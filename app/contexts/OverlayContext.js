@@ -8,7 +8,7 @@ import SingleInput from '../components/parts/SingleInput';
 const OverlayContext = createContext();
 
 export const OverlayProvider = ({children}) => {
-	const {errors, setErrors, setHasTyped} = useValidationContext();
+	const {setErrors, setHasTyped} = useValidationContext();
 	const [overlay, setOverlay] = useState(null);
 	const [overlayContent, setOverlayContent] = useState({
 		title: null,
