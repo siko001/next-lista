@@ -1,51 +1,39 @@
-'use client'
-import {useEffect, useState} from 'react';
+'use client'; // Important to make this client-side only
+import {useUserContext} from "./contexts/UserContext";
+import {useOverlayContext} from "./contexts/OverlayContext";
+import Navigation from "./components/Navigation";
+import Button from "./components/Button";
+import Overlay from "./components/modals/Overlay";
+import Notification from "./components/Notification";
 
-export default function Home() {
-	const [data, setData] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState(null);
+const Home = () => {
+	const {userData, token, loading, error} = useUserContext();
+	const {overlay} = useOverlayContext()
 
-
-	useEffect(() => {
-		const fetchData = async() => {
-			setLoading(true);
-			try {
-				const response = await fetch('https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json/wp/v2/posts');
-				const data = await response.json();
-				setData(data);
-
-			} catch(error) {
-				setError(error);
-			} finally {
-				setLoading(false);
-			}
-
-		}
-
-		fetchData().then();
-	}, []);
-
-
-	// Fetch data from API
-
+	if(loading) return <div>Loading...</div>;
+	if(error) return <div>Error: {error}</div>;
 
 	return (
-		<div>
-			<h1>Home</h1>
+		<main>
+			<Navigation route={"/login"} link={"Login"}/>
 
-			{loading && <p>Loading...</p>}
+			<div className={" flex flex-col gap-36 py-24"}>
 
-			{error && <p>Error: {error.message}</p>}
+				<div className={"mx-auto"}>
+					<Button cta={"Create a new list"} content={"single-input"} action={"create-list"} cancelAction={"true"} color={'#21ba9c'} hover={"inwards"}/>
+				</div>
 
-			{/*	data is a object*/}
+				<div className={"text-center "}>
+					<p className={"text-xl md:text-2xl"}><strong> Let&#39;s plan your shopping list!</strong></p>
+					<p className={"mt-2 md:text-lg text-gray-400"}>Use the button to start a new list </p>
+				</div>
 
-			{data.map((post) => (
-				<article key={post.id}>
-					<h2>{post.title.rendered}</h2>
-					<div dangerouslySetInnerHTML={{__html: post.excerpt.rendered}}></div>
-				</article>
-			))}
-		</div>
+			</div>
+			{overlay && <Overlay/>}
+
+			<Notification/>
+		</main>
 	);
-}
+};
+
+export default Home;
