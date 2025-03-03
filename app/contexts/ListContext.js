@@ -33,19 +33,22 @@ export const ListProvider = ({ children }) => {
         // Send the request to create the shopping list and set ACF fields
         const res = await sendApiRequest(url, method, listData.token, body);
         
-        return res; // Return the response so it can be handled by the calling function
+        return res; 
     };
 
     // Fetch shopping lists for the user
     const getShoppingList = async (userId, token) => {
-        const url = `${WP_API_BASE}/wp/v2/shopping-list?author=${userId}`; // Filter by user ID
+        const url = `${WP_API_BASE}/wp/v2/shopping-list`; 
+        
         const method = "GET";
         
         const res = await sendApiRequest(url, method, token);
         
-        // Assuming the response contains the lists in an array format
+    
         if (Array.isArray(res)) {
-            setUserLists(res); // Update state with the lists
+
+            const lists = res.filter((list) => list.acf.owner_id === userId);
+            setUserLists(lists); 
         } else {
             console.error("Failed to fetch lists:", res);
         }

@@ -38,8 +38,9 @@ const Home = () => {
                     />
                     {userLists && userLists.length > 0 ? (
                         userLists.map((list, index) => (
-                            <div key={index} className={"flex justify-between items-center mt-8 mx-auto w-full"}>
+                            <div key={index} className={"flex justify-between items-center mt-8"}>
                                 <p>{list.title.rendered}</p>
+                                
                             </div>
                         ))
                     ) : (
