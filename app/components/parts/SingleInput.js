@@ -1,9 +1,11 @@
 import {useRef, useState} from "react";
 import {useValidationContext} from "../../contexts/ValidationContext";
+import { useListContext } from "../../contexts/ListContext";
 import ErrorIcon from "../svgs/ErrorIcon";
 
 export default function SingleInput() {
-	const {errors, setErrors, hasTyped, setHasTyped} = useValidationContext(); // Ensure you can update errors
+	const {errors, setErrors, hasTyped, setHasTyped} = useValidationContext(); 
+	const { setShoppingList} = useListContext();
 	const [length, setLength] = useState(0);
 	// Track if the user has started typing
 	const inputRef = useRef(null);
@@ -39,6 +41,7 @@ export default function SingleInput() {
 					} else {
 						setErrors({message: null});
 						parentRef.current.classList.remove("border-red-500");
+						setShoppingList((prev) => ({...prev, name: value}));
 					}
 			}
 		}, 300);

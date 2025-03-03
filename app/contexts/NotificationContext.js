@@ -18,10 +18,19 @@ export const NotificationProvider = ({children}) => {
 		});
 	};
 
+const clearNotification = () => {
+		setNotification({
+			message: null,
+			type: null,
+			timeout: null
+		});
+	};
+
 	return (
 		<NotificationContext.Provider value={{
 			notification,
-			showNotification
+			showNotification,
+			clearNotification
 		}}>
 			{children}
 		</NotificationContext.Provider>

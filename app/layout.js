@@ -3,7 +3,9 @@ import {UserProvider} from "./contexts/UserContext";
 import {OverlayProvider} from "./contexts/OverlayContext";
 import {NotificationProvider} from "./contexts/NotificationContext";
 import {ValidationProvider} from "./contexts/ValidationContext";
+import { ListProvider } from "./contexts/ListContext";
 import "./globals.css";
+
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -32,7 +34,11 @@ export default function RootLayout({children}) {
 
 					<NotificationProvider>
 
+						<ListProvider>
+
 						{children}
+
+						</ListProvider>
 
 					</NotificationProvider>
 

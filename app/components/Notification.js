@@ -4,7 +4,7 @@ import {useNotificationContext} from '../contexts/NotificationContext';
 import {gsap} from 'gsap';
 
 export default function Notification() {
-	const {notification} = useNotificationContext();
+	const {notification,clearNotification} = useNotificationContext();
 	const notificationRef = useRef(null);
 
 	// Only animate when there is a new notification
@@ -24,6 +24,9 @@ export default function Notification() {
 					opacity: 0,
 					duration: 0.5
 				});
+				setTimeout(() => {
+					clearNotification();
+				}, 500);
 			}, notification.timeout);
 		}
 		// 	cleanup function

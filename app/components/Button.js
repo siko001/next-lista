@@ -1,45 +1,65 @@
 import {useOverlayContext} from "../contexts/OverlayContext";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import {useValidationContext} from "../contexts/ValidationContext";
+import { useListContext } from "../contexts/ListContext";
+import { useUserContext } from "../contexts/UserContext";
 
 export default function Button(props) {
 	const {setOverlay, setOverlayContent, closeOverlay} = useOverlayContext();
+	const {shoppingList,  createShoppingList} = useListContext();
+	const {userData, token} = useUserContext();
 	const {errors, setErrors, hasTyped} = useValidationContext();
 	const {showNotification} = useNotificationContext();
 
-	const handleClick = () => {
-		if(errors.message) return
 
+	const handleClick = async () => {
+		if(errors.message) return;
+	
 		if(props.action === "create-list") {
-			setOverlay((prev) => !prev)
+			setOverlay((prev) => !prev);
 			setOverlayContent({
 				title: "Create a new list",
 				content: "single-input",
 				action: "create-a-list",
 				cta: "Create list",
 				cancelAction: true
-			})
+			});
 			return;
 		}
-
-
+	
 		if(props.action === "create-a-list") {
 			try {
 				if(!hasTyped) return setErrors({message: "List Name required"});
-				if(errors.message) return
-
-				// 	Send data to API
-				showNotification("List created", "success", 1000);
-				closeOverlay();
-			} catch(err) {
-				console.log(err)
-				showNotification("Error creating list", "error", 1000);
+				if(errors.message) return;
+	
+				const data = {
+					name: shoppingList.name,
+					userId: userData.id,
+					token: token
+				};
+	
+				// Call the createShoppingList function
+				const res = await createShoppingList(data);
+	
+				if (res) {
+					console.log("Shopping List Created and ACF Fields Updated:", res);
+					// Optionally show a success notification
+					showNotification(`List ${res.title.raw} created`, "success", 2000);
+					closeOverlay();
+				} else {
+					showNotification("Error creating list", "error", 2000);
+					closeOverlay();
+				}
+			} catch (err) {
+				console.error("Error creating list:", err);
+				showNotification("Error creating list", "error", 2000);
 				closeOverlay();
 			} finally {
-
+				// Final cleanup if needed
 			}
 		}
-	}
+	};
+	
 
 	return (
 		<button onClick={() => {
