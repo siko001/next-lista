@@ -1,9 +1,9 @@
 'use client';
-import {createContext, useContext, useState} from 'react';
+import { createContext, useContext, useState } from 'react';
 
 const NotificationContext = createContext();
 
-export const NotificationProvider = ({children}) => {
+export const NotificationProvider = ({ children }) => {
 	const [notification, setNotification] = useState({
 		message: null,
 		type: null,
@@ -18,7 +18,7 @@ export const NotificationProvider = ({children}) => {
 		});
 	};
 
-const clearNotification = () => {
+	const clearNotification = () => {
 		setNotification({
 			message: null,
 			type: null,

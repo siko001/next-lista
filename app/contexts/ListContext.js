@@ -18,36 +18,36 @@ export const ListProvider = ({ children }) => {
 
     // Create List
     const createShoppingList = async (listData) => {
-        const url = `${WP_API_BASE}/wp/v2/shopping-list`; 
+        const url = `${WP_API_BASE}/wp/v2/shopping-list`;
         const method = "POST";
-        
+
         const body = {
-            title: listData.name, 
-            status: "publish", 
-            acf: {              
+            title: listData.name,
+            status: "publish",
+            acf: {
                 owner_id: listData.userId,
                 owner_token: listData.token,
             }
         };
-        
+
         // Send the request to create the shopping list and set ACF fields
         const res = await sendApiRequest(url, method, listData.token, body);
-        
+
         return res; // Return the response so it can be handled by the calling function
     };
 
     // Fetch shopping lists for the user
     const getShoppingList = async (userId, token) => {
         const url = `${WP_API_BASE}/wp/v2/shopping-list`; // Filter by user ID
-        
+
         const method = "GET";
-        
+
         const res = await sendApiRequest(url, method, token);
-        
+
         // Assuming the response contains the lists in an array format
         if (Array.isArray(res)) {
             // filter the lists by user ID
-           const result = res.filter((list) => list.acf.owner_id === userId);
+            const result = res.filter((list) => list.acf.owner_id === userId);
             setUserLists(result); // Update state with the lists
         } else {
             console.error("Failed to fetch lists:", res);
@@ -65,7 +65,7 @@ export const ListProvider = ({ children }) => {
                 },
                 body: JSON.stringify(body)
             });
-    
+
             const data = await response.json();
             return data;
         } catch (error) {
@@ -81,6 +81,7 @@ export const ListProvider = ({ children }) => {
             createShoppingList,
             userLists,
             getShoppingList,
+            setUserLists
         }}>
             {children}
         </ListContext.Provider>
