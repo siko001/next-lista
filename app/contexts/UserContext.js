@@ -108,7 +108,7 @@ export const UserProvider = ({ children }) => {
 				const encryptedToken = encryptData(tokenData.token);
 
 				setCookie('jwt_token', encryptedToken, {
-					httpOnly: true, // Prevent client-side access
+					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
 					maxAge: 60 * 60 * 24 * 7, // 1 week
