@@ -1,7 +1,8 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from 'react';
+import { setCookie, getCookie, deleteCookie } from 'cookies-next'; // Cookie library
+import CryptoJS from 'crypto-js'; // Encryption library
 import { useListContext } from './ListContext';
-
 
 const UserContext = createContext();
 
@@ -10,11 +11,24 @@ export const UserProvider = ({ children }) => {
 	const [token, setToken] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
-	const { setUserLists } = useListContext(); // Import setUserLists from ListContext
-
+	const { setUserLists } = useListContext();
 
 	// Base URL for your WordPress site
 	const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+
+	// Encryption key (store this securely, e.g., in environment variables)
+	const SECRET_KEY = 'your-secret-key-123';
+
+	// Function to encrypt data
+	const encryptData = (data) => {
+		return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString();
+	};
+
+	// Function to decrypt data
+	const decryptData = (ciphertext) => {
+		const bytes = CryptoJS.AES.decrypt(ciphertext, SECRET_KEY);
+		return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+	};
 
 	// Function to create a new user
 	const createUser = async () => {
@@ -49,6 +63,7 @@ export const UserProvider = ({ children }) => {
 		}
 	};
 
+	// Function to fetch user data
 	const fetchUserData = async (token) => {
 		try {
 			const res = await fetch(`${WP_API_BASE}/custom/v1/user-data`, {
@@ -60,7 +75,6 @@ export const UserProvider = ({ children }) => {
 			});
 
 			if (!res.ok) throw new Error('Failed to fetch user data');
-
 			return await res.json();
 		} catch (err) {
 			throw new Error(err.message || 'User data fetch error');
@@ -69,9 +83,7 @@ export const UserProvider = ({ children }) => {
 
 	// Function to log out the user
 	const logout = () => {
-		if (typeof window !== 'undefined') {
-			localStorage?.removeItem('jwt_token');
-		}
+		deleteCookie('jwt_token'); // Remove the cookie
 		setUserData(null);
 		setToken(null);
 		setUserLists(null);
@@ -81,8 +93,10 @@ export const UserProvider = ({ children }) => {
 	const initializeUser = async () => {
 		try {
 			let storedToken = null;
-			if (typeof window !== 'undefined') {
-				storedToken = localStorage.getItem('jwt_token');
+			// Check for existing token in cookies
+			const encryptedToken = getCookie('jwt_token');
+			if (encryptedToken) {
+				storedToken = decryptData(encryptedToken);
 			}
 
 			if (!storedToken) {
@@ -90,10 +104,15 @@ export const UserProvider = ({ children }) => {
 				const newUser = await createUser();
 				const tokenData = await generateToken(newUser.username);
 
-				// Store token in localStorage
-				if (typeof window !== 'undefined') {
-					localStorage.setItem('jwt_token', tokenData.token);
-				}
+				// Encrypt and store the token in a cookie
+				const encryptedToken = encryptData(tokenData.token);
+
+				setCookie('jwt_token', encryptedToken, {
+					httpOnly: true, // Prevent client-side access
+					secure: process.env.NODE_ENV === 'production',
+					sameSite: 'strict', // Prevent CSRF attacks
+					maxAge: 60 * 60 * 24 * 7, // 1 week
+				});
 
 				setUserData({ id: newUser.user_id, username: newUser.username, email: newUser.email, name: newUser.name });
 				setToken(tokenData.token);
@@ -101,6 +120,7 @@ export const UserProvider = ({ children }) => {
 				// Token exists? Fetch user data
 				fetchUserData(storedToken).then((data) => {
 					setUserData(data);
+					console.log(data)
 				});
 				setToken(storedToken);
 			}
