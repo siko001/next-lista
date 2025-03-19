@@ -98,7 +98,7 @@ export const UserProvider = ({ children }) => {
 			if (encryptedToken) {
 				storedToken = decryptData(encryptedToken);
 			}
-
+			console.log(storedToken)
 			if (!storedToken) {
 				// No token? Create a new user and generate a token
 				const newUser = await createUser();
