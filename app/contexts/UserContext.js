@@ -85,6 +85,7 @@ export const UserProvider = ({ children }) => {
 	const logout = () => {
 		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg'); // Remove the cookie
 		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg');
+		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg');
 		setUserData(null);
 		setToken(null);
 		setUserLists(null);
@@ -107,6 +108,7 @@ export const UserProvider = ({ children }) => {
 				// Encrypt and store the token in a cookie
 				const encryptedToken = encryptData(tokenData.token);
 
+				// Set the token cookie
 				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', encryptedToken, {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
@@ -114,6 +116,7 @@ export const UserProvider = ({ children }) => {
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
 
+				// Set the registration cookie
 				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', "no", {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
@@ -121,13 +124,17 @@ export const UserProvider = ({ children }) => {
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
 
+
 				setUserData({ id: newUser.user_id, username: newUser.username, email: newUser.email, name: newUser.name });
+
 				setToken(tokenData.token);
 			} else {
 				// Token exists? Fetch user data
 				fetchUserData(storedToken).then((data) => {
 					setUserData(data);
+
 				});
+
 				setToken(storedToken);
 			}
 

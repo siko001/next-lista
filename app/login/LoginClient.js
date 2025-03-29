@@ -103,6 +103,18 @@ const LoginClient = () => {
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
 
+				const userName = result.user_display_name
+				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', {
+					userName
+				}, {
+					// httpOnly: true, // Prevent client-side access
+					secure: process.env.NODE_ENV === 'production',
+					sameSite: 'strict', // Prevent CSRF attacks
+					maxAge: 60 * 60 * 24 * 7, // 1 week
+				});
+
+
+
 
 				showNotification("Login successful! Redirecting to Lista", "success");
 				setTimeout(() => {

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { setCookie } from 'cookies-next'; // Cookie library
 
 import Notification from "../components/Notification";
 import { useUserContext } from "../contexts/UserContext";
@@ -166,6 +167,16 @@ const RegisterClient = () => {
 					username: data.name,
 				});
 				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', "yes", {
+					// httpOnly: true, // Prevent client-side access
+					secure: process.env.NODE_ENV === 'production',
+					sameSite: 'strict', // Prevent CSRF attacks
+					maxAge: 60 * 60 * 24 * 7, // 1 week
+				});
+				
+				const userName = result.name || result.username || data.username;
+				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', {
+					userName
+				}, {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
