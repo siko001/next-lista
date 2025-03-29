@@ -83,7 +83,8 @@ export const UserProvider = ({ children }) => {
 
 	// Function to log out the user
 	const logout = () => {
-		deleteCookie('jwt_token'); // Remove the cookie
+		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg'); // Remove the cookie
+		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg');
 		setUserData(null);
 		setToken(null);
 		setUserLists(null);
@@ -94,11 +95,10 @@ export const UserProvider = ({ children }) => {
 		try {
 			let storedToken = null;
 			// Check for existing token in cookies
-			const encryptedToken = getCookie('jwt_token');
+			const encryptedToken = getCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg');
 			if (encryptedToken) {
 				storedToken = decryptData(encryptedToken);
 			}
-			console.log(storedToken)
 			if (!storedToken) {
 				// No token? Create a new user and generate a token
 				const newUser = await createUser();
@@ -107,7 +107,14 @@ export const UserProvider = ({ children }) => {
 				// Encrypt and store the token in a cookie
 				const encryptedToken = encryptData(tokenData.token);
 
-				setCookie('jwt_token', encryptedToken, {
+				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', encryptedToken, {
+					// httpOnly: true, // Prevent client-side access
+					secure: process.env.NODE_ENV === 'production',
+					sameSite: 'strict', // Prevent CSRF attacks
+					maxAge: 60 * 60 * 24 * 7, // 1 week
+				});
+
+				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', "no", {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
@@ -120,7 +127,6 @@ export const UserProvider = ({ children }) => {
 				// Token exists? Fetch user data
 				fetchUserData(storedToken).then((data) => {
 					setUserData(data);
-					console.log(data)
 				});
 				setToken(storedToken);
 			}
