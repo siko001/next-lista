@@ -25,17 +25,17 @@ export default function RootLayout({ children }) {
 	return (
 		<html lang="en">
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				<ListProvider>
-					<UserProvider>
-						<ValidationProvider>
-							<OverlayProvider>
-								<NotificationProvider>
+				<NotificationProvider>
+					<ListProvider>
+						<UserProvider>
+							<ValidationProvider>
+								<OverlayProvider>
 									{children}
-								</NotificationProvider>
-							</OverlayProvider>
-						</ValidationProvider>
-					</UserProvider>
-				</ListProvider>
+								</OverlayProvider>
+							</ValidationProvider>
+						</UserProvider>
+					</ListProvider>
+				</NotificationProvider>
 			</body>
 		</html>
 	);

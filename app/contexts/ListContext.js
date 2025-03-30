@@ -1,12 +1,14 @@
 'use client';
 import { createContext, useContext, useState, useCallback } from 'react';
-
+import { useNotificationContext } from './NotificationContext';
+import gsap from 'gsap';
 
 
 const ListContext = createContext();
 
 export const ListProvider = ({ children }) => {
     const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+    const { showNotification } = useNotificationContext();
 
     const [shoppingList, setShoppingList] = useState({
         name: "",
@@ -30,27 +32,35 @@ export const ListProvider = ({ children }) => {
             }
         };
 
-        // Send the request to create the shopping list and set ACF fields
-        const res = await sendApiRequest(url, method, listData.token, body);
 
-        return res; // Return the response so it can be handled by the calling function
+        const res = await sendApiRequest(url, method, listData.token, body);
+        return res;
     };
 
     // Fetch shopping lists for the user
     const getShoppingList = async (userId, token) => {
-        const url = `${WP_API_BASE}/wp/v2/shopping-list`; // Filter by user ID
+        // Change to ASCENDING order to match typical UI expectations
+        const url = `${WP_API_BASE}/wp/v2/shopping-list?orderby=menu_order&order=asc&per_page=100`;
 
-        const method = "GET";
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                }
+            });
 
-        const res = await sendApiRequest(url, method, token);
+            const data = await response.json();
+            const result = Array.isArray(data)
+                ? data.filter(list => list.acf?.owner_id === userId)
+                : [];
 
-        // Assuming the response contains the lists in an array format
-        if (Array.isArray(res)) {
-            // filter the lists by user ID
-            const result = res.filter((list) => list.acf.owner_id === userId);
-            setUserLists(result); // Update state with the lists
-        } else {
-            console.error("Failed to fetch lists:", res);
+            setUserLists(result);
+            return result;
+        } catch (error) {
+            console.error("Failed to fetch lists:", error);
+            return [];
         }
     };
 
@@ -73,6 +83,53 @@ export const ListProvider = ({ children }) => {
         }
     }, []);
 
+
+    const deleteList = async (listId, token) => {
+        const url = `${WP_API_BASE}/wp/v2/shopping-list/${listId}`;
+        const method = "DELETE";
+
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+
+            if (!response.ok) {
+                throw new Error("Failed to delete list");
+            }
+
+            const data = await response.json();
+            // play animation of list being deleted
+
+            gsap.fromTo(`#list-${listId}`,
+                {
+                    opacity: 1,
+                    border: "1px solid #ff0000",
+                    duration: 0.5,
+                },
+                {
+                    opacity: 0,
+                    y: 100,
+                    ease: "power2.out",
+                    duration: 0.8,
+                    onComplete: () => {
+                        setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
+                        showNotification("List deleted successfully", "success");
+                    }
+                });
+
+
+        } catch (error) {
+            console.error("Delete List Failed:", error);
+        }
+    };
+
+
+
     return (
         <ListContext.Provider value={{
             shoppingList,
@@ -81,7 +138,8 @@ export const ListProvider = ({ children }) => {
             createShoppingList,
             userLists,
             getShoppingList,
-            setUserLists
+            setUserLists,
+            deleteList
         }}>
             {children}
         </ListContext.Provider>

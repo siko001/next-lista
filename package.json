@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^4.1.2",
     "cookies-next": "^5.1.0",
     "crypto-js": "^4.2.0",

@@ -1,5 +1,4 @@
 @import "tailwindcss";
-
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -42,3 +41,5 @@ body {
   animation: wave 3s infinite;
   transform-origin: 70% 70%;
 }
+
+
