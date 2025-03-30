@@ -119,15 +119,15 @@ const HomeClient = ({ isRegistered, userName }) => {
             {!isRegistered && <Navigation route={"/login"} link={"Login"} />}
             {isRegistered && <div className={" py-4 md:py-6 px-4 md:px-8 xl:px-16 flex justify-between items-center gap-12"}>
                 <div className={"font-bold text-3xl"}>Lista</div>
-                <div className="flex gap-4 items-center">
+                <div className="flex gap-y-2 gap-x-2 md:gap-4 items-center flex-wrap justify-end">
 
                     {(isRegistered) &&
-                        <div className={" flex gap-2"}>
+                        <div className={" flex gap-2 items-center"}>
                             <span className="inline-block wave-emoji">👋</span>
-                            {extractUserName(userName)}
+                            <span className="text-xs md:text-sm lg:text-base"> {extractUserName(userName)}</span>
                         </div>
                     }
-                    <Link className="text-white  py-3 px-6 xl:px-10 font-bold rounded-full bg-blue-800" href={"/logout"} >
+                    <Link className="text-white  py-3 px-6 xl:px-10 text-xs md:text-base font-bold rounded-full bg-blue-800" href={"/logout"} >
                         Logout
                     </Link>
                 </div>
@@ -135,7 +135,7 @@ const HomeClient = ({ isRegistered, userName }) => {
 
             }
 
-            <div className={" flex flex-col gap-16 md:gap-36 py-12 md:py-24 px-16 "}>
+            <div className={" flex flex-col gap-16 md:gap-36 py-12 md:py-24 px-8 "}>
                 <div className={"mx-auto flex flex-col items-center  w-full  md:w-fit  "}>
                     <Button
                         cta={"Create a new list"}
@@ -214,7 +214,7 @@ const HomeClient = ({ isRegistered, userName }) => {
                             </Droppable>
                         </DragDropContext>
                     ) : (
-                        <p className="mt-12 text-xl font-black ">No shopping lists found.</p>
+                        <p className="mt-12 text-xl font-black text-center">No shopping lists found.</p>
                     )}
                 </div>
 
