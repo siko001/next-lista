@@ -4,6 +4,7 @@ import { OverlayProvider } from "./contexts/OverlayContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { ValidationProvider } from "./contexts/ValidationContext";
 import { ListProvider } from "./contexts/ListContext";
+import { LoadingProvider } from "./contexts/LoadingContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,17 +26,19 @@ export default function RootLayout({ children }) {
 	return (
 		<html lang="en">
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-				<NotificationProvider>
-					<ListProvider>
-						<UserProvider>
-							<ValidationProvider>
-								<OverlayProvider>
-									{children}
-								</OverlayProvider>
-							</ValidationProvider>
-						</UserProvider>
-					</ListProvider>
-				</NotificationProvider>
+				<LoadingProvider>
+					<NotificationProvider>
+						<ListProvider>
+							<UserProvider>
+								<ValidationProvider>
+									<OverlayProvider>
+										{children}
+									</OverlayProvider>
+								</ValidationProvider>
+							</UserProvider>
+						</ListProvider>
+					</NotificationProvider>
+				</LoadingProvider>
 			</body>
 		</html>
 	);

@@ -1,25 +1,33 @@
 'use client';
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+
+// Contexts
 import { useUserContext } from "./contexts/UserContext";
 import { useOverlayContext } from "./contexts/OverlayContext";
 import { useListContext } from "./contexts/ListContext";
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { useLoadingContext } from "./contexts/LoadingContext";
+
+// Components
 import Navigation from "./components/Navigation";
 import Button from "./components/Button";
 import Overlay from "./components/modals/Overlay";
 import Notification from "./components/Notification";
-import Link from "next/link";
+
+// Icons
 import SettingsIcon from "./components/svgs/SettingsIcon";
 import RenameIcon from "./components/svgs/RenameIcon";
 import ShareIcon from "./components/svgs/ShareIcon";
 import CopyIcon from "./components/svgs/CopyIcon";
 import TrashIcon from "./components/svgs/TranshIcon";
-import CloseIcon from "./components/svgs/CloseIcon";
+import ListLoader from "./components/loaders/ListLoader";
+
 
 const HomeClient = ({ isRegistered, userName }) => {
     const [listSettings, setListSettings] = useState(false);
-
-    const { userData, token, loading, error } = useUserContext();
+    const { loading } = useLoadingContext();
+    const { userData, token, error } = useUserContext();
     const { userLists, getShoppingList, setUserLists, deleteList } = useListContext();
     const { overlay } = useOverlayContext();
 
@@ -111,11 +119,10 @@ const HomeClient = ({ isRegistered, userName }) => {
 
 
 
-    if (loading) return <div>Loading...</div>;
+    // if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
     return (
         <main>
-
             {!isRegistered && <Navigation route={"/login"} link={"Login"} />}
             {isRegistered && <div className={" py-4 md:py-6 px-4 md:px-8 xl:px-16 flex justify-between items-center gap-12"}>
                 <div className={"font-bold text-3xl"}>Lista</div>
@@ -226,6 +233,12 @@ const HomeClient = ({ isRegistered, userName }) => {
                 </div>
             </div>
             {overlay && <Overlay />}
+
+            {loading &&
+                <div className="fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">
+                    <ListLoader />
+                </div>
+            }
 
             <Notification />
         </main >

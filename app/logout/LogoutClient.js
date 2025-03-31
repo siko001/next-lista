@@ -9,7 +9,7 @@ export default function LogoutClient() {
         setTimeout(() => {
             logout();
             window.location.href = "/";
-        }, 2000);
+        }, 1500);
         return () => {
             clearTimeout();
         };

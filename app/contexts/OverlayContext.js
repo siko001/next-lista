@@ -1,14 +1,17 @@
 'use client';
-import {gsap} from "gsap";
+import { gsap } from "gsap";
 
-import {createContext, useContext, useEffect, useState} from 'react';
-import {useValidationContext} from './ValidationContext';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useValidationContext } from './ValidationContext';
+import { useLoadingContext } from "./LoadingContext";
 import SingleInput from '../components/parts/SingleInput';
+import { set } from "react-hook-form";
 
 const OverlayContext = createContext();
 
-export const OverlayProvider = ({children}) => {
-	const {setErrors, setHasTyped} = useValidationContext();
+export const OverlayProvider = ({ children }) => {
+	const { setLoading } = useLoadingContext();
+	const { setErrors, setHasTyped } = useValidationContext();
 	const [overlay, setOverlay] = useState(null);
 	const [overlayContent, setOverlayContent] = useState({
 		title: null,
@@ -20,13 +23,13 @@ export const OverlayProvider = ({children}) => {
 
 	useEffect(() => {
 		// trigger gsap animation when overlay is opening
-		if(overlay) {
-			gsap.fromTo("#overlay-backdrop", {opacity: 0}, {opacity: 1, duration: 0.5});
-			gsap.fromTo("#overlay-content", {scale: 0, opacity: 0}, {scale: 1, opacity: 1, duration: 0.5, delay: 0.25});
+		if (overlay) {
+			gsap.fromTo("#overlay-backdrop", { opacity: 0 }, { opacity: 1, duration: 0.5 });
+			gsap.fromTo("#overlay-content", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 0.25 });
 		}
 
 		const closeOnEsc = (e) => {
-			if(e.key === "Escape") return closeOverlay()
+			if (e.key === "Escape") return closeOverlay()
 		}
 
 		window.addEventListener("keydown", closeOnEsc);
@@ -34,10 +37,10 @@ export const OverlayProvider = ({children}) => {
 	}, [overlay]);
 
 	const convertContentToComponent = (content) => {
-		if(!content) return null;
-		switch(content) {
-			case "single-input" :
-				return <SingleInput/>
+		if (!content) return null;
+		switch (content) {
+			case "single-input":
+				return <SingleInput />
 
 			default:
 				return null;
@@ -47,7 +50,8 @@ export const OverlayProvider = ({children}) => {
 
 	const closeOverlay = () => {
 		// Start closing animation
-		gsap.to("#overlay-backdrop", {opacity: 0, duration: 0.1});
+		setLoading(false);
+		gsap.to("#overlay-backdrop", { opacity: 0, duration: 0.1 });
 		gsap.to("#overlay-content", {
 			scale: 0, opacity: 0, duration: 0.2, delay: 0.25, onComplete: () => {
 				setHasTyped(false);

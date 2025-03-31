@@ -87,16 +87,19 @@ const LoginClient = () => {
 			});
 
 			const result = await response.json();
+
 			if (result.token) {
+
+
 				// Encrypt and store the token in a cookie
 				const encryptedToken = encryptData(result.token);
-				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', encryptedToken, {
+				setCookie('token', encryptedToken, {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
-				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', "yes", {
+				setCookie('registered', "yes", {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
@@ -104,7 +107,7 @@ const LoginClient = () => {
 				});
 
 				const userName = result.user_display_name
-				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', {
+				setCookie('username', {
 					userName
 				}, {
 					// httpOnly: true, // Prevent client-side access
@@ -113,13 +116,20 @@ const LoginClient = () => {
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
 
+				const userId = result.user_id
+				setCookie('id', userId, {
+					// httpOnly: true, // Prevent client-side access
+					secure: process.env.NODE_ENV === 'production',
+					sameSite: 'strict', // Prevent CSRF attacks
+					maxAge: 60 * 60 * 24 * 7, // 1 week
+				});
 
 
 
 				showNotification("Login successful! Redirecting to Lista", "success");
 				setTimeout(() => {
 					window.location.href = "/";
-				}, 3000);
+				}, 2000);
 			} else {
 				showNotification(`Error: ${result.message}`, "error");
 			}

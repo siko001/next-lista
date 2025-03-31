@@ -1,6 +1,7 @@
 import { useOverlayContext } from "../contexts/OverlayContext";
 import { useNotificationContext } from "../contexts/NotificationContext";
 import { useValidationContext } from "../contexts/ValidationContext";
+import { useLoadingContext } from "../contexts/LoadingContext";
 import { useListContext } from "../contexts/ListContext";
 import { useUserContext } from "../contexts/UserContext";
 
@@ -10,7 +11,7 @@ export default function Button(props) {
 	const { userData, token } = useUserContext();
 	const { errors, setErrors, hasTyped } = useValidationContext();
 	const { showNotification } = useNotificationContext();
-
+	const { setLoading } = useLoadingContext();
 
 	const handleClick = async () => {
 		if (errors.message) return;
@@ -31,22 +32,24 @@ export default function Button(props) {
 			try {
 				if (!hasTyped) return setErrors({ message: "List Name required" });
 				if (errors.message) return;
+				setLoading(true);
 
 				const data = {
 					name: shoppingList.name,
 					userId: userData.id,
 					token: token
 				};
+				console.log("Creating list with data:", data);
 
 				// Call the createShoppingList function
 				const res = await createShoppingList(data);
 				await getShoppingList(userData.id, token);
 
 				if (res) {
-					console.log("Shopping List Created and ACF Fields Updated:", res);
-					// Optionally show a success notification
+
 					showNotification(`List ${res.title.raw} created`, "success", 2000);
 					closeOverlay();
+
 				} else {
 					showNotification("Error creating list", "error", 2000);
 					closeOverlay();
@@ -56,7 +59,7 @@ export default function Button(props) {
 				showNotification("Error creating list", "error", 2000);
 				closeOverlay();
 			} finally {
-				// Final cleanup if needed
+				setLoading(false);
 			}
 		}
 	};

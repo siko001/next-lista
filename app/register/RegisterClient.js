@@ -161,20 +161,23 @@ const RegisterClient = () => {
 
 			if (result) {
 				showNotification("User has been registered successfully. Redirecting to home page");
+
 				setUserData({
 					registered: "yes",
 					name: data.name,
 					username: data.name,
 				});
-				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', "yes", {
+
+				setCookie('registered', "yes", {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
-				
+
+				// Username
 				const userName = result.name || result.username || data.username;
-				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', {
+				setCookie('username', {
 					userName
 				}, {
 					// httpOnly: true, // Prevent client-side access
@@ -182,6 +185,14 @@ const RegisterClient = () => {
 					sameSite: 'strict', // Prevent CSRF attacks
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
+
+				setCookie('id', result.id, {
+					// httpOnly: true, // Prevent client-side access
+					secure: process.env.NODE_ENV === 'production',
+					sameSite: 'strict', // Prevent CSRF attacks
+					maxAge: 60 * 60 * 24 * 7, // 1 week
+				})
+
 				setTimeout(() => {
 					window.location.href = "/";
 				}, 3000)

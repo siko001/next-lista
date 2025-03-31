@@ -83,9 +83,10 @@ export const UserProvider = ({ children }) => {
 
 	// Function to log out the user
 	const logout = () => {
-		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg'); // Remove the cookie
-		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg');
-		deleteCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg');
+		deleteCookie('token'); // Remove the cookie
+		deleteCookie('registered'); // Remove the cookie
+		deleteCookie('id');
+		deleteCookie('username'); // Remove the cookie
 		setUserData(null);
 		setToken(null);
 		setUserLists(null);
@@ -96,7 +97,7 @@ export const UserProvider = ({ children }) => {
 		try {
 			let storedToken = null;
 			// Check for existing token in cookies
-			const encryptedToken = getCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg');
+			const encryptedToken = getCookie('token');
 			if (encryptedToken) {
 				storedToken = decryptData(encryptedToken);
 			}
@@ -109,7 +110,7 @@ export const UserProvider = ({ children }) => {
 				const encryptedToken = encryptData(tokenData.token);
 
 				// Set the token cookie
-				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', encryptedToken, {
+				setCookie('token', encryptedToken, {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
@@ -117,12 +118,19 @@ export const UserProvider = ({ children }) => {
 				});
 
 				// Set the registration cookie
-				setCookie('hodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hghodowipefhwfg8wgfd687gbbru3fg3bfgh3297fgh2e7g3hg', "no", {
+				setCookie('registered', "no", {
 					// httpOnly: true, // Prevent client-side access
 					secure: process.env.NODE_ENV === 'production',
 					sameSite: 'strict', // Prevent CSRF attacks
 					maxAge: 60 * 60 * 24 * 7, // 1 week
 				});
+
+				setCookie('id', newUser.user_id, {
+					// httpOnly: true, // Prevent client-side access
+					secure: process.env.NODE_ENV === 'production',
+					sameSite: 'strict', // Prevent CSRF attacks
+					maxAge: 60 * 60 * 24 * 7, // 1 week
+				})
 
 
 				setUserData({ id: newUser.user_id, username: newUser.username, email: newUser.email, name: newUser.name });
