@@ -24,12 +24,13 @@ import TrashIcon from "./components/svgs/TranshIcon";
 import ListLoader from "./components/loaders/ListLoader";
 
 
-const HomeClient = ({ isRegistered, userName }) => {
+const HomeClient = ({ isRegistered, userName, lists }) => {
     const [listSettings, setListSettings] = useState(false);
     const { loading } = useLoadingContext();
     const { userData, token, error } = useUserContext();
     const { userLists, getShoppingList, setUserLists, deleteList } = useListContext();
     const { overlay } = useOverlayContext();
+
 
 
     function extractUserName(jsonString) {
@@ -221,7 +222,27 @@ const HomeClient = ({ isRegistered, userName }) => {
                             </Droppable>
                         </DragDropContext>
                     ) : (
-                        <p className="mt-12 text-xl font-black text-center">No shopping lists found.</p>
+                        lists && lists.length > 0 ? (
+                            <div className="mt-8 flex flex-col gap-4 w-full  ">
+                                {lists.map((list) => (
+                                    <div key={list.id} className="flex justify-between border items-center px-6 py-3 rounded-lg shadow-xl shadow-[#00000022] dark:bg-black bg-white min-w-full w-full md:min-w-[550px] transition-colors duration-200 hover:dark:bg-gray-900 hover:bg-gray-100 mx-auto relative">
+                                        <p className="font-bold text-lg">{list.title.rendered}</p>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevent drag when clicking settings
+                                                handleListSettings(list.id);
+                                            }}
+                                            className="relative !z-[9999]"
+                                        >
+                                            <SettingsIcon className="w-6 h-6 settings-icon dark:text-gray-600 text-gray-800 cursor-pointer" />
+
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="mt-12 text-xl font-black text-center">No shopping lists found.</p>
+                        )
                     )}
                 </div>
 
