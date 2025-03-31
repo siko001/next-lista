@@ -20,22 +20,6 @@ export const OverlayProvider = ({ children }) => {
 		cancelAction: false
 	});
 
-
-	useEffect(() => {
-		// trigger gsap animation when overlay is opening
-		if (overlay) {
-			gsap.fromTo("#overlay-backdrop", { opacity: 0 }, { opacity: 1, duration: 0.5 });
-			gsap.fromTo("#overlay-content", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 0.25 });
-		}
-
-		const closeOnEsc = (e) => {
-			if (e.key === "Escape") return closeOverlay()
-		}
-
-		window.addEventListener("keydown", closeOnEsc);
-		return () => window.removeEventListener("keydown", closeOnEsc);
-	}, [overlay]);
-
 	const convertContentToComponent = (content) => {
 		if (!content) return null;
 		switch (content) {

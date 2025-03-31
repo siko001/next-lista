@@ -55,7 +55,7 @@ export const ListProvider = ({ children }) => {
             const result = Array.isArray(data)
                 ? data.filter(list => list.acf?.owner_id === userId)
                 : [];
-
+            console.log("Fetched Lists:", result);
             setUserLists(result);
             return result;
         } catch (error) {
