@@ -1,9 +1,13 @@
+'use client'
+
 import { useOverlayContext } from "../contexts/OverlayContext";
 import { useNotificationContext } from "../contexts/NotificationContext";
 import { useValidationContext } from "../contexts/ValidationContext";
 import { useLoadingContext } from "../contexts/LoadingContext";
 import { useListContext } from "../contexts/ListContext";
 import { useUserContext } from "../contexts/UserContext";
+import { useEffect } from "react";
+import gsap from "gsap";
 
 export default function Button(props) {
 	const { setOverlay, setOverlayContent, closeOverlay } = useOverlayContext();
@@ -13,8 +17,40 @@ export default function Button(props) {
 	const { showNotification } = useNotificationContext();
 	const { setLoading } = useLoadingContext();
 
+
+	useEffect(() => {
+		if (props.action === "add-product-overlay") {
+			gsap.set(".open-product-overlay", {
+				y: 200,
+				opacity: 1,
+			})
+			gsap.to(".open-product-overlay", {
+				y: 0,
+				duration: 0.5,
+				ease: "power2.out",
+			})
+			return;
+		}
+	});
+
+
+
 	const handleClick = async () => {
 		if (errors.message) return;
+		// console.log(props)
+
+		// Open ALl Products Overlay
+		if (props.action === "add-product-overlay") {
+			props.setProductOverlay(true);
+			return;
+		}
+
+		// Close All Products Overlay
+		if (props.action === "close-product-overlay") {
+			props.setProductOverlay(false);
+			return;
+		}
+
 
 		if (props.action === "create-list") {
 			setOverlay((prev) => !prev);
@@ -28,6 +64,9 @@ export default function Button(props) {
 			return;
 		}
 
+
+
+
 		if (props.action === "create-a-list") {
 			try {
 				if (!hasTyped) return setErrors({ message: "List Name required" });
@@ -39,7 +78,6 @@ export default function Button(props) {
 					userId: userData.id,
 					token: token
 				};
-				console.log("Creating list with data:", data);
 
 				// Call the createShoppingList function
 				const res = await createShoppingList(data);
@@ -65,6 +103,8 @@ export default function Button(props) {
 	};
 
 
+
+
 	return (
 		<button onClick={() => {
 			if (props.action === "close-overlay") {
@@ -72,8 +112,8 @@ export default function Button(props) {
 			} else {
 				handleClick();
 			}
-		}} className={`relative  cursor-pointer z-20 group ${props.overrideDefaultClasses ? props.overrideDefaultClasses : 'bg-blue-800'} px-6 py-3 md:px-8 md:py-4 rounded-md overflow-hidden`}>
-			<p className={`z-20 relative delay-75 font-bold text-white ${props.hover && "group-hover:text-black"} transition-colors duration-200`}>{props.cta}</p>
+		}} className={`relative  cursor-pointer z-20 group ${props.overrideDefaultClasses ? props.overrideDefaultClasses : 'bg-blue-800 text-white'} px-6 py-3 md:px-8 md:py-4 rounded-md overflow-hidden`}>
+			<p className={`z-20 relative delay-75 font-bold  ${props.hover && props.light ? "group-hover:text-white" : "group-hover:text-black"} transition-colors duration-200`}>{props.cta}</p>
 
 			{(props.hover && props.hover === "inwards") && (
 				<>

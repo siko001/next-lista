@@ -34,9 +34,8 @@ export const getShoppingList = async (userId, encryptedToken) => {
         return [];
     }
 
-
     // Change to ASCENDING order to match typical UI expectations
-    const url = `${WP_API_BASE}/wp/v2/shopping-list?orderby=menu_order&order=asc&per_page=100`;
+    const url = `${WP_API_BASE}/custom/v1/shopping-lists-by-owner/${userId}`;
 
     try {
         const response = await fetch(url, {
@@ -51,9 +50,90 @@ export const getShoppingList = async (userId, encryptedToken) => {
         const result = Array.isArray(data)
             ? data.filter(list => list.acf?.owner_id == userId)
             : [];
+
+        // sort by menu_order
+        result.sort((a, b) => {
+            return a.menu_order - b.menu_order;
+        });
         return result;
     } catch (error) {
         console.error("Failed to fetch lists:", error);
         return [];
     }
 };
+
+
+export const getListDetails = async (listId, encryptedToken) => {
+    const token = decryptToken(encryptedToken);
+    if (!token) {
+        return null;
+    }
+    const url = `${WP_API_BASE}/custom/v1/shopping-list/${listId}`;
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to fetch list details:", error);
+        return null;
+    }
+}
+
+
+export const getAllProducts = async (encryptedToken) => {
+    const token = decryptToken(encryptedToken);
+    if (!token) {
+        return [];
+    }
+    const url = `${WP_API_BASE}/custom/v1/products`;
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to fetch all products:", error);
+        return [];
+    }
+}
+
+
+
+export const extractUserName = (jsonString) => {
+    try {
+        const data = JSON.parse(jsonString);
+        return data.userName || null;
+    } catch (error) {
+        console.error("Invalid JSON:", error);
+        return null;
+    }
+}
+
+export const decodeHtmlEntities = (text) => {
+    if (!text) return '';
+
+    if (typeof document === 'undefined') {
+        return text.replace(/&#(\d+);/g, (match, dec) =>
+            String.fromCharCode(dec)
+        );
+    }
+
+    // For browser
+    const textArea = document.createElement('textarea');
+    textArea.innerHTML = text;
+    return textArea.value;
+};
+

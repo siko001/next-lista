@@ -40,8 +40,7 @@ export const ListProvider = ({ children }) => {
     // Fetch shopping lists for the user
     const getShoppingList = async (userId, token) => {
         // Change to ASCENDING order to match typical UI expectations
-        const url = `${WP_API_BASE}/wp/v2/shopping-list?orderby=menu_order&order=asc&per_page=100`;
-
+        const url = `${WP_API_BASE}/custom/v1/shopping-lists-by-owner/${userId}`;
         try {
             const response = await fetch(url, {
                 method: "GET",
@@ -53,9 +52,14 @@ export const ListProvider = ({ children }) => {
 
             const data = await response.json();
             const result = Array.isArray(data)
-                ? data.filter(list => list.acf?.owner_id === userId)
+                ? data.filter(list => list.acf?.owner_id == userId)
                 : [];
-            console.log("Fetched Lists:", result);
+
+            // sort by menu_order
+            result.sort((a, b) => {
+                return a.menu_order - b.menu_order;
+            }
+            );
             setUserLists(result);
             return result;
         } catch (error) {

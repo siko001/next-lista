@@ -1,5 +1,4 @@
 'use client';
-import Link from "next/link";
 import { useEffect, useState, useRef } from "react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
@@ -11,8 +10,8 @@ import { useLoadingContext } from "./contexts/LoadingContext";
 import { useNotificationContext } from "./contexts/NotificationContext";
 
 // Components
+import Header from "./components/Header";
 import Button from "./components/Button";
-import Navigation from "./components/Navigation";
 import Overlay from "./components/modals/Overlay";
 import Notification from "./components/Notification";
 
@@ -22,7 +21,7 @@ import ShareIcon from "./components/svgs/ShareIcon";
 import TrashIcon from "./components/svgs/TranshIcon";
 import RenameIcon from "./components/svgs/RenameIcon";
 import ListLoader from "./components/loaders/ListLoader";
-import SettingsIcon from "./components/svgs/SettingsIcon";
+import List from "./components/parts/List";
 
 
 
@@ -33,24 +32,12 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
     const [startingValue, setStartingValue] = useState(null);
     const listRenameRef = useRef(null);
 
-
     const { loading } = useLoadingContext();
     const { userData, token, error } = useUserContext();
     const { userLists, getShoppingList, setUserLists, deleteList } = useListContext();
     const { overlay } = useOverlayContext();
     const { showNotification } = useNotificationContext();
 
-
-
-    function extractUserName(jsonString) {
-        try {
-            const data = JSON.parse(jsonString);
-            return data.userName || null;
-        } catch (error) {
-            console.error("Invalid JSON:", error);
-            return null;
-        }
-    }
 
     useEffect(() => {
         if (userData && userData.id && token) {
@@ -80,6 +67,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                 },
                 body: JSON.stringify({ orders: updates })
             });
+            
         } catch (error) {
             console.error("Reorder failed:", error);
             setUserLists(userLists);
@@ -216,40 +204,12 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
     // if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
     return (
-        <main>
+        <main className=" transition-all duration-300">
 
-            {/* normal header */}
-            {!isRegistered && <Navigation route={"/login"} link={"Login"} />}
-
-
-            {/* Register user Navigation */}
-            {
-                isRegistered && <div className={" py-4 md:py-6 px-4 md:px-8 xl:px-16 flex justify-between items-center gap-12"}>
-                    <div className={"font-bold text-3xl"}>Lista</div>
-                    <div className="flex gap-y-2 gap-x-2 md:gap-4 items-center flex-wrap justify-end">
-
-                        {/* Username if registered */}
-                        {
-                            (isRegistered) &&
-                            <div className={" flex gap-2 items-center"}>
-                                <span className="inline-block wave-emoji">👋</span>
-                                <span className="text-xs md:text-sm lg:text-base"> {extractUserName(userName)}</span>
-                            </div>
-                        }
-
-
-                        <Link className="text-white  py-3 px-6 xl:px-10 text-xs md:text-base font-bold rounded-full bg-blue-800" href={"/logout"} >
-                            Logout
-                        </Link>
-
-                    </div>
-                </div>
-            }
+            <Header isRegistered={isRegistered} userName={userName} />
 
             <div className={" flex flex-col gap-16 md:gap-36 py-12 md:py-24 px-8 "}>
                 <div className={"mx-auto flex flex-col items-center  w-full  md:w-fit  "}>
-
-
                     <Button
                         cta={"Create a new list"}
                         content={"single-input"}
@@ -259,13 +219,12 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                         hover={"inwards"}
                     />
 
-
                     {/* Actual List */}
                     {userLists && userLists.length > 0 ? (
                         <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                             <Droppable droppableId="lists">
                                 {(provided) => (
-                                    <div {...provided.droppableProps} ref={provided.innerRef} className="mt-8 flex flex-col gap-4 w-full group">
+                                    <div {...provided.droppableProps} ref={provided.innerRef} className="mt-8 flex flex-col gap-6 w-full group  ">
                                         {userLists.map((list, index) => (
                                             // List Wrapper
                                             <div key={list.id} className="relative" >
@@ -273,65 +232,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                                                 {/* Draggable Item */}
                                                 <Draggable draggableId={String(list.id)} index={index}>
                                                     {(provided, snapshot) => (
-
-                                                        // List Container
-                                                        <div id={`list-${list.id}`}
-                                                            ref={provided.innerRef}
-                                                            {...provided.draggableProps}
-                                                            {...provided.dragHandleProps}
-                                                            className={`flex justify-between border items-center px-6 py-3 rounded-lg shadow-xl shadow-[#00000022] dark:bg-black bg-white min-w-full w-full md:min-w-[550px] transition-colors duration-200 hover:dark:bg-gray-900 hover:bg-gray-100 mx-auto relative ${snapshot.isDragging ? '!scale-90 dark:!bg-gray-900 !bg-gray-100 md:scale-110 !left-0 md:!left-[50%] md:!-translate-x-[50%]' : 'scale-100'}`}
-                                                            style={{
-                                                                touchAction: 'none',
-                                                                ...provided.draggableProps.style
-                                                            }}  >
-
-
-
-                                                            {listRename && listRename === list.id ?
-                                                                <div className="relative w-full  flex gap-1 justify-between items-center">
-                                                                    {/* Renaming */}
-                                                                    <input
-                                                                        type="text"
-                                                                        ref={listRenameRef}
-                                                                        className="w-full dark:bg-gray-800 group-hover:bg-gray-200 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
-                                                                        defaultValue={list.title.rendered}
-                                                                        onBlur={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setListRename(false);
-                                                                            handleRenameList(e.target.value);
-                                                                        }}
-                                                                        onKeyDown={(e) => {
-                                                                            e.stopPropagation();
-                                                                            if (e.key === 'Enter') {
-                                                                                setListRename(false);
-                                                                                handleRenameList(e.target.value);
-                                                                            }
-                                                                        }}
-                                                                        onChange={handleRenameInput}
-                                                                    />
-                                                                    <div>
-                                                                        {/* quanity of words */}
-                                                                        <span className=" text-xs font-bold">{startingValue}/32</span>
-                                                                    </div>
-                                                                </div>
-
-                                                                :
-                                                                // No Renaming
-                                                                <p className="font-bold text-sm md:text-lg whitespace-normal break-all">
-                                                                    {list.title.rendered}
-                                                                </p>
-                                                            }
-
-                                                            {/* List Actions Button */}
-                                                            <button onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleListSettings(list.id);
-                                                            }}
-                                                                className="relative !z-[9999]"  >
-                                                                <SettingsIcon className="w-6 h-6 settings-icon dark:text-gray-600 text-gray-800 cursor-pointer" />
-                                                            </button>
-
-                                                        </div>
+                                                        <List setStartingValue={setStartingValue} startingValue={startingValue} list={list} provided={provided} snapshot={snapshot} handleListSettings={handleListSettings} handleRenameList={handleRenameList} listRename={listRename} setListRename={setListRename} listRenameRef={listRenameRef} handleRenameInput={handleRenameInput} />
                                                     )}
                                                 </Draggable>
 
@@ -340,19 +241,19 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                                                     listSettings === list.id && (
                                                         <div className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
                                                             <div className="flex flex-col gap-0.5">
-                                                                <button onClick={() => handleRenameClick(list.id)} className="px-3 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                                <button onClick={() => handleRenameClick(list.id)} className=" cursor-pointer px-3 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                                     <RenameIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Rename
                                                                 </button>
-                                                                <button className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                                <button className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                                     <CopyIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Copy
                                                                 </button>
-                                                                <button className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                                <button className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                                     <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Share
                                                                 </button>
-                                                                <button onClick={() => { handleDeleteList(list.id, token) }} className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
+                                                                <button onClick={() => { handleDeleteList(list.id, token) }} className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Delete
                                                                 </button>
@@ -374,16 +275,9 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                     ) : (
                         // Lists Loaded from the server (if any pre-rendered)
                         lists && lists.length > 0 ? (
-                            <div className="mt-8 flex flex-col gap-4 w-full  ">
+                            <div className="mt-8 flex flex-col gap-6 w-full  ">
                                 {lists.map((list) => (
-                                    <div key={list.id} className="flex justify-between border items-center px-6 py-3 rounded-lg shadow-xl shadow-[#00000022] dark:bg-black bg-white min-w-full w-full md:min-w-[550px] transition-colors duration-200 hover:dark:bg-gray-900 hover:bg-gray-100 mx-auto relative">
-                                        <p className="font-bold text-sm md:text-lg whitespace-normal break-all">
-                                            {list.title.rendered}
-                                        </p>
-                                        <button className="relative !z-[9999]" >
-                                            <SettingsIcon className="w-6 h-6 settings-icon dark:text-gray-600 text-gray-800 cursor-pointer" />
-                                        </button>
-                                    </div>
+                                    <List decoy={true} key={list.id} startingValue={startingValue} list={list} handleListSettings={handleListSettings} handleRenameList={handleRenameList} listRename={listRename} setListRename={setListRename} listRenameRef={listRenameRef} handleRenameInput={handleRenameInput} />
                                 ))}
                             </div>
                         ) : (

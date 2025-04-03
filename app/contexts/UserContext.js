@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from 'react';
-import { setCookie, getCookie, deleteCookie } from 'cookies-next'; // Cookie library
+import { setCookie, getCookie, deleteCookie } from 'cookies-next';
 import CryptoJS from 'crypto-js'; // Encryption library
 import { useListContext } from './ListContext';
 
