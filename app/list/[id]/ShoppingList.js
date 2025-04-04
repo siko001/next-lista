@@ -97,7 +97,6 @@ export default function ShoppingList({ isRegistered, userName, list, token }) {
             try {
                 // 1. Fetch ALL products
                 const products = await fetchProducts(token);
-                console.log('Fetched products:', products);
                 setAllProducts(products);
 
                 // 2. Fetch linked products for THIS list
@@ -112,7 +111,6 @@ export default function ShoppingList({ isRegistered, userName, list, token }) {
 
                 if (response.ok) {
                     const data = await response.json();
-                    console.log('Fetched linked products:', data.linkedProducts);
                     setCheckedProducts(data.linkedProducts);
                 }
             } catch (error) {
@@ -147,13 +145,15 @@ export default function ShoppingList({ isRegistered, userName, list, token }) {
                 </div>
 
                 <div className="flex flex-col gap-6">
-                    {[].map((product, index) => (
-                        < div key={index} className="flex min-w-[300px] text-center max-w-[300px] mx-auto items-center justify-between gap-12 px-2 py-4 bg-gray-800 rounded-lg">
-                            <div className="flex items-center gap-4">
-                                <h3 className="text-lg font-semibold">{product.title}</h3>
+                    {checkedProducts.map((product, index) => (
+                        product === 0 ? null : (
+                            <div key={index} className="flex min-w-[300px] text-center max-w-[300px] mx-auto items-center justify-between gap-12 px-2 py-4 bg-gray-800 rounded-lg">
+                                <div className="flex items-center gap-4">
+                                    <h3 className="text-lg font-semibold">{product}</h3>
+                                </div>
                             </div>
-                        </div>
-                    )) || []}
+                        )
+                    ))}
                 </div>
 
             </div>

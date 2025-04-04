@@ -26,10 +26,7 @@ export const ProductProvider = ({ children }) => {
             });
 
             const data = await response.json();
-            // console.log("data from getAllProducts:", data);
-            // setProducts(data);
             return data
-
         } catch (error) {
             console.error("Failed to fetch all products:", error);
             return [];
