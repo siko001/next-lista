@@ -1,9 +1,63 @@
 'use client'
 import Button from '../../components/Button';
 import gsap from 'gsap';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useProductContext } from '../../contexts/ProductContext';
+import SearchIcon from '../svgs/SearchIcon';
+import { decryptToken } from '../../lib/helpers';
+import "../../css/checkbox.css";
+import CloseIcon from '../svgs/CloseIcon';
+import { useParams } from 'next/navigation';
 
-export default function AddProduct({ setProductOverlay }) {
+export default function AddProduct({ setProductOverlay, token, checkedProducts, setCheckedProducts, allProducts }) {
+
+    // const { products: initialProducts } = useProductContext();
+    const [products, setProducts] = useState(allProducts);
+    const [originalProducts] = useState(allProducts);
+
+    const { searchRef } = useRef();
+    const [isUpdating, setIsUpdating] = useState(false);
+    const shoppingListId = useParams().id;
+    const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+
+    const updateProductInShoppingList = async (productId, isAdding, token) => {
+        if (!shoppingListId || !token) return;
+        const decryptedToken = decryptToken(token);
+
+        setIsUpdating(true);
+        try {
+            const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${decryptedToken}`
+                },
+                body: JSON.stringify({
+                    shoppingListId,
+                    productId,
+                    action: isAdding ? 'add' : 'remove'
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update shopping list');
+            }
+
+            const data = await response.json();
+
+            // Always use the currentProducts array from the response
+            setCheckedProducts(data.currentProducts);
+
+        } catch (error) {
+            console.error('Error:', error);
+            // Optionally revert the UI state here
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+
+
 
     useEffect(() => {
         gsap.set(".close-product-overlay", {
@@ -17,16 +71,147 @@ export default function AddProduct({ setProductOverlay }) {
         })
     }, [])
 
+
+    // handle esc key and outside click to close the overlay
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setProductOverlay(false);
+            }
+        };
+        const handleOutsideClick = (event) => {
+            if (event.target.classList.contains('close-product-overlay')) {
+                setProductOverlay(false);
+            }
+        };
+
+        window.addEventListener('click', handleOutsideClick);
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('click', handleOutsideClick);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [setProductOverlay]);
+
+
+    const handleSearchProduct = (e) => {
+        const searchValue = e.target.value.toLowerCase();
+
+        if (searchValue === '') {
+            setProducts(originalProducts);
+        } else {
+            const filteredProducts = originalProducts.filter(product =>
+                product.title.toLowerCase().includes(searchValue)
+            );
+            setProducts(filteredProducts);
+        }
+    };
+
+
+    const handleClick = (e) => {
+        // if the checkbox is already checked, do nothing
+        if (e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]').checked) return;
+        const checkbox = e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            checkbox.click();
+        }
+    }
+
+    const handleRemoveProduct = (e) => {
+        const productId = e.target?.parentElement?.parentElement?.querySelector('input[type="checkbox"]')?.id?.split('-')[1] || null;
+        console.log(productId)
+        setCheckedProducts((prev) => prev.filter((id) => id !== parseInt(productId)));
+    }
+
+
+
+
+    const handleCheckboxChange = (productId, token) => {
+        const isCurrentlyChecked = checkedProducts.includes(productId);
+        updateProductInShoppingList(productId, !isCurrentlyChecked, token);
+    };
+
+
+    // const handleCheckboxChange = (productId) => {
+    //     if (checkedProducts.includes(productId)) {
+    //         return;
+    //     }
+
+    //     setCheckedProducts((prev) =>
+    //         prev.includes(productId)
+    //             ? prev.filter((id) => id !== productId)
+    //             : [...prev, productId]
+    //     );
+    // };
+
     return (
         <div>
-            <div className="fixed z-50 inset-0 w-full h-full bg-[#000000cc] blur-sm"></div>
-            <div>
+            <div className="fixed z-50 inset-0 w-full h-full bg-[#000000cc] blur-sm close-product-overlay"></div>
+            <div className="fixed z-50 inset-0  gap-4  left-[50%] -translate-x-1/2 w-[90%]  md:w-1/2  md:min-w-[550px] max-w-[750px]  flex flex-col items-center mt-6 mb-8 md:my-12">
 
-            </div>
-            <div className="fixed bottom-12 left-[50%] translate-x-[-50%] opacity-0 z-50 close-product-overlay">
-                <Button cta="Close Products List" color="#82181a" hover="inwards" action="close-product-overlay" overrideDefaultClasses={"bg-red-500 text-black"} light={true} setProductOverlay={setProductOverlay} />
+                {/* Search Input */}
+                <div className="w-full bg-gray-700 flex items bg-gray-70 center rounded-md relative">
+                    <input onChange={handleSearchProduct} ref={searchRef} placeholder='Search for a Product...' className="w-full rounded-md border-2 transition-colors duration-200 border-transparent focus:border-primary outline-0  placeholder:relative placeholder:top-0.5 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"></input>
+                    <div className="h-full absolute right-0 peer-focus:opacity-0 duration-200 transition-opacity  grid place-items-center mr-2">
+                        <SearchIcon className={'w-8 h-8 text-white'} />
+                    </div>
+                </div>
+
+                <div className="w-full bg-gray-700 h-full mb-14 rounded-md ">
+                    <div className="flex flex-col gap-3 px-4 mt-4">
+                        {/* Products list - modified to handle immediate updates */}
+                        {products.map((product) => (
+                            <div
+                                onClick={() => !isUpdating && handleCheckboxChange(product.id, token)}
+                                key={product.id}
+                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts.includes(product.id) ? 'border-primary' : ''
+                                    } ${isUpdating ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
+                                    <div className="checkbox-wrapper-28">
+                                        <input
+                                            id={`checkbox-${product.id}`}
+                                            type="checkbox"
+                                            className="promoted-input-checkbox peer"
+                                            checked={checkedProducts.includes(product.id)}
+                                            onChange={() => handleCheckboxChange(product.id, token)}
+                                            disabled={isUpdating}
+                                        />
+                                        <label htmlFor={`checkbox-${product.id}`}></label>
+                                        <svg onClick={handleClick} className="absolute -z-0">
+                                            <use href="#checkmark-28" />
+                                        </svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" style={{ display: 'none' }}>
+                                            <symbol id="checkmark-28" viewBox="0 0 24 24">
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeMiterlimit="10"
+                                                    fill="none"
+                                                    d="M22.9 3.7l-15.2 16.6-6.6-7.1"
+                                                />
+                                            </symbol>
+                                        </svg>
+                                    </div>
+                                    {product.title}
+                                </div>
+
+                                <div onClick={handleRemoveProduct} className={`flex items-center transition-opacity duration-300 gap-2 ${checkedProducts.includes(product.id) ? 'opacity-100' : 'opacity-0'}`}>
+                                    <CloseIcon className="w-6 h-6 text-red-500 hover:text-white tranisition-colors duration-200 cursor-pointer" />
+                                </div>
+                            </div>
+                        ))
+                        }
+                    </div>
+                </div>
+
+
+            </div >
+            <div className="fixed bottom-8 left-[50%] translate-x-[-50%] opacity-0 z-50 close-product-overlay">
+                <Button cta="Close Products List" color="#82181a" hover="inwards" action="close-product-overlay" overrideDefaultClasses={"bg-red-500 text-black text-sm md:text-base"} light={true} setProductOverlay={setProductOverlay} />
             </div>
 
-        </div>
+        </div >
     )
 }

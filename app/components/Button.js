@@ -112,8 +112,8 @@ export default function Button(props) {
 			} else {
 				handleClick();
 			}
-		}} className={`relative  cursor-pointer z-20 group ${props.overrideDefaultClasses ? props.overrideDefaultClasses : 'bg-blue-800 text-white'} px-6 py-3 md:px-8 md:py-4 rounded-md overflow-hidden`}>
-			<p className={`z-20 relative delay-75 font-bold  ${props.hover && props.light ? "group-hover:text-white" : "group-hover:text-black"} transition-colors duration-200`}>{props.cta}</p>
+		}} className={`relative  cursor-pointer z-20 group ${props.overrideDefaultClasses ? props.overrideDefaultClasses : 'bg-blue-800 text-primary'}  px-6 py-3 md:px-8 md:py-4 rounded-md overflow-hidden`}>
+			<p className={`z-20 relative delay-75 font-bold  ${props.hover && props.light ? "group-hover:text-white" : "group-hover:text-black"} transition-colors duration-200   ${props.textColorOverride && props.textColorOverride}`}>{props.cta}</p>
 
 			{(props.hover && props.hover === "inwards") && (
 				<>

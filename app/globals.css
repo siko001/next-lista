@@ -2,6 +2,7 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-primary: #21ba9c;
 }
 
 :root {
@@ -20,6 +21,22 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+
+  ::selection {
+    background-color: #00000000;
+  }
+  input::selection {
+    @apply bg-[#21ba97aa] text-[#000000];
+  }
+  input:not(.overlay input):not(#login-form input):not(#register-form input),
+  textarea:not(.overlay textarea),
+  select {
+    @apply border-2  transition-colors duration-200  border-transparent focus:border-primary outline-0;
+  }
+  button:not(.overlay button):not(#site-logo a),
+  a:not(.overlay a):not(a#site-logo) {
+    @apply border-2  transition-colors duration-200 hover:border-current  border-transparent focus:border-primary outline-0;
+  }
 }
 
 /* Add keyframes for the waving animation */
@@ -41,5 +58,3 @@ body {
   animation: wave 3s infinite;
   transform-origin: 70% 70%;
 }
-
-

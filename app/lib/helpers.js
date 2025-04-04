@@ -2,7 +2,7 @@ import CryptoJS from 'crypto-js';
 
 const SECRET_KEY = 'your-secret-key-123'; // Must match the key used for encryption
 
-const decryptToken = (encryptedToken) => {
+export const decryptToken = (encryptedToken) => {
     try {
 
         if (!encryptedToken) return null;

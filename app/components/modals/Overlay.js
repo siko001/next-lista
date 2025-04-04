@@ -24,7 +24,7 @@ export default function Overlay() {
 
 
 	return (
-		<div className={"w-full h-screen fixed z-50 inset-0 grid place-items-center"}>
+		<div className={"w-full h-screen fixed z-50 inset-0 grid place-items-center overlay"}>
 			<div id={"overlay-backdrop"} className="absolute inset-0 opacity-0 w-full h-full backdrop-blur z-10"></div>
 
 			<div id={"overlay-content"} className={"z-20 bg-white p-12 md:p-18 rounded-lg shadow-lg text-black flex flex-col gap-4 relative"}>
@@ -41,9 +41,9 @@ export default function Overlay() {
 				{overlayContent.content && convertContentToComponent(overlayContent.content)}
 
 				<div className={"flex gap-4 justify-between mt-6"}>
-					{overlayContent.action && <Button cta={overlayContent.cta} action={overlayContent.action} color={'#000'} hover={"borders"} />}
+					{overlayContent.action && <Button cta={overlayContent.cta} action={overlayContent.action} textColorOverride={'text-white'} color={'#000'} hover={"borders"} />}
 
-					{overlayContent.cancelAction && <Button cta={"Cancel"} action={"close-overlay"} color={'#fff'} overrideDefaultClasses={"bg-red-500"} hover={"borders"} />}
+					{overlayContent.cancelAction && <Button cta={"Cancel"} action={"close-overlay"} color={'#fff'} textColorOverride={'text-white'} overrideDefaultClasses={"bg-red-500"} hover={"borders"} />}
 				</div>
 
 			</div>

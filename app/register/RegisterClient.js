@@ -341,7 +341,7 @@ const RegisterClient = () => {
 
 
 	return (
-		<main onMouseMove={handleMouseMove}>
+		<main id="register-form" onMouseMove={handleMouseMove}>
 			<Navigation route={'/'} link={"Home"} />
 			<form ref={formRef} className={"flex flex-col items-center max-auto mt-16"} onSubmit={handleSubmit(onSubmit)}>
 				<div className={"flex flex-col gap-4 min-w-[80%] md:min-w-[350px]"}>

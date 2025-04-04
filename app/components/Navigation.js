@@ -13,11 +13,11 @@ export default function Navigation(props) {
 
 					<span className="inline-block wave-emoji">👋</span> {userData?.name}</div>}
 
-				<Link href={`${props.route}`} className={"text-white overflow-hidden group relative  py-3 px-6 xl:px-10 font-bold rounded-full bg-blue-800"}>
-					<p className="relative z-20 group-hover:text-black duration-700">
+				<Link href={`${props.route}`} className={" text-primary overflow-hidden group relative  py-3 px-6 xl:px-10 font-bold rounded-full bg-blue-800"}>
+					<p className="relative z-20 group-hover:text-black duration-700 text-white">
 						{props.link}
 					</p>
-					<div className="absolute w-0 h-0 group-hover:w-full group-hover:h-full transition-all top-[50%] z-10 left-[50%] -translate-x-1/2 -translate-y-1/2 duration-200 bg-[#21ba9c]">
+					<div className="absolute w-0 h-0 group-hover:w-full group-hover:h-full transition-all top-[50%] z-10 left-[50%] -translate-x-1/2 -translate-y-1/2 duration-200 bg-primary">
 					</div>
 				</Link>
 			</div>

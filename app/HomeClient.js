@@ -67,7 +67,6 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                 },
                 body: JSON.stringify({ orders: updates })
             });
-            
         } catch (error) {
             console.error("Reorder failed:", error);
             setUserLists(userLists);
@@ -217,6 +216,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                         cancelAction={"true"}
                         color={"#21ba9c"}
                         hover={"inwards"}
+                        textColorOverride={"text-white"}
                     />
 
                     {/* Actual List */}

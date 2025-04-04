@@ -20,6 +20,6 @@ export default async function Page() {
     // const products = await getAllProducts(token)
 
     return (
-        <ShoppingList isRegistered={isRegistered} userName={userName} list={list} products={[]} />
+        <ShoppingList isRegistered={isRegistered} userName={userName} list={list} token={token} products={[]} />
     )
 }

@@ -5,6 +5,7 @@ import { NotificationProvider } from "./contexts/NotificationContext";
 import { ValidationProvider } from "./contexts/ValidationContext";
 import { ListProvider } from "./contexts/ListContext";
 import { LoadingProvider } from "./contexts/LoadingContext";
+import { ProductProvider } from "./contexts/ProductContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,11 +31,13 @@ export default function RootLayout({ children }) {
 					<NotificationProvider>
 						<ListProvider>
 							<UserProvider>
-								<ValidationProvider>
-									<OverlayProvider>
-										{children}
-									</OverlayProvider>
-								</ValidationProvider>
+								<ProductProvider>
+									<ValidationProvider>
+										<OverlayProvider>
+											{children}
+										</OverlayProvider>
+									</ValidationProvider>
+								</ProductProvider>
 							</UserProvider>
 						</ListProvider>
 					</NotificationProvider>
