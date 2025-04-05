@@ -10,13 +10,10 @@ import CloseIcon from '../svgs/CloseIcon';
 import { useParams } from 'next/navigation';
 
 export default function AddProduct({ setProductOverlay, token, checkedProducts, setCheckedProducts, allProducts }) {
-
-    // const { products: initialProducts } = useProductContext();
     const [products, setProducts] = useState(allProducts);
     const [originalProducts] = useState(allProducts);
 
     const { searchRef } = useRef();
-    const [isUpdating, setIsUpdating] = useState(false);
     const shoppingListId = useParams().id;
     const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
 
@@ -24,7 +21,6 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
         if (!shoppingListId || !token) return;
         const decryptedToken = decryptToken(token);
 
-        setIsUpdating(true);
         try {
             const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
                 method: 'POST',
@@ -39,20 +35,15 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                 }),
             });
 
+            console.log('Response:', response);
             if (!response.ok) {
                 throw new Error('Failed to update shopping list');
             }
 
             const data = await response.json();
-
-            // Always use the currentProducts array from the response
             setCheckedProducts(data.currentProducts);
-
         } catch (error) {
             console.error('Error:', error);
-            // Optionally revert the UI state here
-        } finally {
-            setIsUpdating(false);
         }
     };
 
@@ -112,19 +103,15 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
     const handleClick = (e) => {
         // if the checkbox is already checked, do nothing
         if (e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]').checked) return;
+
         const checkbox = e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]');
-        if (checkbox) {
-            checkbox.click();
-        }
+        if (checkbox) checkbox.click();
     }
 
     const handleRemoveProduct = (e) => {
         const productId = e.target?.parentElement?.parentElement?.querySelector('input[type="checkbox"]')?.id?.split('-')[1] || null;
-        console.log(productId)
         setCheckedProducts((prev) => prev.filter((id) => id !== parseInt(productId)));
     }
-
-
 
 
     const handleCheckboxChange = (productId, token) => {
@@ -133,17 +120,6 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
     };
 
 
-    // const handleCheckboxChange = (productId) => {
-    //     if (checkedProducts.includes(productId)) {
-    //         return;
-    //     }
-
-    //     setCheckedProducts((prev) =>
-    //         prev.includes(productId)
-    //             ? prev.filter((id) => id !== productId)
-    //             : [...prev, productId]
-    //     );
-    // };
 
     return (
         <div>
@@ -163,12 +139,9 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                         {/* Products list - modified to handle immediate updates */}
                         {products.map((product) => (
                             <div
-                                onClick={() => !isUpdating && handleCheckboxChange(product.id, token)}
+                                onClick={() => handleCheckboxChange(product.id, token)}
                                 key={product.id}
-                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts.includes(product.id) ? 'border-primary' : ''
-                                    } ${isUpdating ? 'opacity-50 pointer-events-none' : 'cursor-pointer'
-                                    }`}
-                            >
+                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts.includes(product.id) ? 'border-primary' : ''}`} >
                                 <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
                                     <div className="checkbox-wrapper-28">
                                         <input
@@ -176,9 +149,8 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                                             type="checkbox"
                                             className="promoted-input-checkbox peer"
                                             checked={checkedProducts.includes(product.id)}
-                                            onChange={() => handleCheckboxChange(product.id, token)}
-                                            disabled={isUpdating}
-                                        />
+                                            onChange={() => handleCheckboxChange(product.id, token)} />
+
                                         <label htmlFor={`checkbox-${product.id}`}></label>
                                         <svg onClick={handleClick} className="absolute -z-0">
                                             <use href="#checkmark-28" />

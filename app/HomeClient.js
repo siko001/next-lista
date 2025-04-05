@@ -34,7 +34,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
 
     const { loading } = useLoadingContext();
     const { userData, token, error } = useUserContext();
-    const { userLists, getShoppingList, setUserLists, deleteList } = useListContext();
+    const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists } = useListContext();
     const { overlay } = useOverlayContext();
     const { showNotification } = useNotificationContext();
 
@@ -131,10 +131,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
             list.id === listId
                 ? {
                     ...list,
-                    title: {
-                        rendered: value,
-                        raw: value
-                    }
+                    title: value,
                 }
                 : list
         );
@@ -185,6 +182,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
     };
 
     const handleRenameClick = (id) => {
+
         if (listRename === id) {
             setListRename(false);
         } else {
@@ -198,6 +196,39 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
         setListSettings(false);
     }
 
+
+    const handleCopyList = async (id) => {
+        const copiedList = await copyShoppingList(id, token)
+        if (!copiedList) {
+            showNotification("Failed to copy list", "error");
+            return;
+        }
+        showNotification("List Copied", "success", 1000);
+        setUserLists((prev) => [
+            {
+                ...copiedList,
+                id: copiedList.new_list_id,
+                key: `list-${copiedList.new_list_id}`,
+                title: copiedList.new_list_title,
+                acf: {
+                    product_count: copiedList.product_count,
+                    products: []
+                },
+                isNew: true
+            },
+            ...prev
+        ]);
+
+
+        setTimeout(() => {
+            setUserLists(prev => prev.map(list => ({
+                ...list,
+                isNew: false
+            })));
+        }, 3000);
+
+        setListSettings(false);
+    }
 
 
     // if (loading) return <div>Loading...</div>;
@@ -230,7 +261,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                                             <div key={list.id} className="relative" >
 
                                                 {/* Draggable Item */}
-                                                <Draggable draggableId={String(list.id)} index={index}>
+                                                <Draggable key={list.id} draggableId={String(list.id)} index={index}>
                                                     {(provided, snapshot) => (
                                                         <List setStartingValue={setStartingValue} startingValue={startingValue} list={list} provided={provided} snapshot={snapshot} handleListSettings={handleListSettings} handleRenameList={handleRenameList} listRename={listRename} setListRename={setListRename} listRenameRef={listRenameRef} handleRenameInput={handleRenameInput} />
                                                     )}
@@ -245,7 +276,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                                                                     <RenameIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Rename
                                                                 </button>
-                                                                <button className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                                <button onClick={() => handleCopyList(list.id)} className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                                     <CopyIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Copy
                                                                 </button>
@@ -274,7 +305,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
 
                     ) : (
                         // Lists Loaded from the server (if any pre-rendered)
-                        lists && lists.length > 0 ? (
+                        !hasDeletedLists && lists && lists.length > 0 ? (
                             <div className="mt-8 flex flex-col gap-6 w-full  ">
                                 {lists.map((list) => (
                                     <List decoy={true} key={list.id} startingValue={startingValue} list={list} handleListSettings={handleListSettings} handleRenameList={handleRenameList} listRename={listRename} setListRename={setListRename} listRenameRef={listRenameRef} handleRenameInput={handleRenameInput} />

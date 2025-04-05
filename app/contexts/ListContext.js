@@ -9,7 +9,7 @@ const ListContext = createContext();
 export const ListProvider = ({ children }) => {
     const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
     const { showNotification } = useNotificationContext();
-
+    const [hasDeletedLists, setHasDeletedLists] = useState(false);
     const [shoppingList, setShoppingList] = useState({
         name: "",
         userId: null,
@@ -20,18 +20,27 @@ export const ListProvider = ({ children }) => {
 
     // Create List
     const createShoppingList = async (listData) => {
+        // Find the minimum menu_order value
+        const minMenuOrder = userLists.reduce((min, list) => {
+            return Math.min(min, list.menu_order || 0);
+        }, 0);
+
+        // Set new menu_order to be 1 less than the current minimum
+        const newMenuOrder = minMenuOrder - 1;
+
         const url = `${WP_API_BASE}/wp/v2/shopping-list`;
         const method = "POST";
 
         const body = {
             title: listData.name,
             status: "publish",
+            menu_order: newMenuOrder, // This ensures it appears first
             acf: {
                 owner_id: listData.userId,
                 owner_token: listData.token,
             }
-        };
 
+        };
 
         const res = await sendApiRequest(url, method, listData.token, body);
         return res;
@@ -51,6 +60,7 @@ export const ListProvider = ({ children }) => {
             });
 
             const data = await response.json();
+            console.log("Fetched lists:", data);
             const result = Array.isArray(data)
                 ? data.filter(list => list.acf?.owner_id == userId)
                 : [];
@@ -61,6 +71,7 @@ export const ListProvider = ({ children }) => {
             }
             );
             setUserLists(result);
+
             return result;
         } catch (error) {
             console.error("Failed to fetch lists:", error);
@@ -107,8 +118,8 @@ export const ListProvider = ({ children }) => {
             }
 
             const data = await response.json();
-            // play animation of list being deleted
 
+            setHasDeletedLists(true);
             gsap.fromTo(`#list-${listId}`,
                 {
                     opacity: 1,
@@ -133,17 +144,60 @@ export const ListProvider = ({ children }) => {
     };
 
 
+    const copyShoppingList = async (listId, token) => {
+        if (!listId || !token) return null;
+
+        try {
+            // Get current minimum menu_order from existing lists
+            const minMenuOrder = userLists.reduce((min, list) => {
+                return Math.min(min, list.menu_order || 0);
+            }, 0);
+
+            const newMenuOrder = minMenuOrder - 1;
+
+            const response = await fetch(`${WP_API_BASE}/custom/v1/copy-shopping-list`, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    source_list_id: listId,
+                    new_menu_order: newMenuOrder  // Pass the calculated order to backend
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Ensure the response includes our new menu_order
+            return {
+                ...data,
+                menu_order: newMenuOrder
+            };
+
+        } catch (error) {
+            console.error('Error copying shopping list:', error);
+            return null;
+        }
+    };
+
 
     return (
         <ListContext.Provider value={{
             shoppingList,
             setShoppingList,
             sendApiRequest,
+            hasDeletedLists,
             createShoppingList,
             userLists,
             getShoppingList,
             setUserLists,
-            deleteList
+            deleteList,
+            copyShoppingList
         }}>
             {children}
         </ListContext.Provider>

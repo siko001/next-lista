@@ -112,6 +112,32 @@ export const getAllProducts = async (encryptedToken) => {
 
 
 
+// 2. Fetch linked products for THIS list
+export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
+    const token = decryptToken(encryptedToken);
+    if (!token) {
+        return [];
+    }
+    const url = `${WP_API_BASE}/custom/v1/get-shopping-list-products?shoppingListId=${shoppingListId}`;
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Failed to fetch linked products:", error);
+        return [];
+    }
+}
+
+
+
 export const extractUserName = (jsonString) => {
     try {
         const data = JSON.parse(jsonString);

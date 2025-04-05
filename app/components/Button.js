@@ -11,7 +11,7 @@ import gsap from "gsap";
 
 export default function Button(props) {
 	const { setOverlay, setOverlayContent, closeOverlay } = useOverlayContext();
-	const { shoppingList, createShoppingList, getShoppingList } = useListContext();
+	const { shoppingList, createShoppingList, getShoppingList, setUserLists } = useListContext();
 	const { userData, token } = useUserContext();
 	const { errors, setErrors, hasTyped } = useValidationContext();
 	const { showNotification } = useNotificationContext();
@@ -81,9 +81,26 @@ export default function Button(props) {
 
 				// Call the createShoppingList function
 				const res = await createShoppingList(data);
-				await getShoppingList(userData.id, token);
+				const allLists = await getShoppingList(userData.id, token);
 
 				if (res) {
+					// Add animation state to the new list
+					const listsWithAnimation = allLists.map(list => ({
+						...list,
+						isNew: list.id === res.id // Mark the new list
+
+					}));
+
+					setUserLists(listsWithAnimation);
+
+					// Remove the animation after 5 seconds
+					setTimeout(() => {
+						setUserLists(prev => prev.map(list => ({
+							...list,
+							isNew: false
+						})));
+					}, 3000);
+
 
 					showNotification(`List ${res.title.raw} created`, "success", 2000);
 					closeOverlay();

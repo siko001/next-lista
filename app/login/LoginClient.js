@@ -207,7 +207,6 @@ const LoginClient = () => {
 
 
 
-
 	return (
 		<main id="login-form" onMouseMove={handleMouseMove}>
 			<Navigation route={'/'} link={"Home"} />

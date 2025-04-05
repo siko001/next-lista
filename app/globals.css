@@ -33,7 +33,7 @@ body {
   select {
     @apply border-2  transition-colors duration-200  border-transparent focus:border-primary outline-0;
   }
-  button:not(.overlay button):not(#site-logo a),
+  button:not(.overlay button):not(#site-logo a):not(.shopping-list button),
   a:not(.overlay a):not(a#site-logo) {
     @apply border-2  transition-colors duration-200 hover:border-current  border-transparent focus:border-primary outline-0;
   }
@@ -57,4 +57,20 @@ body {
   display: inline-block;
   animation: wave 3s infinite;
   transform-origin: 70% 70%;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.new-list {
+  @apply duration-200 ease-in-out border-2 border-green-500;
+  animation: slideDown 0.5s ease-out;
 }
