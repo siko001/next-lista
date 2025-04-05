@@ -2,8 +2,6 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { useNotificationContext } from './NotificationContext';
 import gsap from 'gsap';
-
-
 const ListContext = createContext();
 
 export const ListProvider = ({ children }) => {

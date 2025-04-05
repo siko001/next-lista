@@ -81,7 +81,7 @@ export default function List({ list, provided, snapshot, handleListSettings, han
 
                 <div className="flex items-center gap-2 justify-between">
 
-                    <div className="text-xs md:text-base 2xl:text-lg font-bold text-gray-600 dark:text-gray-400 relative top-[1px]">
+                    <div className="text-xs md:text-base 2xl:text-lg font-bold whitespace-pre text-gray-600 dark:text-gray-400 relative top-[1px]">
                         {(list?.acf?.product_count && list?.acf?.product_count != 0) && `0 / ${list?.acf?.product_count}`}
                     </div>
 

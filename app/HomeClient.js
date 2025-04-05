@@ -14,6 +14,7 @@ import Header from "./components/Header";
 import Button from "./components/Button";
 import Overlay from "./components/modals/Overlay";
 import Notification from "./components/Notification";
+import ShareListDialog from "./components/modals/ShareListDialog";
 
 // Icons
 import CopyIcon from "./components/svgs/CopyIcon";
@@ -27,6 +28,7 @@ import List from "./components/parts/List";
 
 const HomeClient = ({ isRegistered, userName, lists }) => {
     const [listSettings, setListSettings] = useState(false);
+    const [shareDialogOpen, setShareDialogOpen] = useState(null);
 
     const [listRename, setListRename] = useState(false);
     const [startingValue, setStartingValue] = useState(null);
@@ -125,6 +127,12 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
         const updateData = {
             title: value,
         };
+
+        if (list.title === value) {
+            setListRename(false);
+            return;
+        }
+
 
         // Optimistic UI update
         const updatedLists = userLists.map((list) =>
@@ -280,7 +288,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                                                                     <CopyIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Copy
                                                                 </button>
-                                                                <button className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                                <button onClick={() => setShareDialogOpen(list.id)} className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                                     <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Share
                                                                 </button>
@@ -337,6 +345,13 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
             {loading && <div className="fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">  <ListLoader />  </div>}
 
             <Notification />
+
+            {shareDialogOpen && (
+                <ShareListDialog
+                    listId={shareDialogOpen}
+                    onClose={() => setShareDialogOpen(null)}
+                />
+            )}
 
         </main >
     );
