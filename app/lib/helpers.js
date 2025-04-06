@@ -47,15 +47,31 @@ export const getShoppingList = async (userId, encryptedToken) => {
         });
 
         const data = await response.json();
-        const result = Array.isArray(data)
-            ? data.filter(list => list.acf?.owner_id == userId)
+        // BEFORE UPDATING TO INCLUDE THE SHARED LISTS (ALSO IN LIST CONTEXT)
+        // const result = Array.isArray(data)
+        //     ? data.filter(list => list.acf?.owner_id == userId)
+        //     : [];
+
+        // // sort by menu_order
+        // result.sort((a, b) => {
+        //     return a.menu_order - b.menu_order;
+        // });
+        // return result;
+
+
+        const filteredLists = Array.isArray(data)
+            ? data.filter(list => {
+                const isOwner = list?.acf?.owner_id == userId;
+                const isShared = list.acf.shared_with_users != false && list?.acf?.shared_with_users?.some(user => user.ID == userId);
+                return isOwner || isShared;
+            })
             : [];
 
-        // sort by menu_order
-        result.sort((a, b) => {
-            return a.menu_order - b.menu_order;
-        });
-        return result;
+        // Sort by menu_order
+        filteredLists.sort((a, b) => a.menu_order - b.menu_order);
+        return filteredLists;
+
+
     } catch (error) {
         console.error("Failed to fetch lists:", error);
         return [];

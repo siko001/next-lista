@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useContext, useState, useCallback } from 'react';
 import { useNotificationContext } from './NotificationContext';
+import { decryptToken } from '../lib/helpers';
 import gsap from 'gsap';
 const ListContext = createContext();
 
@@ -32,12 +33,11 @@ export const ListProvider = ({ children }) => {
         const body = {
             title: listData.name,
             status: "publish",
-            menu_order: newMenuOrder, // This ensures it appears first
+            menu_order: newMenuOrder,
             acf: {
                 owner_id: listData.userId,
                 owner_token: listData.token,
             }
-
         };
 
         const res = await sendApiRequest(url, method, listData.token, body);
@@ -46,8 +46,8 @@ export const ListProvider = ({ children }) => {
 
     // Fetch shopping lists for the user
     const getShoppingList = async (userId, token) => {
-        // Change to ASCENDING order to match typical UI expectations
         const url = `${WP_API_BASE}/custom/v1/shopping-lists-by-owner/${userId}`;
+
         try {
             const response = await fetch(url, {
                 method: "GET",
@@ -58,19 +58,20 @@ export const ListProvider = ({ children }) => {
             });
 
             const data = await response.json();
-            console.log("Fetched lists:", data);
-            const result = Array.isArray(data)
-                ? data.filter(list => list.acf?.owner_id == userId)
+            // Filter lists where user is either owner or shared with
+            const filteredLists = Array.isArray(data)
+                ? data.filter(list => {
+                    const isOwner = list.acf.owner_id == userId;
+                    const isShared = list.acf.shared_with_users != false && list.acf.shared_with_users.some(user => user.ID == userId);
+                    return isOwner || isShared;
+                })
                 : [];
 
-            // sort by menu_order
-            result.sort((a, b) => {
-                return a.menu_order - b.menu_order;
-            }
-            );
-            setUserLists(result);
+            // Sort by menu_order
+            filteredLists.sort((a, b) => a.menu_order - b.menu_order);
 
-            return result;
+            setUserLists(filteredLists);
+            return filteredLists;
         } catch (error) {
             console.error("Failed to fetch lists:", error);
             return [];

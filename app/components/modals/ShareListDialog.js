@@ -2,7 +2,7 @@
 const ShareListDialog = ({ listId, onClose }) => {
     // const [showOptions, setShowOptions] = useState(false);
     const listUrl = `${window.location.origin}/shared-list/${listId}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Check out this shopping list: ${listUrl}`)}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Sharing this list with you: ${listUrl}`)}`;
     const messengerUrl = `fb-messenger://share?link=${encodeURIComponent(listUrl)}`;
 
     const copyToClipboard = () => {
