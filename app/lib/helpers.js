@@ -62,7 +62,7 @@ export const getShoppingList = async (userId, encryptedToken) => {
         const filteredLists = Array.isArray(data)
             ? data.filter(list => {
                 const isOwner = list?.acf?.owner_id == userId;
-                const isShared = list.acf.shared_with_users != false && list?.acf?.shared_with_users?.some(user => user.ID == userId);
+                const isShared = list?.acf?.shared_with_users != false && list?.acf?.shared_with_users?.some(user => user.ID == userId);
                 return isOwner || isShared;
             })
             : [];
