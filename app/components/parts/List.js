@@ -2,9 +2,12 @@ import SettingsIcon from "../svgs/SettingsIcon";
 import Progressbar from "./Progressbar";
 import { decodeHtmlEntities } from "../../lib/helpers";
 import { setCookie } from 'cookies-next';
+import { useListContext } from "../../contexts/ListContext";
 
 
-export default function List({ list, provided, snapshot, handleListSettings, handleRenameList, listRename, setListRename, listRenameRef, handleRenameInput, startingValue, setStartingValue }) {
+export default function List({ listSettings, list, provided, snapshot, handleListSettings, handleRenameList, token }) {
+    const { listRenameRef, setStartingValue, listRename, setListRename, handleRenameInput, startingValue, } = useListContext();
+
     const handleGoToList = (e) => {
         e.stopPropagation();
         const listId = list.id;
@@ -46,13 +49,13 @@ export default function List({ list, provided, snapshot, handleListSettings, han
                             onBlur={(e) => {
                                 e.stopPropagation();
                                 setListRename(false);
-                                handleRenameList(e.target.value);
+                                handleRenameList(e.target.value, token);
                             }}
                             onKeyDown={(e) => {
                                 e.stopPropagation();
                                 if (e.key === 'Enter') {
                                     setListRename(false);
-                                    handleRenameList(e.target.value);
+                                    handleRenameList(e.target.value, token);
                                 }
                             }}
                             onChange={handleRenameInput} />
@@ -91,7 +94,7 @@ export default function List({ list, provided, snapshot, handleListSettings, han
                         handleListSettings(list.id);
                     }}
                         className="relative !z-[9999]"  >
-                        <SettingsIcon className="w-6 h-6 settings-icon dark:text-gray-600 text-gray-800 hover:text-gray-400 duration-200 transition-colors  cursor-pointer" />
+                        <SettingsIcon className={`w-6 h-6 settings-icon ${listSettings === list.id ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors  cursor-pointer`} />
                     </button>
                 </div>
             </div>

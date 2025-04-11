@@ -2,7 +2,6 @@
 import Button from '../../components/Button';
 import gsap from 'gsap';
 import { useEffect, useRef, useState } from 'react';
-import { useProductContext } from '../../contexts/ProductContext';
 import SearchIcon from '../svgs/SearchIcon';
 import { decryptToken } from '../../lib/helpers';
 import "../../css/checkbox.css";
@@ -35,34 +34,66 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                 }),
             });
 
-            console.log('Response:', response);
             if (!response.ok) {
                 throw new Error('Failed to update shopping list');
             }
 
             const data = await response.json();
-            setCheckedProducts(data.currentProducts);
+
+            // Update to handle the new structure - map to just IDs if needed
+            // Either keep the full objects or just the IDs depending on your needs
+            setCheckedProducts(data.linkedProducts); // Use the full objects from backend
+
         } catch (error) {
-            console.error('Error:', error);
+            // console.error('Error:', error);
         }
     };
 
+    // Modify the checkbox change handler
+    const handleCheckboxChange = (productId, token) => {
+        const isCurrentlyChecked = checkedProducts.some(product => product.id === productId);
+        updateProductInShoppingList(productId, !isCurrentlyChecked, token);
+    };
 
+    // Modify the remove product handler
+    const handleRemoveProduct = (e, productId) => {
+        e.stopPropagation(); // Prevent triggering the parent click
+        setCheckedProducts(prev => prev.filter(product => product.id !== productId));
+        updateProductInShoppingList(productId, false, token);
+    };
 
 
     useEffect(() => {
-        gsap.set(".close-product-overlay", {
+        gsap.set(".close-product-overlay-btn", {
             y: 200,
             opacity: 1,
         })
-        gsap.to(".close-product-overlay", {
+        gsap.to(".close-product-overlay-btn", {
             y: 0,
             duration: 0.5,
             ease: "power2.out",
         })
     }, [])
 
+    const handleSearchProduct = (e) => {
+        const searchValue = e.target.value.toLowerCase();
 
+        if (searchValue === '') {
+            setProducts(originalProducts);
+        } else {
+            const filteredProducts = originalProducts.filter(product =>
+                product.title.toLowerCase().includes(searchValue)
+            );
+            setProducts(filteredProducts);
+        }
+    };
+    const handleClick = (e) => {
+        // if the checkbox is already checked, do nothing
+        if (e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]').checked) return;
+
+        const checkbox = e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.click();
+    }
     // handle esc key and outside click to close the overlay
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -85,46 +116,10 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
         };
     }, [setProductOverlay]);
 
-
-    const handleSearchProduct = (e) => {
-        const searchValue = e.target.value.toLowerCase();
-
-        if (searchValue === '') {
-            setProducts(originalProducts);
-        } else {
-            const filteredProducts = originalProducts.filter(product =>
-                product.title.toLowerCase().includes(searchValue)
-            );
-            setProducts(filteredProducts);
-        }
-    };
-
-
-    const handleClick = (e) => {
-        // if the checkbox is already checked, do nothing
-        if (e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]').checked) return;
-
-        const checkbox = e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]');
-        if (checkbox) checkbox.click();
-    }
-
-    const handleRemoveProduct = (e) => {
-        const productId = e.target?.parentElement?.parentElement?.querySelector('input[type="checkbox"]')?.id?.split('-')[1] || null;
-        setCheckedProducts((prev) => prev.filter((id) => id !== parseInt(productId)));
-    }
-
-
-    const handleCheckboxChange = (productId, token) => {
-        const isCurrentlyChecked = checkedProducts.includes(productId);
-        updateProductInShoppingList(productId, !isCurrentlyChecked, token);
-    };
-
-
-
     return (
         <div>
-            <div className="fixed z-50 inset-0 w-full h-full bg-[#000000cc] blur-sm close-product-overlay"></div>
-            <div className="fixed z-50 inset-0  gap-4  left-[50%] -translate-x-1/2 w-[90%]  md:w-1/2  md:min-w-[550px] max-w-[750px]  flex flex-col items-center mt-6 mb-8 md:my-12">
+            <div className="fixed z-[99] inset-0 w-full h-full bg-[#000000cc] blur-sm close-product-overlay"></div>
+            <div className="fixed z-[100] inset-0  gap-4  left-[50%] -translate-x-1/2 w-[90%]  md:w-1/2  md:min-w-[550px] max-w-[750px]  flex flex-col items-center mt-6 mb-8 md:my-12">
 
                 {/* Search Input */}
                 <div className="w-full bg-gray-700 flex items bg-gray-70 center rounded-md relative">
@@ -141,15 +136,16 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                             <div
                                 onClick={() => handleCheckboxChange(product.id, token)}
                                 key={product.id}
-                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts.includes(product.id) ? 'border-primary' : ''}`} >
+                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts.some(p => p.id === product.id) ? 'border-primary' : ''}`} >
                                 <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
                                     <div className="checkbox-wrapper-28">
                                         <input
                                             id={`checkbox-${product.id}`}
                                             type="checkbox"
                                             className="promoted-input-checkbox peer"
-                                            checked={checkedProducts.includes(product.id)}
+                                            checked={checkedProducts.some(p => p.id === product.id)}
                                             onChange={() => handleCheckboxChange(product.id, token)} />
+
 
                                         <label htmlFor={`checkbox-${product.id}`}></label>
                                         <svg onClick={handleClick} className="absolute -z-0">
@@ -169,18 +165,17 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                                     {product.title}
                                 </div>
 
-                                <div onClick={handleRemoveProduct} className={`flex items-center transition-opacity duration-300 gap-2 ${checkedProducts.includes(product.id) ? 'opacity-100' : 'opacity-0'}`}>
+                                <div onClick={(e) => handleRemoveProduct(e, product.id)} className={`flex items-center transition-opacity duration-300 gap-2 ${checkedProducts.some(p => p.id === product.id) ? 'opacity-100' : 'opacity-0'}`}>
                                     <CloseIcon className="w-6 h-6 text-red-500 hover:text-white tranisition-colors duration-200 cursor-pointer" />
                                 </div>
                             </div>
-                        ))
-                        }
+                        ))}
                     </div>
                 </div>
 
 
             </div >
-            <div className="fixed bottom-8 left-[50%] translate-x-[-50%] opacity-0 z-50 close-product-overlay">
+            <div className="fixed bottom-8 left-[50%] translate-x-[-50%] opacity-0 z-[100] close-product-overlay-btn">
                 <Button cta="Close Products List" color="#82181a" hover="inwards" action="close-product-overlay" overrideDefaultClasses={"bg-red-500 text-black text-sm md:text-base"} light={true} setProductOverlay={setProductOverlay} />
             </div>
 

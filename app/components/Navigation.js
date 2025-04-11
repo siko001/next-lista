@@ -6,7 +6,7 @@ export default function Navigation(props) {
 
 	return (
 		<div className={" py-4 md:py-6 px-4 md:px-8 xl:px-16 flex justify-between items-center gap-12"}>
-			<div className={"font-bold text-3xl"}>Lista</div>
+			<Link id="site-logo" href={"/"} className={"font-bold text-3xl"}>Lista</Link>
 
 			<div className="flex gap-4 items-center">
 				{(userData && userData.registered === "yes") && <div className={"text-white flex gap-2"}>

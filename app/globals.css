@@ -74,3 +74,11 @@ body {
   @apply duration-200 ease-in-out border-2 border-green-500;
   animation: slideDown 0.5s ease-out;
 }
+
+input {
+  transition: width 1s ease-in-out; /* Smooth transition for width */
+}
+
+input.expanded {
+  width: 100%; /* Expand to full width */
+}

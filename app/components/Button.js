@@ -29,9 +29,24 @@ export default function Button(props) {
 				duration: 0.5,
 				ease: "power2.out",
 			})
-			return;
 		}
-	});
+	}, [props.action]);
+
+
+	useEffect(() => {
+		// submit on enter
+		const handleKeyDown = (e) => {
+			if (e.key === "Enter") {
+				handleClick();
+			}
+		};
+		if (props.action === "create-a-list") {
+			window.addEventListener("keydown", handleKeyDown);
+		}
+		return () => {
+			window.removeEventListener("keydown", handleKeyDown);
+		};
+	})
 
 
 

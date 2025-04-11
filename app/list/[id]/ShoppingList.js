@@ -1,60 +1,52 @@
 'use client'
 import { useParams } from 'next/navigation'
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import gsap from 'gsap';
 import { decryptToken } from "../../lib/helpers";
 
 // Contexts
-import { useUserContext } from "../../contexts/UserContext";
-import { useListContext } from "../../contexts/ListContext";
 import { useOverlayContext } from "../../contexts/OverlayContext";
 import { useLoadingContext } from "../../contexts/LoadingContext";
 import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useProductContext } from "../../contexts/ProductContext";
-
-// Icons
-import SettingsIcon from '../../components/svgs/SettingsIcon';
-import SearchIcon from '../../components/svgs/SearchIcon';
 
 // Components
 import Header from "../../components/Header";
 import ListLoader from '../../components/loaders/ListLoader';
 import Overlay from '../../components/modals/Overlay';
 import Notification from '../../components/Notification';
-import Progressbar from '../../components/parts/Progressbar';
 import Button from '../../components/Button';
 import AddProduct from '../../components/modals/AddProduct';
 import ShoppingListHeader from '../../components/parts/ShoppingListHeader';
 import Product from '../../components/parts/Product';
-
+import ShareListDialog from '../../components/modals/ShareListDialog';
+import SettingsIcon from '../../components/svgs/SettingsIcon';
+import BagIcon from '../../components/svgs/BagIcon';
+import XBagIcon from '../../components/svgs/XBagIcon';
+import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
 
 export default function ShoppingList({ isRegistered, userName, list, token, products }) {
+
+    console.log(products)
     const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
     const { loading } = useLoadingContext();
     const { overlay } = useOverlayContext();
     const { getAllProducts } = useProductContext();
     const [productOverlay, setProductOverlay] = useState(false);
     const [checkedProducts, setCheckedProducts] = useState([]);
+    const [baggedProducts, setBaggedProducts] = useState([]);
     const shoppingListId = useParams().id;
     const [allProducts, setAllProducts] = useState([]);
+    const [shareDialogOpen, setShareDialogOpen] = useState(false)
+
+    const [checklistSettings, setChecklistSettings] = useState(false);
+    const [baggedSettings, setBaggedSettings] = useState(false);
 
     const fetchProducts = async (token) => {
         return await getAllProducts(token);
     }
 
-    useEffect(() => {
-        gsap.set(".open-product-overlay", {
-            y: 200,
-            opacity: 1,
-        })
-        gsap.to(".open-product-overlay", {
-            y: 0,
-            duration: 0.5,
-            ease: "power2.out",
-        })
-    }, [])
 
     useEffect(() => {
         const fetchAllData = async () => {
@@ -67,7 +59,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
                 setAllProducts(products);
 
                 // 2. Fetch linked products for THIS list
-                const response = await fetch(
+                const checkedResponse = await fetch(
                     `${WP_API_BASE}/custom/v1/get-shopping-list-products?shoppingListId=${shoppingListId}`,
                     {
                         headers: {
@@ -76,10 +68,27 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
                     }
                 );
 
-                if (response.ok) {
-                    const data = await response.json();
-                    setCheckedProducts(data.linkedProducts);
+                const baggedResponse = await fetch(
+                    `${WP_API_BASE}/custom/v1/get-bagged-products?shoppingListId=${shoppingListId}`,
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${decryptedToken}`
+                        }
+                    }
+                );
+
+
+
+                if (checkedResponse.ok) {
+                    const checkedData = await checkedResponse.json();
+                    setCheckedProducts(checkedData.linkedProducts);
                 }
+                if (baggedResponse.ok) {
+                    const baggedData = await baggedResponse.json();
+                    setBaggedProducts(baggedData.baggedProducts);
+                }
+
+
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -87,6 +96,46 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
 
         fetchAllData();
     }, [shoppingListId, token]);
+
+
+
+    const handleOpenChecklistSettings = () => {
+        setChecklistSettings((prev) => !prev);
+    }
+
+    const handleOpenBaggedSettings = () => {
+        setBaggedSettings((prev) => !prev);
+    }
+
+    useEffect(() => {
+        // Close the checklist settings when clicking outside
+        const handleClickOutside = (event) => {
+            if (event.target.closest('.checklist-settings') === null) {
+                setChecklistSettings(false);
+            }
+            if (event.target.closest('.bagged-settings') === null) {
+                setBaggedSettings(false);
+            }
+        };
+
+
+
+        // close if esc is pressed  
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setChecklistSettings(false);
+                setBaggedSettings(false);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('click', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('click', handleClickOutside);
+        };
+    })
+
     return (
         <main >
 
@@ -94,18 +143,72 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
 
             <div className=" relatve px-4">
 
-                <ShoppingListHeader list={list} />
+                <ShoppingListHeader setShareDialogOpen={setShareDialogOpen} token={token} list={list} />
 
 
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4 w-full max-w-[740px] mx-auto  mt-4 px-4 mb-32">
+                    <div className="flex items-center justify-between">
+
+
+                        {checkedProducts?.length !== 0 ?
+                            // Real List  checked products Header
+                            (
+                                <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative  gap-1 checklist-settings">
+                                    <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
+                                    <div>
+                                        <span className="text-2xl font-bold">Checklist </span>
+                                        <span className="text-sm text-gray-500 ml-2">{checkedProducts?.length} products</span>
+                                    </div>
+
+                                    {
+                                        checklistSettings && (
+                                            <>
+                                                {/* Settings for checklist */}
+                                                <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                                    <div className="flex flex-col gap-0.5">
+
+                                                        <button className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                            <BagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
+                                                            Bag All Items
+                                                        </button>
+                                                        <button className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
+                                                            <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
+                                                            Remove All Items
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )
+                                    }
+
+                                </h3>
+                            )
+                            :
+                            // Server side checked products Header
+                            products.length !== 0 &&
+                            (
+                                <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative  gap-1 checklist-settings">
+
+                                    <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
+                                    <div>
+                                        <span className="text-2xl font-bold">Checklist </span>
+                                        <span className="text-sm text-gray-500 ml-2">{products?.length} products</span>
+                                    </div>
+                                </h3>
+                            )
+
+                        }
+                    </div>
+
+                    {/* PRODUCTS */}
                     {
                         // Actual products (live data)
-                        checkedProducts?.length ? checkedProducts.map((product, index) => (
+                        checkedProducts.length !== 0 ? checkedProducts.map((product, index) => (
                             //    Skip the product if it is 0
                             product === 0 ? null
                                 :
                                 (
-                                    <Product product={product} key={index} />
+                                    <Product token={token} product={product} key={index} />
                                 )
                         ))
                             // static products from server (fallback first to load)
@@ -115,15 +218,64 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
                                 product === 0 ? null
                                     :
                                     (
-                                        <Product product={product} key={index} />
+                                        <Product token={token} product={product} key={index} />
                                     )
                             ))
                     }
-                </div>
 
-            </div>
+                    {/* BAGGED PRODUCTS */}
+                    {
+                        baggedProducts?.length !== 0 &&
+                        (
+                            <h3 onClick={handleOpenBaggedSettings} className="flex cursor-pointer mt-10 relative  gap-1 bagged-settings">
+                                <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
+                                <div>
+                                    <span className="text-2xl font-bold">Bagged</span>
+                                    <span className="text-sm text-gray-500 ml-2">{baggedProducts?.length} products</span>
+                                </div>
 
-            {overlay && <Overlay />}
+                                {
+                                    baggedSettings && (
+                                        <>
+                                            {/* Settings for checklist */}
+                                            <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <button className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                        <EmptyBagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
+                                                        Unbag All Items
+                                                    </button>
+                                                    <button className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
+                                                        <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
+                                                        Remove All Items
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )
+                                }
+                            </h3>
+                        )
+                    }
+
+
+                    {
+                        // Actual products (live data)
+                        baggedProducts?.length !== 0 && baggedProducts.map((product, index) => (
+                            //    Skip the product if it is 0
+                            product === 0 ? null
+                                :
+                                (
+                                    <Product token={token} product={product} key={index} />
+                                )
+                        ))
+                    }
+                </div >
+
+            </div >
+
+            {
+                overlay && <Overlay />
+            }
 
             {loading && <div className=" fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">  <ListLoader />  </div>}
 
@@ -131,10 +283,25 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
 
             <Notification />
 
-
-            <div className="open-product-overlay opacity-0 fixed bottom-8 md:bottom-12 left-[50%] translate-x-[-50%] z-20">
-                <Button cta="Add Products" color="#21ba9c" hover="inwards" action="add-product-overlay" textColorOverride={"text-white"} setProductOverlay={setProductOverlay} />
+            <div className="open-product-overlay opacity-0 fixed bottom-8 left-[50%] translate-x-[-50%] z-50">
+                <Button cta="Add Products" color="#21ba9c" hover="inwards" action="add-product-overlay" textColorOverride={"text-white"} overrideDefaultClasses={"bg-blue-800 text-black text-sm md:text-base"} setProductOverlay={setProductOverlay} />
             </div>
+
+
+            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 bg-black py-14  px-4 flex items-center justify-between">
+
+            </div>
+
+
+            {
+                shareDialogOpen && (
+                    <ShareListDialog
+                        listId={shareDialogOpen}
+                        onClose={() => setShareDialogOpen(null)}
+                    />
+                )
+            }
+
         </main >
 
     )

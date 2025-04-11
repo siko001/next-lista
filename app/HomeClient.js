@@ -26,17 +26,12 @@ import List from "./components/parts/List";
 
 
 
-const HomeClient = ({ isRegistered, userName, lists }) => {
-    const [listSettings, setListSettings] = useState(false);
+const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
+
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
-
-    const [listRename, setListRename] = useState(false);
-    const [startingValue, setStartingValue] = useState(null);
-    const listRenameRef = useRef(null);
-
     const { loading } = useLoadingContext();
     const { userData, token, error } = useUserContext();
-    const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists } = useListContext();
+    const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists, handleRenameClick, listSettings, setListSettings, handleRenameList } = useListContext();
     const { overlay } = useOverlayContext();
     const { showNotification } = useNotificationContext();
 
@@ -117,92 +112,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
     }, []);
 
 
-    const handleRenameList = async (value) => {
-        if (!value) return;
-        const listId = listRename;
-        const list = userLists.find((list) => list.id === listId);
-        if (!list) return;
 
-        // Prepare the update payload
-        const updateData = {
-            title: value,
-        };
-
-        if (list.title === value) {
-            setListRename(false);
-            return;
-        }
-
-
-        // Optimistic UI update
-        const updatedLists = userLists.map((list) =>
-            list.id === listId
-                ? {
-                    ...list,
-                    title: value,
-                }
-                : list
-        );
-        setUserLists(updatedLists);
-
-        // Reset UI states
-        setListRename(false);
-        setStartingValue(null);
-
-        // Send to server
-        const WP_API_BASE = "https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json";
-        try {
-            const response = await fetch(`${WP_API_BASE}/wp/v2/shopping-list/${listId}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify(updateData)
-            });
-
-            if (!response.ok) throw new Error('Failed to update');
-
-            const data = await response.json();
-            if (!data) {
-                showNotification("Failed to update list", "error");
-                setUserLists(userLists);
-                return;
-            }
-
-            showNotification("List Renamed", "success", 1000);
-
-        } catch (error) {
-            console.error("Error updating list:", error);
-            showNotification("Failed to update list", "error");
-            // Revert optimistic update if failed
-            setUserLists(userLists);
-        }
-    }
-
-    const handleRenameInput = (e) => {
-        let input = e.target.value
-        if (input.length > 32) {
-            input = input.slice(0, 32);
-        }
-        listRenameRef.current.value = input;
-        setStartingValue(input.length);
-    };
-
-    const handleRenameClick = (id) => {
-
-        if (listRename === id) {
-            setListRename(false);
-        } else {
-            setListRename(id);
-            setTimeout(() => {
-                listRenameRef.current.focus();
-                // starting number
-                setStartingValue(listRenameRef.current.value.length);
-            }, 0);
-        }
-        setListSettings(false);
-    }
 
 
     const handleCopyList = async (id) => {
@@ -271,7 +181,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                                                 {/* Draggable Item */}
                                                 <Draggable key={list.id} draggableId={String(list.id)} index={index}>
                                                     {(provided, snapshot) => (
-                                                        <List setStartingValue={setStartingValue} startingValue={startingValue} list={list} provided={provided} snapshot={snapshot} handleListSettings={handleListSettings} handleRenameList={handleRenameList} listRename={listRename} setListRename={setListRename} listRenameRef={listRenameRef} handleRenameInput={handleRenameInput} />
+                                                        <List listSettings={listSettings} token={serverToken} list={list} provided={provided} snapshot={snapshot} handleListSettings={handleListSettings} handleRenameList={handleRenameList} />
                                                     )}
                                                 </Draggable>
 
@@ -316,7 +226,7 @@ const HomeClient = ({ isRegistered, userName, lists }) => {
                         !hasDeletedLists && lists && lists.length > 0 ? (
                             <div className="mt-8 flex flex-col gap-6 w-full  ">
                                 {lists.map((list) => (
-                                    <List decoy={true} key={list.id} startingValue={startingValue} list={list} handleListSettings={handleListSettings} handleRenameList={handleRenameList} listRename={listRename} setListRename={setListRename} listRenameRef={listRenameRef} handleRenameInput={handleRenameInput} />
+                                    <List token={token} decoy={true} key={list.id} list={list} handleListSettings={handleListSettings} handleRenameList={handleRenameList} />
                                 ))}
                             </div>
                         ) : (

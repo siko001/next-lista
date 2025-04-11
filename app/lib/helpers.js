@@ -23,7 +23,7 @@ export const decryptToken = (encryptedToken) => {
     }
 };
 
-const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+export const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
 
 // Fetch shopping lists for the user
 export const getShoppingList = async (userId, encryptedToken) => {

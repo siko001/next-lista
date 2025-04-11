@@ -1,21 +1,28 @@
 'use client';
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { useNotificationContext } from './NotificationContext';
 import { decryptToken } from '../lib/helpers';
 import gsap from 'gsap';
+import { set } from 'react-hook-form';
 const ListContext = createContext();
 
 export const ListProvider = ({ children }) => {
     const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
     const { showNotification } = useNotificationContext();
+    const [listRename, setListRename] = useState(false);
     const [hasDeletedLists, setHasDeletedLists] = useState(false);
+    const [startingValue, setStartingValue] = useState(null);
+    const listRenameRef = useRef(null);
+    const innerListRef = useRef(null);
+    const [listSettings, setListSettings] = useState(false);
     const [shoppingList, setShoppingList] = useState({
         name: "",
         userId: null,
         userToken: null,
     });
-
+    const [startingInnerListName, setStartingInnerListName] = useState(null);
     const [userLists, setUserLists] = useState([]);
+    const [listName, setListName] = useState();
 
     // Create List
     const createShoppingList = async (listData) => {
@@ -185,8 +192,126 @@ export const ListProvider = ({ children }) => {
     };
 
 
+
+    // REMANE LIST STUFF
+    const handleRenameInput = (e) => {
+        let input = e.target.value
+        if (input.length > 32) {
+            input = input.slice(0, 32);
+        }
+        listRenameRef.current.value = input;
+        setStartingValue(input.length);
+    };
+
+    const handleRenameClick = (id) => {
+        if (listRename === id) {
+            setListRename(false);
+        } else {
+            setStartingInnerListName(innerListRef.current?.innerText);
+            setListRename(id);
+            setTimeout(() => {
+                listRenameRef.current.focus();
+                // starting number
+                setStartingValue(listRenameRef.current.value.length);
+            }, 0);
+        }
+        setListSettings(false);
+    }
+
+
+
+    const handleRenameList = async (value, token, view) => {
+        console.log(view)
+        if (!value) return;
+        const listId = listRename;
+        const list = userLists.find((list) => list.id === listId);
+
+        if (!list && view !== "in-list") return;
+
+        // Prepare the update payload
+        const updateData = {
+            title: value,
+        };
+
+        if (view !== "in-list" && list.title === value) {
+            setListRename(false);
+            return;
+        }
+
+        if (view === "in-list" && startingInnerListName === value) {
+            setListRename(false);
+            return;
+        }
+
+
+        if (view === "in-list") {
+            // Optimistic UI update
+            setListName(value);
+        }
+
+        if (view === "in-list" && value) {
+            console.log(value)
+        }
+
+        // Optimistic UI update
+        if (view !== "in-list") {
+            const updatedLists = userLists.map((list) =>
+                list.id === listId
+                    ? {
+                        ...list,
+                        title: value,
+                    }
+                    : list
+            );
+            setUserLists(updatedLists);
+
+            // Reset UI states
+            setListRename(false);
+            setStartingValue(null);
+        }
+
+
+        // decrypt the token
+        const decryptedToken = decryptToken(token);
+
+        // Send to server
+        const WP_API_BASE = "https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json";
+        try {
+            const response = await fetch(`${WP_API_BASE}/wp/v2/shopping-list/${listId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${decryptedToken}`
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (!response.ok) throw new Error('Failed to update');
+
+            const data = await response.json();
+            if (!data) {
+                showNotification("Failed to update list", "error");
+                setUserLists(userLists);
+                return;
+            }
+
+            showNotification("List Renamed", "success", 1000);
+            return
+        } catch (error) {
+            console.error("Error updating list:", error);
+            showNotification("Failed to update list", "error");
+            setUserLists(userLists);
+        }
+    }
+
+
+
     return (
         <ListContext.Provider value={{
+            startingValue,
+            setStartingValue,
+            listRename,
+            setListRename,
             shoppingList,
             setShoppingList,
             sendApiRequest,
@@ -196,7 +321,16 @@ export const ListProvider = ({ children }) => {
             getShoppingList,
             setUserLists,
             deleteList,
-            copyShoppingList
+            copyShoppingList,
+            listSettings,
+            setListSettings,
+            listRenameRef,
+            innerListRef,
+            handleRenameInput,
+            handleRenameClick,
+            handleRenameList,
+            listName,
+            setListName,
         }}>
             {children}
         </ListContext.Provider>
