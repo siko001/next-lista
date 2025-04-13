@@ -3,6 +3,7 @@ import SettingsIcon from "../svgs/SettingsIcon"
 import SearchIcon from "../svgs/SearchIcon"
 import Progressbar from "./Progressbar"
 import { useListContext } from "../../contexts/ListContext"
+
 import { useState, useEffect, useRef } from "react"
 import { gsap } from "gsap"
 

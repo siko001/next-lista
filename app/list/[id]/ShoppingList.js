@@ -77,7 +77,6 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     }
 
 
-    
     useEffect(() => {
         // Close the checklist settings when clicking outside
         const handleClickOutside = (event) => {

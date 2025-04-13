@@ -1,6 +1,8 @@
 'use client'
 import { useParams } from 'next/navigation'
 import { decryptToken, WP_API_BASE } from "../../lib/helpers";
+import { useRef, useEffect } from 'react';
+import gsap from 'gsap';
 
 export default function Product({
     product,
@@ -11,8 +13,17 @@ export default function Product({
     setProgress,
     totalProductCount,
 }) {
-
     const shoppingListId = useParams().id;
+    const itemRef = useRef(null);
+    const animationRef = useRef(null);
+
+    // Function to cleanup animations
+    const killAnimation = () => {
+        if (animationRef.current) {
+            animationRef.current.kill();
+            animationRef.current = null;
+        }
+    };
 
     const updateProductStatus = async (action) => {
         if (!shoppingListId || !token) return;
@@ -36,6 +47,7 @@ export default function Product({
                 return newProgress < 0 ? 0 : newProgress;
             });
         }
+
         try {
             const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
                 method: 'POST',
@@ -73,6 +85,9 @@ export default function Product({
             return data;
 
         } catch (error) {
+            // console.error('Error updating product status:', error);
+            // throw error;
+            // revert local state changes if API call fails
             if (action === 'bag') {
                 setCheckedProducts(prev => [...prev, product]);
                 setBaggedProducts(prev => prev.filter(p => p.id !== product.id));
@@ -91,16 +106,113 @@ export default function Product({
         }
     };
 
-    const handleClick = () => {
+    const animateToBagged = async () => {
+        return new Promise((resolve) => {
+            killAnimation();
+            animationRef.current = gsap.to(itemRef.current, {
+                scale: 1.1,
+                duration: 0.2,
+                onComplete: () => {
+                    animationRef.current = gsap.to(itemRef.current, {
+                        backgroundColor: '#14532d', // Green background
+                        duration: 0.2,
+                        onComplete: () => {
+                            animationRef.current = gsap.to(itemRef.current, {
+                                y: 20,
+                                opacity: 0,
+                                duration: 0.3,
+                                onComplete: () => {
+                                    animationRef.current = null;
+                                    gsap.set(itemRef.current, { clearProps: 'all' });
+                                    resolve();
+                                },
+                            });
+                        },
+                    });
+                },
+            });
+        });
+    };
+
+    const animateToChecked = async () => {
+        return new Promise((resolve) => {
+            killAnimation();
+            animationRef.current = gsap.to(itemRef.current, {
+                scale: 1.1,
+                duration: 0.2,
+                onComplete: () => {
+                    animationRef.current = gsap.to(itemRef.current, {
+                        backgroundColor: '#1f2937', // Gray background
+                        duration: 0.2,
+                        onComplete: () => {
+                            animationRef.current = gsap.to(itemRef.current, {
+                                y: -20,
+                                opacity: 0,
+                                duration: 0.3,
+                                onComplete: () => {
+                                    animationRef.current = null;
+                                    gsap.set(itemRef.current, { clearProps: 'all' });
+                                    resolve();
+                                },
+                            });
+                        },
+                    });
+                },
+            });
+        });
+    };
+
+    const animateAppearInBagged = () => {
+        killAnimation();
+        animationRef.current = gsap.fromTo(
+            itemRef.current,
+            { y: 20, opacity: 0 },
+            {
+                y: 0,
+                opacity: 1,
+                backgroundColor: '#14532d',
+                duration: 0.4,
+                onComplete: () => {
+                    animationRef.current = null;
+                    gsap.set(itemRef.current, { clearProps: 'backgroundColor' });
+                },
+            }
+        );
+    };
+
+    const animateAppearInChecked = () => {
+        killAnimation();
+        animationRef.current = gsap.fromTo(
+            itemRef.current,
+            { y: -20, opacity: 0 },
+            {
+                y: 0,
+                opacity: 1,
+                backgroundColor: '#1f2937',
+                duration: 0.4,
+                onComplete: () => {
+                    animationRef.current = null;
+                    gsap.set(itemRef.current, { clearProps: 'backgroundColor' });
+                },
+            }
+        );
+    };
+
+    const handleClick = async () => {
         if (isBagged) {
+            await animateToChecked();
             updateProductStatus('unbag');
+            animateAppearInChecked();
         } else {
+            await animateToBagged();
             updateProductStatus('bag');
+            animateAppearInBagged();
         }
     };
 
     return (
         <div
+            ref={itemRef}
             onClick={handleClick}
             className={`flex text-center w-full mx-auto items-center justify-between gap-12 px-2 py-4 rounded-lg ${isBagged ? 'bg-green-900' : 'bg-gray-800 hover:bg-gray-700 cursor-pointer'
                 }`}
