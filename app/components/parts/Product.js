@@ -4,6 +4,7 @@ import { decryptToken, WP_API_BASE } from "../../lib/helpers";
 import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { set } from 'react-hook-form';
+import CloseIcon from '../svgs/CloseIcon';
 
 export default function Product({
     setTotalProductCount, baggedProductCount, setBaggedProductCount, progress,
@@ -215,17 +216,37 @@ export default function Product({
 
 
     return (
-        <div
-            ref={itemRef}
-            onClick={handleClick}
-            className={`flex text-center w-full mx-auto items-center justify-between gap-12 px-2 py-4 rounded-lg ${isBagged ? 'bg-green-900' : 'bg-gray-800 hover:bg-gray-700 cursor-pointer'
-                }`}
-        >
-            <div className="flex items-center gap-4">
-                <h3 className="text-lg md:text-xl font-semibold pl-3">
+        <div onClick={(e) => { e.stopPropagation(); handleClick() }} ref={itemRef} className={`flex text-center transition-colors group duration-200  w-full mx-auto items-center justify-between gap-12 px-2 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer ${isBagged && 'border border-primary'}`} >
+            <div
+                className="flex items-center  w-full gap-4">
+                <h3 className="text-lg md:text-xl font-semibold pl-3 flex gap-1 items-center">
+                    <div className="checkbox-wrapper-28">
+                        {/* Use a unique id for the checkbox */}
+                        <input
+                            id={`checkbox-${product.id}`}
+                            type="checkbox"
+                            className="promoted-input-checkbox"
+                            checked={isBagged} // Synchronize with isBagged
+
+                            onChange={handleClick} // Handle change event
+                        />
+                        <svg className="absolute -z-0">
+                            <use href="#checkmark-28" />
+                        </svg>
+                        <label htmlFor={`checkbox-${product.id}`}>    </label>
+                        <svg xmlns="http://www.w3.org/2000/svg">
+                            <symbol id="checkmark-28" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeMiterlimit="10" fill="none" d="M22.9 3.7l-15.2 16.6-6.6-7.1" />
+                            </symbol>
+                        </svg>
+                    </div>
                     {product.title}
                 </h3>
+
+
             </div>
+            {isBagged && <CloseIcon onClick={(e) => { e.stopPropagation(); alert('remove from list') }} className="group-hover:opacity-100 group-hover:visible mr-4 sm:invisible  sm:opacity-0 duration-200 transition-opcaity text-red-600 w-8 h-8" />
+            }
         </div>
     )
 }

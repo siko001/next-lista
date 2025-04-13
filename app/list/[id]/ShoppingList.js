@@ -110,7 +110,6 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     }, [totalProductCount, baggedProductCount])
 
 
-
     return (
         <main >
 
@@ -120,15 +119,16 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
                 <ShoppingListHeader progress={progress} setShareDialogOpen={setShareDialogOpen} token={token} list={list} />
 
-                <div className="flex flex-col gap-4 w-full max-w-[740px] mx-auto  mt-4 px-4 mb-32">
+                <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32">
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2">
+                        <div className="bg-black h-4 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
                         {checkedProducts?.length !== 0 &&
                             // Checked Products Header
                             (
                                 <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative  gap-1 checklist-settings">
                                     <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
-                                    <div>
+                                    <div className="">
                                         <span className="text-2xl font-bold">Checklist </span>
                                         <span className="text-sm text-gray-500 ml-2">{checkedProducts?.length} products</span>
                                     </div>
@@ -165,41 +165,42 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                     ))}
 
 
+                    <div className={`flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${checkedProducts?.length !== 0 ? 'mt-10' : 'mt-0'} py-2 z-20 px-4 `}>
+                        <div className="bg-black h-4 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
+                        {/* BAGGED PRODUCTS */}
+                        {(
+                            baggedProducts?.length !== 0) &&
+                            // Bagged Products Header
+                            (
+                                <h3 onClick={handleOpenBaggedSettings} className={`flex cursor-pointer relative  gap-1 bagged-settings`}>
+                                    <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
+                                    <div>
+                                        <span className="text-2xl font-bold">Bagged</span>
+                                        <span className="text-sm text-gray-500 ml-2">{baggedProducts?.length !== 0 ? baggedProducts?.length : baggedItems.baggedCount !== 0 && baggedItems.baggedCount} products</span>
+                                    </div>
 
-                    {/* BAGGED PRODUCTS */}
-                    {(
-                        baggedProducts?.length !== 0) &&
-                        // Bagged Products Header
-                        (
-                            <h3 onClick={handleOpenBaggedSettings} className={`flex cursor-pointer ${checkedProducts?.length !== 0 ? 'mt-10' : 'mt-0'} relative  gap-1 bagged-settings`}>
-                                <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
-                                <div>
-                                    <span className="text-2xl font-bold">Bagged</span>
-                                    <span className="text-sm text-gray-500 ml-2">{baggedProducts?.length !== 0 ? baggedProducts?.length : baggedItems.baggedCount !== 0 && baggedItems.baggedCount} products</span>
-                                </div>
-
-                                {
-                                    baggedSettings && (
-                                        <>
-                                            {/* Settings for checklist */}
-                                            <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
-                                                <div className="flex flex-col gap-0.5">
-                                                    <button className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                                        <EmptyBagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
-                                                        Unbag All Items
-                                                    </button>
-                                                    <button className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
-                                                        <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
-                                                        Remove All Items
-                                                    </button>
+                                    {
+                                        baggedSettings && (
+                                            <>
+                                                {/* Settings for checklist */}
+                                                <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <button className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                            <EmptyBagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
+                                                            Unbag All Items
+                                                        </button>
+                                                        <button className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
+                                                            <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
+                                                            Remove All Items
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </>
-                                    )
-                                }
-                            </h3>
-                        )}
-
+                                            </>
+                                        )
+                                    }
+                                </h3>
+                            )}
+                    </div>
 
                     {/* Products */}
                     {baggedProducts?.length !== 0 && baggedProducts.map((product, index) => (

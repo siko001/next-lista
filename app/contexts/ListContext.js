@@ -348,6 +348,7 @@ export const ListProvider = ({ children }) => {
             handleRenameList,
             listName,
             setListName,
+            lenis
         }}>
             {children}
         </ListContext.Provider>
