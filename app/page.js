@@ -18,6 +18,5 @@ export default async function Home() {
 
     const lists = await getShoppingList(id, token)
 
-
     return <HomeClient isRegistered={isRegistered} userName={userName} lists={lists} serverToken={token} />
 }

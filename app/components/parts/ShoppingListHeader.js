@@ -14,7 +14,7 @@ import TranshIcon from "../svgs/TranshIcon"
 import CloseIcon from "../svgs/CloseIcon"
 
 
-export default function ShoppingListHeader({ list, token, setShareDialogOpen }) {
+export default function ShoppingListHeader({ progress, list, token, setShareDialogOpen }) {
     const { handleRenameInput, handleRenameClick, listRenameRef, handleRenameList, listRename, setListRename, innerListRef, listName, startingValue } = useListContext();
     const [openSettings, setOpenSettings] = useState(false)
     const searchProductRef = useRef(null);
@@ -99,6 +99,8 @@ export default function ShoppingListHeader({ list, token, setShareDialogOpen }) 
             },
         });
     };
+
+
 
     return (
         <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px]  bg-gray-900 h-[100px] mx-auto sticky top-0 z-40">
@@ -189,7 +191,7 @@ export default function ShoppingListHeader({ list, token, setShareDialogOpen }) 
                     </div>
                 </div>
             </div>
-            <Progressbar progress={0} />
+            <Progressbar progress={progress} />
         </div>
     )
 }

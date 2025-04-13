@@ -1,13 +1,13 @@
 'use client';
 import Link from "next/link";
 import { gsap } from "gsap";
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { setCookie } from 'cookies-next'; // Cookie library
-import CryptoJS from 'crypto-js'; // Encryption library
-
+import { setCookie } from 'cookies-next';
+import CryptoJS from 'crypto-js';
+import { SECRET_KEY } from "../lib/helpers";
 
 import Notification from "../components/Notification";
 import { useNotificationContext } from "../contexts/NotificationContext";
@@ -67,7 +67,7 @@ const LoginClient = () => {
 		}
 	}, [isValid]);
 
-	const SECRET_KEY = 'your-secret-key-123';
+
 	const encryptData = (data) => {
 		return CryptoJS.AES.encrypt(JSON.stringify(data), SECRET_KEY).toString();
 	};

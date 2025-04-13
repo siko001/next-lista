@@ -1,4 +1,4 @@
-const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+export const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
 
 export const getSharedList = async (listId) => {
     try {

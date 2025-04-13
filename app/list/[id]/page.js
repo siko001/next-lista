@@ -1,5 +1,5 @@
 import ShoppingList from "./ShoppingList";
-import { getListDetails, getAllProducts, getLinkedProducts } from "../../lib/helpers";
+import { getListDetails, getLinkedProducts } from "../../lib/helpers";
 import { cookies } from 'next/headers'
 
 export default async function Page() {
@@ -8,7 +8,7 @@ export default async function Page() {
     const token = cookieStore.get('token')?.value
     const reg = cookieStore.get('registered')?.value
     const userName = cookieStore.get('username')?.value
-    const id = cookieStore.get('id')?.value
+    // const id = cookieStore.get('id')?.value
     const listId = cookieStore.get('listId')?.value
 
     let isRegistered = false
@@ -18,8 +18,7 @@ export default async function Page() {
 
     const list = await getListDetails(listId, token)
     const products = await getLinkedProducts(listId, token)
-
     return (
-        <ShoppingList isRegistered={isRegistered} userName={userName} list={list} token={token} products={products.linkedProducts} />
+        <ShoppingList baggedItems={products} isRegistered={isRegistered} userName={userName} list={list} token={token} checkedProductList={products.checkedProducts} products={products.linkedProducts} />
     )
 }

@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { WP_API_BASE } from "./lib/helpers";
 
 // Contexts
 import { useUserContext } from "./contexts/UserContext";
@@ -36,6 +37,8 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     const { showNotification } = useNotificationContext();
 
 
+
+
     useEffect(() => {
         if (userData && userData.id && token) {
             getShoppingList(userData.id, token)
@@ -45,7 +48,6 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
 
     const handleDragEnd = async (result) => {
         if (!result.destination) return;
-        const WP_API_BASE = " https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json"
         const items = Array.from(userLists);
         const [reorderedItem] = items.splice(result.source.index, 1);
         items.splice(result.destination.index, 0, reorderedItem);

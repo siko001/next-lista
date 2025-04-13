@@ -1,9 +1,8 @@
 import SettingsIcon from "../svgs/SettingsIcon";
 import Progressbar from "./Progressbar";
-import { decodeHtmlEntities } from "../../lib/helpers";
+import { decodeHtmlEntities, calculateProgress } from "../../lib/helpers";
 import { setCookie } from 'cookies-next';
 import { useListContext } from "../../contexts/ListContext";
-
 
 export default function List({ listSettings, list, provided, snapshot, handleListSettings, handleRenameList, token }) {
     const { listRenameRef, setStartingValue, listRename, setListRename, handleRenameInput, startingValue, } = useListContext();
@@ -18,10 +17,10 @@ export default function List({ listSettings, list, provided, snapshot, handleLis
             sameSite: 'strict', // Prevent CSRF attacks
             maxAge: 60 * 60 * 24 * 7, // 1 week
         })
-
         window.location.href = `/list/${listId}`;
-
     }
+
+    const progress = calculateProgress(list?.acf?.product_count, list?.acf?.bagged_product_count);
 
     return (
 
@@ -85,7 +84,7 @@ export default function List({ listSettings, list, provided, snapshot, handleLis
                 <div className="flex items-center gap-2 justify-between">
 
                     <div className="text-xs md:text-base 2xl:text-lg font-bold whitespace-pre text-gray-600 dark:text-gray-400 relative top-[1px]">
-                        {(list?.acf?.product_count && list?.acf?.product_count != 0) && `0 / ${list?.acf?.product_count}`}
+                        {((list?.acf?.product_count && list?.acf?.product_count != 0)) && `${list?.acf?.bagged_product_count || 0} / ${list?.acf?.product_count}`}
                     </div>
 
                     {/* List Actions Button */}
@@ -100,7 +99,7 @@ export default function List({ listSettings, list, provided, snapshot, handleLis
             </div>
 
 
-            <Progressbar progress={0} />
+            <Progressbar progress={progress} />
 
         </div >
 

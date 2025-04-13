@@ -2,16 +2,42 @@
 import { useParams } from 'next/navigation'
 import { decryptToken, WP_API_BASE } from "../../lib/helpers";
 
-export default function Product({ product, token }) {
+export default function Product({
+    product,
+    token,
+    isBagged,
+    setCheckedProducts,
+    setBaggedProducts,
+    setProgress,
+    totalProductCount,
+}) {
+
     const shoppingListId = useParams().id;
 
-    const updateProductInBaggedList = async (productId, isAdding, token) => {
+    const updateProductStatus = async (action) => {
         if (!shoppingListId || !token) return;
         const decryptedToken = decryptToken(token);
 
+        // Update local state based on action
+        if (action === 'bag') {
+            // Remove from checked, add to bagged
+            setCheckedProducts(prev => prev.filter(p => p.id !== product.id));
+            setBaggedProducts(prev => [...prev, product]);
+            setProgress((prev) => {
+                const newProgress = prev + (1 / totalProductCount) * 100;
+                return newProgress > 100 ? 100 : newProgress;
+            });
+        } else {
+            // Remove from bagged, add back to checked
+            setBaggedProducts(prev => prev.filter(p => p.id !== product.id));
+            setCheckedProducts(prev => [...prev, product]);
+            setProgress((prev) => {
+                const newProgress = prev - (1 / totalProductCount) * 100;
+                return newProgress < 0 ? 0 : newProgress;
+            });
+        }
         try {
-
-            const response = await fetch(`${WP_API_BASE}/custom/v1/update-bagged-products`, {
+            const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
                 method: 'POST',
                 headers: {
                     "Content-Type": "application/json",
@@ -19,29 +45,70 @@ export default function Product({ product, token }) {
                 },
                 body: JSON.stringify({
                     shoppingListId,
-                    productId,
-                    action: isAdding ? 'add' : 'remove'
+                    productId: product.id,
+                    action // 'bag' or 'unbag'
                 }),
             });
 
-
-            console.log("response", response);
             const data = await response.json();
-            console.log("data", data);
-            // Assuming you have a state variable for bagged products
-            // setBaggedProducts(data.currentBaggedProducts);
+
+            if (data.error) {
+                // revert local state changes if API call fails
+                if (action === 'bag') {
+                    setCheckedProducts(prev => [...prev, product]);
+                    setBaggedProducts(prev => prev.filter(p => p.id !== product.id));
+                    setProgress((prev) => {
+                        const newProgress = prev - (1 / totalProductCount) * 100;
+                        return newProgress < 0 ? 0 : newProgress;
+                    });
+                } else {
+                    setBaggedProducts(prev => [...prev, product]);
+                    setCheckedProducts(prev => prev.filter(p => p.id !== product.id));
+                    setProgress((prev) => {
+                        const newProgress = prev + (1 / totalProductCount) * 100;
+                        return newProgress > 100 ? 100 : newProgress;
+                    });
+                }
+            }
+            return data;
 
         } catch (error) {
-            // console.error('Error:', error);
-            // Handle error as needed
+            if (action === 'bag') {
+                setCheckedProducts(prev => [...prev, product]);
+                setBaggedProducts(prev => prev.filter(p => p.id !== product.id));
+                setProgress((prev) => {
+                    const newProgress = prev - (1 / totalProductCount) * 100;
+                    return newProgress < 0 ? 0 : newProgress;
+                });
+            } else {
+                setBaggedProducts(prev => [...prev, product]);
+                setCheckedProducts(prev => prev.filter(p => p.id !== product.id));
+                setProgress((prev) => {
+                    const newProgress = prev + (1 / totalProductCount) * 100;
+                    return newProgress > 100 ? 100 : newProgress;
+                });
+            }
         }
     };
 
+    const handleClick = () => {
+        if (isBagged) {
+            updateProductStatus('unbag');
+        } else {
+            updateProductStatus('bag');
+        }
+    };
 
     return (
-        <div className="flex  text-center w-full mx-auto items-center justify-between gap-12 px-2 py-4 bg-gray-800 rounded-lg">
-            <div onClick={() => updateProductInBaggedList(product.id, 'add', token)} className="flex items-center gap-4">
-                <h3 className="text-lg font-semibold">{product.title}</h3>
+        <div
+            onClick={handleClick}
+            className={`flex text-center w-full mx-auto items-center justify-between gap-12 px-2 py-4 rounded-lg ${isBagged ? 'bg-green-900' : 'bg-gray-800 hover:bg-gray-700 cursor-pointer'
+                }`}
+        >
+            <div className="flex items-center gap-4">
+                <h3 className="text-lg md:text-xl font-semibold pl-3">
+                    {product.title}
+                </h3>
             </div>
         </div>
     )

@@ -1,13 +1,10 @@
 'use client';
 import { createContext, useContext, useState } from 'react';
-import { decryptToken } from '../lib/helpers';
+import { decryptToken, WP_API_BASE } from '../lib/helpers';
 
 const ProductContext = createContext();
 
 export const ProductProvider = ({ children }) => {
-
-    // Base URL for your WordPress site
-    const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
     const [products, setProducts] = useState([]);
 
     const getAllProducts = async (encryptedToken) => {

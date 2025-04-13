@@ -1,9 +1,9 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from 'react';
 import { setCookie, getCookie, deleteCookie } from 'cookies-next';
-import CryptoJS from 'crypto-js'; // Encryption library
+import CryptoJS from 'crypto-js';
 import { useListContext } from './ListContext';
-
+import { WP_API_BASE, SECRET_KEY } from '../lib/helpers';
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
@@ -13,11 +13,7 @@ export const UserProvider = ({ children }) => {
 	const [error, setError] = useState(null);
 	const { setUserLists } = useListContext();
 
-	// Base URL for your WordPress site
-	const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
 
-	// Encryption key (store this securely, e.g., in environment variables)
-	const SECRET_KEY = 'your-secret-key-123';
 
 	// Function to encrypt data
 	const encryptData = (data) => {

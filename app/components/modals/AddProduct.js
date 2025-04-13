@@ -3,18 +3,17 @@ import Button from '../../components/Button';
 import gsap from 'gsap';
 import { useEffect, useRef, useState } from 'react';
 import SearchIcon from '../svgs/SearchIcon';
-import { decryptToken } from '../../lib/helpers';
+import { decryptToken, WP_API_BASE } from '../../lib/helpers';
 import "../../css/checkbox.css";
 import CloseIcon from '../svgs/CloseIcon';
 import { useParams } from 'next/navigation';
 
-export default function AddProduct({ setProductOverlay, token, checkedProducts, setCheckedProducts, allProducts }) {
+export default function AddProduct({ setProductOverlay, token, checkedProducts, setCheckedProducts, allProducts, setBaggedProducts }) {
     const [products, setProducts] = useState(allProducts);
     const [originalProducts] = useState(allProducts);
 
     const { searchRef } = useRef();
     const shoppingListId = useParams().id;
-    const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
 
     const updateProductInShoppingList = async (productId, isAdding, token) => {
         if (!shoppingListId || !token) return;
@@ -34,15 +33,19 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to update shopping list');
+            const data = await response?.json()
+
+
+            const productTitle = products.find(product => product.id === productId)?.title;
+            if (isAdding) {
+                setCheckedProducts(prev => {
+                    const uniqueProducts = prev.filter(product => product.id !== productId); // Remove duplicates
+                    return [...uniqueProducts, { id: productId, title: productTitle }];
+                });
+            } else {
+                setCheckedProducts(prev => prev.filter(product => product.id !== productId));
+                setBaggedProducts(prev => prev.filter(product => product.id !== productId));
             }
-
-            const data = await response.json();
-
-            // Update to handle the new structure - map to just IDs if needed
-            // Either keep the full objects or just the IDs depending on your needs
-            setCheckedProducts(data.linkedProducts); // Use the full objects from backend
 
         } catch (error) {
             // console.error('Error:', error);
@@ -51,7 +54,7 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
 
     // Modify the checkbox change handler
     const handleCheckboxChange = (productId, token) => {
-        const isCurrentlyChecked = checkedProducts.some(product => product.id === productId);
+        const isCurrentlyChecked = checkedProducts?.some(product => product.id === productId);
         updateProductInShoppingList(productId, !isCurrentlyChecked, token);
     };
 
@@ -75,14 +78,17 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
         })
     }, [])
 
-    const handleSearchProduct = (e) => {
-        const searchValue = e.target.value.toLowerCase();
+    const [searchValue, setSearchValue] = useState(""); // Initialize with an empty string
 
-        if (searchValue === '') {
+    const handleSearchProduct = (e) => {
+        const value = e.target.value.toLowerCase();
+        setSearchValue(value); // Update the state
+
+        if (value === "") {
             setProducts(originalProducts);
         } else {
-            const filteredProducts = originalProducts.filter(product =>
-                product.title.toLowerCase().includes(searchValue)
+            const filteredProducts = originalProducts.filter((product) =>
+                product.title.toLowerCase().includes(value)
             );
             setProducts(filteredProducts);
         }
@@ -123,7 +129,7 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
 
                 {/* Search Input */}
                 <div className="w-full bg-gray-700 flex items bg-gray-70 center rounded-md relative">
-                    <input onChange={handleSearchProduct} ref={searchRef} placeholder='Search for a Product...' className="w-full rounded-md border-2 transition-colors duration-200 border-transparent focus:border-primary outline-0  placeholder:relative placeholder:top-0.5 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"></input>
+                    <input value={searchValue} onChange={handleSearchProduct} ref={searchRef} placeholder='Search for a Product...' className="w-full rounded-md border-2 transition-colors duration-200 border-transparent focus:border-primary outline-0  placeholder:relative placeholder:top-0.5 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"></input>
                     <div className="h-full absolute right-0 peer-focus:opacity-0 duration-200 transition-opacity  grid place-items-center mr-2">
                         <SearchIcon className={'w-8 h-8 text-white'} />
                     </div>
@@ -136,14 +142,14 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                             <div
                                 onClick={() => handleCheckboxChange(product.id, token)}
                                 key={product.id}
-                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts.some(p => p.id === product.id) ? 'border-primary' : ''}`} >
+                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts?.some(p => p.id === product.id) ? 'border-primary' : ''}`} >
                                 <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
                                     <div className="checkbox-wrapper-28">
                                         <input
                                             id={`checkbox-${product.id}`}
                                             type="checkbox"
                                             className="promoted-input-checkbox peer"
-                                            checked={checkedProducts.some(p => p.id === product.id)}
+                                            checked={!!checkedProducts?.some(p => p.id === product.id)}
                                             onChange={() => handleCheckboxChange(product.id, token)} />
 
 
@@ -165,7 +171,7 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                                     {product.title}
                                 </div>
 
-                                <div onClick={(e) => handleRemoveProduct(e, product.id)} className={`flex items-center transition-opacity duration-300 gap-2 ${checkedProducts.some(p => p.id === product.id) ? 'opacity-100' : 'opacity-0'}`}>
+                                <div onClick={(e) => handleRemoveProduct(e, product.id)} className={`flex items-center transition-opacity duration-300 gap-2 ${checkedProducts?.some(p => p.id === product.id) ? 'opacity-100' : 'opacity-0'}`}>
                                     <CloseIcon className="w-6 h-6 text-red-500 hover:text-white tranisition-colors duration-200 cursor-pointer" />
                                 </div>
                             </div>

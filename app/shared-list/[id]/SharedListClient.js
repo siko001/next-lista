@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getSharedList } from '../../lib/api';
-import { decryptToken } from '../../lib/helpers';
+import { decryptToken, WP_API_BASE } from '../../lib/helpers';
 import { redirect } from 'next/navigation';
 
 export default function SharedListPage({ token, userId, listId }) {
@@ -27,7 +27,6 @@ export default function SharedListPage({ token, userId, listId }) {
                     throw new Error(data.message || 'List not found');
                 }
 
-                const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
 
                 if (listId && userId && token) {
                     // decrypt the token

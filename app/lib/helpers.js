@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
+export const SECRET_KEY = 'your-secret-key-123';
+export const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
 
-const SECRET_KEY = 'your-secret-key-123'; // Must match the key used for encryption
 
 export const decryptToken = (encryptedToken) => {
     try {
@@ -23,7 +24,7 @@ export const decryptToken = (encryptedToken) => {
     }
 };
 
-export const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+
 
 // Fetch shopping lists for the user
 export const getShoppingList = async (userId, encryptedToken) => {
@@ -127,8 +128,6 @@ export const getAllProducts = async (encryptedToken) => {
 }
 
 
-
-// 2. Fetch linked products for THIS list
 export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
     const token = decryptToken(encryptedToken);
     if (!token) {
@@ -178,4 +177,34 @@ export const decodeHtmlEntities = (text) => {
     textArea.innerHTML = text;
     return textArea.value;
 };
+
+
+
+// 3. Fetch bagged items for A list
+export const getBaggedItems = async (shoppingListId, token) => {
+    if (!token || !shoppingListId) {
+        return [];
+    }
+    // Decrypt the token
+    const decryptedToken = decryptToken(token);
+    const baggedResponse = await fetch(
+        `${WP_API_BASE}/custom/v1/get-bagged-products?shoppingListId=${shoppingListId}`,
+        {
+            headers: {
+                "Authorization": `Bearer ${decryptedToken}`
+            }
+        }
+    );
+
+    const baggedData = await baggedResponse.json();
+    return baggedData;
+}
+
+
+export const calculateProgress = (productCount, baggedProductCount) => {
+    if (productCount === 0) {
+        return 0;
+    }
+    return Math.round((baggedProductCount / productCount) * 100);
+}
 

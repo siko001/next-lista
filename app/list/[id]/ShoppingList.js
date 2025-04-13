@@ -2,7 +2,8 @@
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { decryptToken } from "../../lib/helpers";
+import { decryptToken, WP_API_BASE } from "../../lib/helpers";
+import { calculateProgress } from "../../lib/helpers"
 
 // Contexts
 import { useOverlayContext } from "../../contexts/OverlayContext";
@@ -26,22 +27,24 @@ import XBagIcon from '../../components/svgs/XBagIcon';
 import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
 
-export default function ShoppingList({ isRegistered, userName, list, token, products }) {
-
-    console.log(products)
-    const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList }) {
     const { loading } = useLoadingContext();
     const { overlay } = useOverlayContext();
     const { getAllProducts } = useProductContext();
     const [productOverlay, setProductOverlay] = useState(false);
-    const [checkedProducts, setCheckedProducts] = useState([]);
-    const [baggedProducts, setBaggedProducts] = useState([]);
+    const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
+    const [baggedProducts, setBaggedProducts] = useState(baggedItems.baggedProducts);
     const shoppingListId = useParams().id;
     const [allProducts, setAllProducts] = useState([]);
     const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
+
     const [checklistSettings, setChecklistSettings] = useState(false);
     const [baggedSettings, setBaggedSettings] = useState(false);
+
+    const [progress, setProgress] = useState(calculateProgress(list?.acf?.product_count, list?.acf?.bagged_product_count) || 0);
+
+
 
     const fetchProducts = async (token) => {
         return await getAllProducts(token);
@@ -51,44 +54,10 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
     useEffect(() => {
         const fetchAllData = async () => {
             if (!shoppingListId || !token) return;
-            const decryptedToken = decryptToken(token);
-
             try {
                 // 1. Fetch ALL products
-                const products = await fetchProducts(token);
-                setAllProducts(products);
-
-                // 2. Fetch linked products for THIS list
-                const checkedResponse = await fetch(
-                    `${WP_API_BASE}/custom/v1/get-shopping-list-products?shoppingListId=${shoppingListId}`,
-                    {
-                        headers: {
-                            "Authorization": `Bearer ${decryptedToken}`
-                        }
-                    }
-                );
-
-                const baggedResponse = await fetch(
-                    `${WP_API_BASE}/custom/v1/get-bagged-products?shoppingListId=${shoppingListId}`,
-                    {
-                        headers: {
-                            "Authorization": `Bearer ${decryptedToken}`
-                        }
-                    }
-                );
-
-
-
-                if (checkedResponse.ok) {
-                    const checkedData = await checkedResponse.json();
-                    setCheckedProducts(checkedData.linkedProducts);
-                }
-                if (baggedResponse.ok) {
-                    const baggedData = await baggedResponse.json();
-                    setBaggedProducts(baggedData.baggedProducts);
-                }
-
-
+                const allProducts = await fetchProducts(token);
+                setAllProducts(allProducts);
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -107,6 +76,8 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
         setBaggedSettings((prev) => !prev);
     }
 
+
+    
     useEffect(() => {
         // Close the checklist settings when clicking outside
         const handleClickOutside = (event) => {
@@ -117,8 +88,6 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
                 setBaggedSettings(false);
             }
         };
-
-
 
         // close if esc is pressed  
         const handleKeyDown = (event) => {
@@ -136,22 +105,23 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
         };
     })
 
+
+
+
     return (
         <main >
 
             <Header isRegistered={isRegistered} userName={userName} />
 
-            <div className=" relatve px-4">
+            <div className="relatve px-4">
 
-                <ShoppingListHeader setShareDialogOpen={setShareDialogOpen} token={token} list={list} />
-
+                <ShoppingListHeader progress={progress} setShareDialogOpen={setShareDialogOpen} token={token} list={list} />
 
                 <div className="flex flex-col gap-4 w-full max-w-[740px] mx-auto  mt-4 px-4 mb-32">
+
                     <div className="flex items-center justify-between">
-
-
-                        {checkedProducts?.length !== 0 ?
-                            // Real List  checked products Header
+                        {checkedProducts?.length !== 0 &&
+                            // Checked Products Header
                             (
                                 <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative  gap-1 checklist-settings">
                                     <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
@@ -167,11 +137,11 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
                                                 <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
                                                     <div className="flex flex-col gap-0.5">
 
-                                                        <button className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                        <button onClick={() => handleBagAllItems(list.id)} className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                             <BagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
                                                             Bag All Items
                                                         </button>
-                                                        <button className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
+                                                        <button onClick={() => { handleRemoveCheckedItems(list.id) }} className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
                                                             <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
                                                             Remove All Items
                                                         </button>
@@ -183,55 +153,26 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
 
                                 </h3>
                             )
-                            :
-                            // Server side checked products Header
-                            products.length !== 0 &&
-                            (
-                                <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative  gap-1 checklist-settings">
-
-                                    <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
-                                    <div>
-                                        <span className="text-2xl font-bold">Checklist </span>
-                                        <span className="text-sm text-gray-500 ml-2">{products?.length} products</span>
-                                    </div>
-                                </h3>
-                            )
-
                         }
                     </div>
 
-                    {/* PRODUCTS */}
-                    {
-                        // Actual products (live data)
-                        checkedProducts.length !== 0 ? checkedProducts.map((product, index) => (
-                            //    Skip the product if it is 0
-                            product === 0 ? null
-                                :
-                                (
-                                    <Product token={token} product={product} key={index} />
-                                )
-                        ))
-                            // static products from server (fallback first to load)
-                            :
-                            products?.map((product, index) => (
-                                //    Skip the product if it is 0
-                                product === 0 ? null
-                                    :
-                                    (
-                                        <Product token={token} product={product} key={index} />
-                                    )
-                            ))
-                    }
+                    { /* Products */}
+                    {checkedProducts?.length !== 0 && checkedProducts?.map((product, index) => (
+                        product === 0 ? null : <Product totalProductCount={list?.acf?.product_count || 0} baggedProductCount={list?.acf?.bagged_product_count || 0} setProgress={setProgress} setCheckedProducts={setCheckedProducts} isBagged={false} setBaggedProducts={setBaggedProducts} token={token} product={product} key={index} />
+                    ))}
+
+
 
                     {/* BAGGED PRODUCTS */}
-                    {
-                        baggedProducts?.length !== 0 &&
+                    {(
+                        baggedProducts?.length !== 0) &&
+                        // Bagged Products Header
                         (
                             <h3 onClick={handleOpenBaggedSettings} className="flex cursor-pointer mt-10 relative  gap-1 bagged-settings">
                                 <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
                                 <div>
                                     <span className="text-2xl font-bold">Bagged</span>
-                                    <span className="text-sm text-gray-500 ml-2">{baggedProducts?.length} products</span>
+                                    <span className="text-sm text-gray-500 ml-2">{baggedProducts?.length !== 0 ? baggedProducts?.length : baggedItems.baggedCount !== 0 && baggedItems.baggedCount} products</span>
                                 </div>
 
                                 {
@@ -254,21 +195,14 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
                                     )
                                 }
                             </h3>
-                        )
-                    }
+                        )}
 
 
-                    {
-                        // Actual products (live data)
-                        baggedProducts?.length !== 0 && baggedProducts.map((product, index) => (
-                            //    Skip the product if it is 0
-                            product === 0 ? null
-                                :
-                                (
-                                    <Product token={token} product={product} key={index} />
-                                )
-                        ))
-                    }
+                    {/* Products */}
+                    {baggedProducts?.length !== 0 && baggedProducts.map((product, index) => (
+                        product === 0 ? null : <Product totalProductCount={list?.acf?.product_count || 0} baggedProductCount={list?.acf?.bagged_product_count || 0} setProgress={setProgress} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} isBagged={true} token={token} product={product} key={index} />
+                    ))}
+
                 </div >
 
             </div >
@@ -279,7 +213,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, prod
 
             {loading && <div className=" fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">  <ListLoader />  </div>}
 
-            {productOverlay && <AddProduct allProducts={allProducts} checkedProducts={checkedProducts} setCheckedProducts={setCheckedProducts} token={token} setProductOverlay={setProductOverlay} />}
+            {productOverlay && <AddProduct setBaggedProducts={setBaggedProducts} allProducts={allProducts} checkedProducts={checkedProducts} setCheckedProducts={setCheckedProducts} token={token} setProductOverlay={setProductOverlay} />}
 
             <Notification />
 

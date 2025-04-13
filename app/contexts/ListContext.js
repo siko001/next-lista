@@ -1,13 +1,31 @@
 'use client';
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { useNotificationContext } from './NotificationContext';
-import { decryptToken } from '../lib/helpers';
+import { decryptToken, WP_API_BASE } from '../lib/helpers';
 import gsap from 'gsap';
-import { set } from 'react-hook-form';
 const ListContext = createContext();
+import Lenis from 'lenis'
+import 'lenis/dist/lenis.css'
+
 
 export const ListProvider = ({ children }) => {
-    const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
+    const lenis = useRef(null);
+    useEffect(() => {
+        lenis.current = new Lenis({
+            duration: 2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            smooth: true,
+        });
+        const raf = (time) => {
+            lenis.current.raf(time);
+            requestAnimationFrame(raf);
+        };
+        requestAnimationFrame(raf);
+        return () => {
+            lenis.current.destroy();
+        };
+    }, []);
+
     const { showNotification } = useNotificationContext();
     const [listRename, setListRename] = useState(false);
     const [hasDeletedLists, setHasDeletedLists] = useState(false);
@@ -274,8 +292,7 @@ export const ListProvider = ({ children }) => {
         // decrypt the token
         const decryptedToken = decryptToken(token);
 
-        // Send to server
-        const WP_API_BASE = "https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json";
+
         try {
             const response = await fetch(`${WP_API_BASE}/wp/v2/shopping-list/${listId}`, {
                 method: "POST",
