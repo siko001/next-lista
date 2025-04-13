@@ -3,8 +3,10 @@ import { useParams } from 'next/navigation'
 import { decryptToken, WP_API_BASE } from "../../lib/helpers";
 import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
+import { set } from 'react-hook-form';
 
 export default function Product({
+    setTotalProductCount, baggedProductCount, setBaggedProductCount, progress,
     product,
     token,
     isBagged,
@@ -34,6 +36,7 @@ export default function Product({
             // Remove from checked, add to bagged
             setCheckedProducts(prev => prev.filter(p => p.id !== product.id));
             setBaggedProducts(prev => [...prev, product]);
+            setBaggedProductCount(prev => prev + 1);
             setProgress((prev) => {
                 const newProgress = prev + (1 / totalProductCount) * 100;
                 return newProgress > 100 ? 100 : newProgress;
@@ -42,6 +45,7 @@ export default function Product({
             // Remove from bagged, add back to checked
             setBaggedProducts(prev => prev.filter(p => p.id !== product.id));
             setCheckedProducts(prev => [...prev, product]);
+            setBaggedProductCount(prev => prev - 1);
             setProgress((prev) => {
                 const newProgress = prev - (1 / totalProductCount) * 100;
                 return newProgress < 0 ? 0 : newProgress;
@@ -65,7 +69,7 @@ export default function Product({
             const data = await response.json();
 
             if (data.error) {
-                // revert local state changes if API call fails
+                // Handle error
                 if (action === 'bag') {
                     setCheckedProducts(prev => [...prev, product]);
                     setBaggedProducts(prev => prev.filter(p => p.id !== product.id));
@@ -85,8 +89,7 @@ export default function Product({
             return data;
 
         } catch (error) {
-            // console.error('Error updating product status:', error);
-            // throw error;
+            console.error('Error:', error);
             // revert local state changes if API call fails
             if (action === 'bag') {
                 setCheckedProducts(prev => [...prev, product]);
@@ -209,6 +212,7 @@ export default function Product({
             animateAppearInBagged();
         }
     };
+
 
     return (
         <div

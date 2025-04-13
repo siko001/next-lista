@@ -7,8 +7,9 @@ import { decryptToken, WP_API_BASE } from '../../lib/helpers';
 import "../../css/checkbox.css";
 import CloseIcon from '../svgs/CloseIcon';
 import { useParams } from 'next/navigation';
+import { set } from 'react-hook-form';
 
-export default function AddProduct({ setProductOverlay, token, checkedProducts, setCheckedProducts, allProducts, setBaggedProducts }) {
+export default function AddProduct({ totalProductCount, setTotalProductCount, baggedProductCount, setBaggedProductCount, progress, setProgress, allLinkedProducts, setAllLinkedProducts, setProductOverlay, token, setCheckedProducts, allProducts, baggedProducts, setBaggedProducts }) {
     const [products, setProducts] = useState(allProducts);
     const [originalProducts] = useState(allProducts);
 
@@ -16,9 +17,36 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
     const shoppingListId = useParams().id;
 
     const updateProductInShoppingList = async (productId, isAdding, token) => {
+
         if (!shoppingListId || !token) return;
         const decryptedToken = decryptToken(token);
+        // find if a product is bagged
+        const isProductBagged = baggedProducts?.some(product => product.id === productId);
+        const productTitle = products.find(product => product.id === productId)?.title;
+        if (isAdding) {
+            setCheckedProducts(prev => {
+                const uniqueProducts = prev.filter(product => product.id !== productId); // Remove duplicates
+                return [...uniqueProducts, { id: productId, title: productTitle }];
+            });
+            setAllLinkedProducts(prev => {
+                const uniqueProducts = prev.filter(product => product.ID !== productId); // Remove duplicates
+                return [...uniqueProducts, { ID: productId, title: productTitle }];
+            })
+            setTotalProductCount(prev => prev + 1);
 
+        } else {
+            setCheckedProducts(prev => prev.filter(product => product.id !== productId));
+            setBaggedProducts(prev => prev.filter(product => product.id !== productId));
+            setAllLinkedProducts(prev => prev.filter(product => product.ID !== productId));
+            setTotalProductCount(prev => prev - 1);
+            if (isProductBagged) {
+                setBaggedProductCount(prev => prev - 1);
+                setProgress((prev) => {
+                    const newProgress = prev - (1 / totalProductCount) * 100;
+                    return newProgress < 0 ? 0 : newProgress;
+                });
+            }
+        }
         try {
             const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
                 method: 'POST',
@@ -34,35 +62,20 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
             });
 
             const data = await response?.json()
-
-
-            const productTitle = products.find(product => product.id === productId)?.title;
-            if (isAdding) {
-                setCheckedProducts(prev => {
-                    const uniqueProducts = prev.filter(product => product.id !== productId); // Remove duplicates
-                    return [...uniqueProducts, { id: productId, title: productTitle }];
-                });
-            } else {
-                setCheckedProducts(prev => prev.filter(product => product.id !== productId));
-                setBaggedProducts(prev => prev.filter(product => product.id !== productId));
-            }
-
         } catch (error) {
-            // console.error('Error:', error);
+            console.error('Error:', error);
         }
     };
 
-    // Modify the checkbox change handler
-    const handleCheckboxChange = (productId, token) => {
-        const isCurrentlyChecked = checkedProducts?.some(product => product.id === productId);
-        updateProductInShoppingList(productId, !isCurrentlyChecked, token);
-    };
 
-    // Modify the remove product handler
-    const handleRemoveProduct = (e, productId) => {
-        e.stopPropagation(); // Prevent triggering the parent click
-        setCheckedProducts(prev => prev.filter(product => product.id !== productId));
-        updateProductInShoppingList(productId, false, token);
+    let isUpdating = false;
+    const handleCheckboxChange = (productId, token) => {
+        if (isUpdating) return;
+        isUpdating = true;
+        const isCurrentlyChecked = allLinkedProducts?.some(product => product.ID === productId);
+        updateProductInShoppingList(productId, !isCurrentlyChecked, token).finally(() => {
+            isUpdating = false;
+        });
     };
 
 
@@ -78,6 +91,9 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
         })
     }, [])
 
+
+
+    // Search functionality
     const [searchValue, setSearchValue] = useState(""); // Initialize with an empty string
 
     const handleSearchProduct = (e) => {
@@ -93,14 +109,8 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
             setProducts(filteredProducts);
         }
     };
-    const handleClick = (e) => {
-        // if the checkbox is already checked, do nothing
-        if (e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]').checked) return;
 
-        const checkbox = e.target.closest('.checkbox-wrapper-28').querySelector('input[type="checkbox"]');
-        if (checkbox) checkbox.click();
-    }
-    // handle esc key and outside click to close the overlay
+
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.key === 'Escape') {
@@ -139,22 +149,27 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                     <div className="flex flex-col gap-3 px-4 mt-4">
                         {/* Products list - modified to handle immediate updates */}
                         {products.map((product) => (
+
                             <div
-                                onClick={() => handleCheckboxChange(product.id, token)}
+                                onClick={(e) => { e.stopPropagation(); handleCheckboxChange(product.id, token) }}
                                 key={product.id}
-                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${checkedProducts?.some(p => p.id === product.id) ? 'border-primary' : ''}`} >
+                                className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`} >
                                 <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
                                     <div className="checkbox-wrapper-28">
                                         <input
                                             id={`checkbox-${product.id}`}
                                             type="checkbox"
                                             className="promoted-input-checkbox peer"
-                                            checked={!!checkedProducts?.some(p => p.id === product.id)}
-                                            onChange={() => handleCheckboxChange(product.id, token)} />
-
-
-                                        <label htmlFor={`checkbox-${product.id}`}></label>
-                                        <svg onClick={handleClick} className="absolute -z-0">
+                                            checked={allLinkedProducts.some(p => p.ID === product.id)}
+                                            onChange={(e) => { e.stopPropagation(); handleCheckboxChange(product.id, token) }} />
+                                        <label
+                                            htmlFor={`checkbox-${product.id}`}
+                                            onClick={(e) => {
+                                                e.preventDefault(); // Prevent default label behavior
+                                                handleCheckboxChange(product.id, token);
+                                            }}
+                                        ></label>
+                                        <svg className="absolute -z-0">
                                             <use href="#checkmark-28" />
                                         </svg>
                                         <svg xmlns="http://www.w3.org/2000/svg" style={{ display: 'none' }}>
@@ -171,7 +186,7 @@ export default function AddProduct({ setProductOverlay, token, checkedProducts, 
                                     {product.title}
                                 </div>
 
-                                <div onClick={(e) => handleRemoveProduct(e, product.id)} className={`flex items-center transition-opacity duration-300 gap-2 ${checkedProducts?.some(p => p.id === product.id) ? 'opacity-100' : 'opacity-0'}`}>
+                                <div className={`flex items-center transition-opacity duration-300 gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'opacity-100' : 'opacity-0'}`}>
                                     <CloseIcon className="w-6 h-6 text-red-500 hover:text-white tranisition-colors duration-200 cursor-pointer" />
                                 </div>
                             </div>

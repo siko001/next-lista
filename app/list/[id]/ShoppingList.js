@@ -1,20 +1,14 @@
 'use client'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from "react";
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { decryptToken, WP_API_BASE } from "../../lib/helpers";
 import { calculateProgress } from "../../lib/helpers"
 
 // Contexts
-import { useOverlayContext } from "../../contexts/OverlayContext";
-import { useLoadingContext } from "../../contexts/LoadingContext";
 import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useProductContext } from "../../contexts/ProductContext";
 
 // Components
 import Header from "../../components/Header";
-import ListLoader from '../../components/loaders/ListLoader';
-import Overlay from '../../components/modals/Overlay';
 import Notification from '../../components/Notification';
 import Button from '../../components/Button';
 import AddProduct from '../../components/modals/AddProduct';
@@ -28,12 +22,14 @@ import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
 
 export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList }) {
-    const { loading } = useLoadingContext();
-    const { overlay } = useOverlayContext();
     const { getAllProducts } = useProductContext();
     const [productOverlay, setProductOverlay] = useState(false);
+
+    const [allLinkedProducts, setAllLinkedProducts] = useState(list.acf.linked_products);
     const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
     const [baggedProducts, setBaggedProducts] = useState(baggedItems.baggedProducts);
+
+
     const shoppingListId = useParams().id;
     const [allProducts, setAllProducts] = useState([]);
     const [shareDialogOpen, setShareDialogOpen] = useState(false)
@@ -42,9 +38,11 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     const [checklistSettings, setChecklistSettings] = useState(false);
     const [baggedSettings, setBaggedSettings] = useState(false);
 
-    const [progress, setProgress] = useState(calculateProgress(list?.acf?.product_count, list?.acf?.bagged_product_count) || 0);
 
+    const [totalProductCount, setTotalProductCount] = useState(Number(list?.acf?.product_count) || 0);
+    const [baggedProductCount, setBaggedProductCount] = useState(Number(list?.acf?.bagged_product_count) || 0);
 
+    const [progress, setProgress] = useState(calculateProgress(totalProductCount, baggedProductCount) || 0);
 
     const fetchProducts = async (token) => {
         return await getAllProducts(token);
@@ -104,6 +102,12 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
         };
     })
 
+    useEffect(() => {
+        if (totalProductCount === 0) setProgress(0)
+        if (baggedProductCount === 0) setProgress(0)
+        const newProgress = calculateProgress(totalProductCount, baggedProductCount);
+        setProgress(newProgress);
+    }, [totalProductCount, baggedProductCount])
 
 
 
@@ -157,7 +161,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
                     { /* Products */}
                     {checkedProducts?.length !== 0 && checkedProducts?.map((product, index) => (
-                        product === 0 ? null : <Product totalProductCount={list?.acf?.product_count || 0} baggedProductCount={list?.acf?.bagged_product_count || 0} setProgress={setProgress} setCheckedProducts={setCheckedProducts} isBagged={false} setBaggedProducts={setBaggedProducts} token={token} product={product} key={index} />
+                        product === 0 ? null : <Product setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} baggedProductCount={baggedProductCount} setProgress={setProgress} setCheckedProducts={setCheckedProducts} isBagged={false} setBaggedProducts={setBaggedProducts} token={token} product={product} key={index} />
                     ))}
 
 
@@ -167,7 +171,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                         baggedProducts?.length !== 0) &&
                         // Bagged Products Header
                         (
-                            <h3 onClick={handleOpenBaggedSettings} className="flex cursor-pointer mt-10 relative  gap-1 bagged-settings">
+                            <h3 onClick={handleOpenBaggedSettings} className={`flex cursor-pointer ${checkedProducts?.length !== 0 ? 'mt-10' : 'mt-0'} relative  gap-1 bagged-settings`}>
                                 <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
                                 <div>
                                     <span className="text-2xl font-bold">Bagged</span>
@@ -199,20 +203,17 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
                     {/* Products */}
                     {baggedProducts?.length !== 0 && baggedProducts.map((product, index) => (
-                        product === 0 ? null : <Product totalProductCount={list?.acf?.product_count || 0} baggedProductCount={list?.acf?.bagged_product_count || 0} setProgress={setProgress} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} isBagged={true} token={token} product={product} key={index} />
+                        product === 0 ? null : <Product setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} baggedProductCount={baggedProductCount} setProgress={setProgress} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} isBagged={true} token={token} product={product} key={index} />
                     ))}
 
                 </div >
 
             </div >
 
-            {
-                overlay && <Overlay />
-            }
 
-            {loading && <div className=" fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">  <ListLoader />  </div>}
 
-            {productOverlay && <AddProduct setBaggedProducts={setBaggedProducts} allProducts={allProducts} checkedProducts={checkedProducts} setCheckedProducts={setCheckedProducts} token={token} setProductOverlay={setProductOverlay} />}
+
+            {productOverlay && <AddProduct baggedProducts={baggedProducts} progress={progress} setProgress={setProgress} baggedProductCount={baggedProductCount} setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} setTotalProductCount={setTotalProductCount} allLinkedProducts={allLinkedProducts} setAllLinkedProducts={setAllLinkedProducts} setBaggedProducts={setBaggedProducts} allProducts={allProducts} setCheckedProducts={setCheckedProducts} token={token} setProductOverlay={setProductOverlay} />}
 
             <Notification />
 
@@ -220,11 +221,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 <Button cta="Add Products" color="#21ba9c" hover="inwards" action="add-product-overlay" textColorOverride={"text-white"} overrideDefaultClasses={"bg-blue-800 text-black text-sm md:text-base"} setProductOverlay={setProductOverlay} />
             </div>
 
-
-            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 bg-black py-14  px-4 flex items-center justify-between">
-
-            </div>
-
+            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 bg-black py-14  px-4 flex items-center justify-between"></div>
 
             {
                 shareDialogOpen && (
@@ -236,6 +233,5 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             }
 
         </main >
-
     )
 }
