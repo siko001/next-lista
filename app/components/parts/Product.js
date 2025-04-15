@@ -233,7 +233,7 @@ export default function Product({
                         <svg className="absolute -z-0">
                             <use href="#checkmark-28" />
                         </svg>
-                        <label htmlFor={`checkbox-${product.id}`}>    </label>
+                        <label htmlFor={`checkbox-${product.id}`}></label>
                         <svg xmlns="http://www.w3.org/2000/svg">
                             <symbol id="checkmark-28" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeMiterlimit="10" fill="none" d="M22.9 3.7l-15.2 16.6-6.6-7.1" />

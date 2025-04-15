@@ -43,18 +43,18 @@ export default function AddProduct({
 
         if (isAdding) {
             setCheckedProducts(prev => {
-                const uniqueProducts = prev.filter(product => product.id !== productId);
+                const uniqueProducts = prev?.filter(product => product.id !== productId);
                 return [...uniqueProducts, { id: productId, title: productTitle }];
             });
             setAllLinkedProducts(prev => {
-                const uniqueProducts = prev.filter(product => product.ID !== productId);
+                const uniqueProducts = prev?.filter(product => product.ID !== productId);
                 return [...uniqueProducts, { ID: productId, title: productTitle }];
             });
             setTotalProductCount(prev => prev + 1);
         } else {
-            setCheckedProducts(prev => prev.filter(product => product.id !== productId));
-            setBaggedProducts(prev => prev.filter(product => product.id !== productId));
-            setAllLinkedProducts(prev => prev.filter(product => product.ID !== productId));
+            setCheckedProducts(prev => prev?.filter(product => product.id !== productId));
+            setBaggedProducts(prev => prev?.filter(product => product.id !== productId));
+            setAllLinkedProducts(prev => prev?.filter(product => product.ID !== productId));
             setTotalProductCount(prev => prev - 1);
             if (isProductBagged) {
                 setBaggedProductCount(prev => prev - 1);
@@ -184,9 +184,18 @@ export default function AddProduct({
 
     return (
         <div className="w-full absolute top-0">
+
+            <div className="fixed top-4 right-6 w-10 h-10 z-[100]">
+                <CloseIcon
+                    className="absolute top-4 right-4 w-8 h-8 text-white cursor-pointer"
+                    onClick={() => {
+                        setProductOverlay(false);
+                    }}
+                />
+            </div>
             <div className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#000000ef] blur-sm close-product-overlay"></div>
             <div className="relative top-0">
-                <div className="absolute top-0 z-[100] inset-x-0 bg-black gap-4 left-1/2 max-h-[800px] -translate-x-1/2 w-[90%] md:w-1/2 md:min-w-[550px] max-w-[750px] flex flex-col items-center mt-6 mb-8 md:my-12">
+                <div className="absolute top-0 z-[100] inset-x-0 bg-black gap-4 left-1/2  -translate-x-1/2 w-[90%] md:w-1/2 md:min-w-[550px] max-w-[750px] flex flex-col items-center mt-3 mb-8 md:my-6">
                     {/* Search Input - Sticky */}
                     <div className="w-full bg-gray-700 sticky top-0 z-20 rounded-md ">
                         <div className="relative flex items-center">
@@ -205,7 +214,10 @@ export default function AddProduct({
 
                     {/* Scrollable Product List with Lenis */}
                     <div ref={productListRef} className="w-full bg-gray-700 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-hidden">
-                        <div className="product-list-content flex flex-col gap-3 px-4 py-4">
+                        <div className="product-list-content flex flex-col gap-3 px-4 pb-4">
+                            <div className="bg-gray-800 w-min whitespace-pre relative font-bold rounded-br-xl -left-4 mb-2 py-2 px-4">
+                                <div>Custom Products</div>
+                            </div>
                             {products.map(product => (
                                 <div
                                     onClick={(e) => {
@@ -213,7 +225,7 @@ export default function AddProduct({
                                         handleCheckboxChange(product.id, token);
                                     }}
                                     key={product.id}
-                                    className={`border px-4 py-3 rounded-md bg-gray-800 text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
+                                    className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-900 hover:bg-gray-800 duration-200 ease-linear tranisition-colors text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
                                 >
                                     <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
                                         <div className="checkbox-wrapper-28">
@@ -221,7 +233,7 @@ export default function AddProduct({
                                                 id={`checkbox-${product.id}`}
                                                 type="checkbox"
                                                 className="promoted-input-checkbox peer"
-                                                checked={allLinkedProducts.some(p => p.ID === product.id)}
+                                                checked={allLinkedProducts?.some(p => p.ID === product.id)}
                                                 onChange={(e) => {
                                                     e.stopPropagation();
                                                     handleCheckboxChange(product.id, token);
@@ -258,13 +270,13 @@ export default function AddProduct({
                         </div>
                     </div>
                 </div>
-                <div className="fixed bottom-4 sm:hidden left-1/2 -translate-x-1/2 opacity-0 z-[100] close-product-overlay-btn">
+                <div className="fixed bottom-4  sm:hidden w-full  mx-auto justify-center flex gap-2  opacity-0 z-[100] close-product-overlay-btn">
                     <Button
                         cta="Close Products List"
                         color="#82181a"
                         hover="inwards"
                         action="close-product-overlay"
-                        overrideDefaultClasses="bg-red-500 text-black text-sm md:text-base"
+                        overrideDefaultClasses="bg-red-500  whitespace-nowrap text-black text-sm md:text-base"
                         light={true}
                         setProductOverlay={() => {
                             document.body.style.overflow = 'auto';
@@ -273,6 +285,6 @@ export default function AddProduct({
                     />
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

@@ -1,6 +1,6 @@
 <?php
 
-dd_action('rest_api_init', function() {
+do_action('rest_api_init', function() {
     register_rest_route('custom/v1', '/get-shopping-list-products', array(
         'methods' => 'GET',
         'callback' => 'get_shopping_list_products',

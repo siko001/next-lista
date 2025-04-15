@@ -13,6 +13,8 @@ import ShareIcon from "../svgs/ShareIcon"
 import RenameIcon from "../svgs/RenameIcon"
 import TranshIcon from "../svgs/TranshIcon"
 import CloseIcon from "../svgs/CloseIcon"
+import ThrowIcon from "../svgs/ThrowIcon"
+import { WP_API_BASE } from "../../lib/helpers"
 
 
 export default function ShoppingListHeader({ progress, list, token, setShareDialogOpen }) {
@@ -102,6 +104,26 @@ export default function ShoppingListHeader({ progress, list, token, setShareDial
     };
 
 
+    const handleEmptyList = (id) => {
+        if (confirm("Are you sure you want to empty this list?")) {
+            fetch(`${WP_API_BASE}/api/lists/${id}/empty`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.success) {
+                        alert("List emptied successfully");
+                    } else {
+                        alert("Error emptying list");
+                    }
+                });
+        }
+    }
+
 
     return (
         <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px]  bg-gray-900 h-[100px] mx-auto sticky top-0 z-40">
@@ -180,6 +202,10 @@ export default function ShoppingListHeader({ progress, list, token, setShareDial
                                     <button onClick={() => setShareDialogOpen(list.id)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                         <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                         Share
+                                    </button>
+                                    <button onClick={() => handleEmptyList(list.id)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                        <ThrowIcon className="w-4 h-4 inline-block mr-1" />
+                                        Empty
                                     </button>
                                     <button onClick={() => { handleDeleteList(list.id, token) }} className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
                                         <TranshIcon className="w-4 h-4 inline-block mr-1" />

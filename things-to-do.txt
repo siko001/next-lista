@@ -1,0 +1,42 @@
+# Lists View ---Third ***
+-Delete list confimartion modal
+-View users which list is shared with
+
+
+##shared list ---Second Main Focus ***
+-Invitees cannot delete list / can remove list.
+-Invitees see who's list it is.
+-Owner can revoke view.
+-Inform user if list has been delete and he wasn't active.
+-REAL TIME UPDATES. + (products + Progress)
+
+
+
+#Inner List  ---Main Focus *****
+-Delete List & confirmation modal plus redirect to home.
+- Remve all products -checked and bagged.
+-Dragg and drop products?
+
+
+#Products. ---Main Focus *****
+-Custom Products
+-Favourit Products
+-Add Categories
+-Sort By Categories
+-Products Show up According to users Choice + most clicked.
+
+
+
+#login ---Last**
+-Wordpress wrong password warning
+-forgot Password stuff
+
+
+#Emails ---Last**
+-Fix Registering Emails
+-Forgot password Emails
+
+
+#user ---Last**
+-User settings
+-User Themes
