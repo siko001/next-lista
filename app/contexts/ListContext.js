@@ -123,47 +123,61 @@ export const ListProvider = ({ children }) => {
     }, []);
 
 
-    const deleteList = async (listId, token) => {
+    const deleteList = async (listId, token, state) => {
+        if (!listId || !token) return null;
         const url = `${WP_API_BASE}/wp/v2/shopping-list/${listId}`;
         const method = "DELETE";
+
+        let decryptedToken
+        if (state && state === "autoDelete") {
+            decryptedToken = decryptToken(token);
+        }
+
+        gsap.fromTo(`#list-${listId}`,
+            {
+                opacity: 1,
+                border: "1px solid #ff0000",
+                duration: 0.5,
+            },
+            {
+                opacity: 0,
+                y: 100,
+                ease: "power2.out",
+                duration: 0.8,
+                onComplete: () => {
+                    setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
+                    showNotification("List deleted successfully", "success");
+                }
+            });
 
         try {
             const response = await fetch(url, {
                 method: method,
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    "Authorization": `Bearer ${decryptedToken && (decryptedToken !== null || decryptedToken !== undefined) ? decryptedToken : token}`
                 }
             });
-
-
             if (!response.ok) {
                 throw new Error("Failed to delete list");
             }
 
             const data = await response.json();
-
             setHasDeletedLists(true);
-            gsap.fromTo(`#list-${listId}`,
-                {
-                    opacity: 1,
-                    border: "1px solid #ff0000",
-                    duration: 0.5,
-                },
-                {
-                    opacity: 0,
-                    y: 100,
-                    ease: "power2.out",
-                    duration: 0.8,
-                    onComplete: () => {
-                        setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
-                        showNotification("List deleted successfully", "success");
-                    }
-                });
-
-
         } catch (error) {
             console.error("Delete List Failed:", error);
+            showNotification("Failed to delete list", "error");
+            setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
+            gsap.to(`#list-${listId}`, {
+                opacity: 1,
+                border: "1px solid #000",
+                duration: 0.5,
+                onComplete: () => {
+                    setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
+                    showNotification("List deleted successfully", "success");
+                }
+            });
+            return null;
         }
     };
 
@@ -239,7 +253,6 @@ export const ListProvider = ({ children }) => {
 
 
     const handleRenameList = async (value, token, view) => {
-        console.log(view)
         if (!value) return;
         const listId = listRename;
         const list = userLists.find((list) => list.id === listId);

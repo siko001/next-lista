@@ -1,5 +1,5 @@
 import ShoppingList from "./ShoppingList";
-import { getListDetails, getLinkedProducts } from "../../lib/helpers";
+import { getListDetails, getLinkedProducts, getAllProducts } from "../../lib/helpers";
 import { cookies } from 'next/headers'
 
 export default async function Page() {
@@ -16,9 +16,13 @@ export default async function Page() {
         isRegistered = true
     }
 
-    const list = await getListDetails(listId, token)
-    const products = await getLinkedProducts(listId, token)
+    // Fetch all data in parallel
+    const [list, products, AllProducts] = await Promise.all([
+        getListDetails(listId, token),
+        getLinkedProducts(listId, token),
+        getAllProducts(token)
+    ])
     return (
-        <ShoppingList baggedItems={products} isRegistered={isRegistered} userName={userName} list={list} token={token} checkedProductList={products.checkedProducts} products={products.linkedProducts} />
+        <ShoppingList AllProducts={AllProducts} baggedItems={products} isRegistered={isRegistered} userName={userName} list={list} token={token} checkedProductList={products.checkedProducts} products={products.linkedProducts} />
     )
 }

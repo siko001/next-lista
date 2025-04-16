@@ -22,17 +22,14 @@ import XBagIcon from '../../components/svgs/XBagIcon';
 import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
 
-export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList }) {
-    const { getAllProducts } = useProductContext();
+export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts }) {
     const [productOverlay, setProductOverlay] = useState(false);
 
     const [allLinkedProducts, setAllLinkedProducts] = useState(list.acf.linked_products);
     const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
     const [baggedProducts, setBaggedProducts] = useState(baggedItems.baggedProducts);
 
-
-    const shoppingListId = useParams().id;
-    const [allProducts, setAllProducts] = useState([]);
+    const [allProducts, setAllProducts] = useState(AllProducts);
     const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
 
@@ -45,25 +42,25 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
     const [progress, setProgress] = useState(calculateProgress(totalProductCount, baggedProductCount) || 0);
 
-    const fetchProducts = async (token) => {
-        return await getAllProducts(token);
-    }
+    // const fetchProducts = async (token) => {
+    //     return await getAllProducts(token);
+    // }
 
 
-    useEffect(() => {
-        const fetchAllData = async () => {
-            if (!shoppingListId || !token) return;
-            try {
-                // 1. Fetch ALL products
-                const allProducts = await fetchProducts(token);
-                setAllProducts(allProducts);
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        };
+    // useEffect(() => {
+    //     const fetchAllData = async () => {
+    //         if (!shoppingListId || !token) return;
+    //         try {
+    //             // 1. Fetch ALL products
+    //             const allProducts = await fetchProducts(token);
+    //             setAllProducts(allProducts);
+    //         } catch (error) {
+    //             console.error('Error:', error);
+    //         }
+    //     };
 
-        fetchAllData();
-    }, [shoppingListId, token]);
+    //     fetchAllData();
+    // }, [shoppingListId, token]);
 
 
 
@@ -107,9 +104,9 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     useEffect(() => {
         if (totalProductCount === 0) setProgress(0)
         if (baggedProductCount === 0) setProgress(0)
+
         const newProgress = calculateProgress(totalProductCount, baggedProductCount);
         setProgress(newProgress);
-        console.log("Progress updated:", newProgress);
     }, [totalProductCount, baggedProductCount])
 
 
@@ -219,6 +216,8 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                         action: 'unbag'
                     }),
                 });
+
+                console.log(res)
             } catch (error) {
                 console.error('Unbagging error:', error);
                 // Revert state on error
@@ -301,7 +300,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     // REMOVE ALL BAGGED PRODUCTS
     const handleRemoveBaggedItems = async (listId) => {
         const container = document.querySelector('.bagged-products-container');
-        const productsToRemove = [...baggedProducts]; // Create a copy of bagged products
+        const productsToRemove = [...baggedProducts];
 
         // Add fade-out animation to all bagged products
         if (container) {
@@ -358,6 +357,8 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     }
 
 
+
+
     return (
         <main >
 
@@ -365,13 +366,13 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
             <div className="relatve px-4">
 
-                <ShoppingListHeader progress={progress} setShareDialogOpen={setShareDialogOpen} token={token} list={list} />
+                <ShoppingListHeader setProgress={setProgress} setAllLinkedProducts={setAllLinkedProducts} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} progress={progress} setTotalProductCount={setTotalProductCount} setBaggedProductCount={setBaggedProductCount} Count setShareDialogOpen={setShareDialogOpen} token={token} list={list} />
 
                 <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32">
 
                     <div className="flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2">
 
-                        {checkedProducts?.length !== 0 &&
+                        {(checkedProducts && checkedProducts?.length !== 0) &&
                             (
                                 <>
                                     <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
@@ -417,7 +418,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
                     <div className={`flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${checkedProducts?.length !== 0 ? 'mt-10' : 'mt-0'} py-2 z-20 px-4 `}>
                         {(
-                            baggedProducts?.length !== 0) &&
+                            baggedProducts && baggedProducts?.length !== 0) &&
                             (
                                 <>
                                     <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
@@ -454,7 +455,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
                     {/* Products */}
                     <div className="bagged-products-container flex flex-col gap-4">
-                        {baggedProducts?.length !== 0 && baggedProducts.map((product, index) => (
+                        {baggedProducts?.length !== 0 && baggedProducts?.map((product, index) => (
                             product === 0 ? null : <Product setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} baggedProductCount={baggedProductCount} setProgress={setProgress} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} isBagged={true} token={token} product={product} key={index} />
                         ))}
                     </div>

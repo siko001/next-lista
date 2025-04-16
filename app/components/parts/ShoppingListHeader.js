@@ -3,7 +3,7 @@ import SettingsIcon from "../svgs/SettingsIcon"
 import SearchIcon from "../svgs/SearchIcon"
 import Progressbar from "./Progressbar"
 import { useListContext } from "../../contexts/ListContext"
-
+import { decryptToken } from "../../lib/helpers"
 import { useState, useEffect, useRef } from "react"
 import { gsap } from "gsap"
 
@@ -15,9 +15,10 @@ import TranshIcon from "../svgs/TranshIcon"
 import CloseIcon from "../svgs/CloseIcon"
 import ThrowIcon from "../svgs/ThrowIcon"
 import { WP_API_BASE } from "../../lib/helpers"
+import { set } from "react-hook-form"
 
 
-export default function ShoppingListHeader({ progress, list, token, setShareDialogOpen }) {
+export default function ShoppingListHeader({ setBaggedProductCount, setTotalProductCount, setProgress, progress, list, token, setShareDialogOpen, setAllLinkedProducts, allLinkedProducts, setCheckedProducts, checkedProducts, setBaggedProducts, baggedProducts }) {
     const { handleRenameInput, handleRenameClick, listRenameRef, handleRenameList, listRename, setListRename, innerListRef, listName, startingValue } = useListContext();
     const [openSettings, setOpenSettings] = useState(false)
     const searchProductRef = useRef(null);
@@ -104,25 +105,77 @@ export default function ShoppingListHeader({ progress, list, token, setShareDial
     };
 
 
-    const handleEmptyList = (id) => {
+    const handleEmptyList = async (id, token) => {
+
         if (confirm("Are you sure you want to empty this list?")) {
-            fetch(`${WP_API_BASE}/api/lists/${id}/empty`, {
-                method: "DELETE",
+            const updateStates = async () => {
+                setAllLinkedProducts([])
+                setCheckedProducts([])
+                setBaggedProducts([])
+                setBaggedProductCount(0)
+                setTotalProductCount(0)
+                setProgress(0)
+            }
+
+            const baggedContainer = document.querySelector('.bagged-products-container');
+            const checkedContainer = document.querySelector('.checked-products-container');
+
+            if ((checkedContainer || baggedContainer)) {
+                if (checkedContainer) {
+                    gsap.to(checkedContainer.children, {
+                        opacity: 0,
+                        y: 60,
+                        duration: 0.3,
+                        backgroundColor: '#ff0000',
+                        stagger: 0.05,
+                        onComplete: () => updateStates()
+                    });
+                }
+                if (baggedContainer) {
+                    gsap.to(baggedContainer.children, {
+                        opacity: 0,
+                        y: 60,
+                        duration: 0.3,
+                        backgroundColor: '#ff0000',
+                        stagger: 0.05,
+                        onComplete: () => updateStates()
+                    });
+                }
+            } else {
+                updateStates();
+            }
+
+            const decryptedToken = decryptToken(token);
+            const res = await fetch(`${WP_API_BASE}/custom/v1/empty/${id}`, {
+                method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${decryptedToken}`,
                 },
+                shoppingListId: id,
             })
-                .then((res) => res.json())
-                .then((data) => {
-                    if (data.success) {
-                        alert("List emptied successfully");
-                    } else {
-                        alert("Error emptying list");
-                    }
-                });
+            const data = await res.json()
+            if (!data.success) {
+                setAllLinkedProducts(allLinkedProducts)
+                setCheckedProducts(checkedProducts)
+                setBaggedProducts(baggedProducts)
+                setProgress(progress)
+            }
         }
     }
+
+    const handleDeleteList = async (listId, token) => {
+        // In deletion handler before redirect
+        sessionStorage.setItem('pendingDeletion', JSON.stringify({
+            listId,
+            token,
+            expires: Date.now() + 5000
+        }));
+
+        // Redirect to clean URL
+        window.location.href = '/';
+    }
+
 
 
     return (
@@ -179,7 +232,7 @@ export default function ShoppingListHeader({ progress, list, token, setShareDial
                                 placeholder="Search"
                                 value={searchValue}
                                 onChange={handleInputChange}
-                                onBlur={handleBlurSearchProduct} // Handle blur to collapse
+                                onBlur={handleBlurSearchProduct}
                                 className="w-0 transition-all !outline-0 !border-0 peer duration-700 pl-2 outline-none text-lg font-bold"
                             />
                             {searchValue && (
@@ -203,7 +256,7 @@ export default function ShoppingListHeader({ progress, list, token, setShareDial
                                         <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                         Share
                                     </button>
-                                    <button onClick={() => handleEmptyList(list.id)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                    <button onClick={() => handleEmptyList(list.id, token)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                         <ThrowIcon className="w-4 h-4 inline-block mr-1" />
                                         Empty
                                     </button>

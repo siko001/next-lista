@@ -86,8 +86,8 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     }
 
 
-    const handleDeleteList = async (id, token) => {
-        deleteList(id, token);
+    const handleDeleteList = async (id, token, state) => {
+        deleteList(id, token, state);
     }
 
 
@@ -149,6 +149,23 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
 
         setListSettings(false);
     }
+
+    const showDeletionConfirmation = (listId, token) => {
+        handleDeleteList(listId, token, 'autoDelete');
+    }
+
+    // In homepage component
+    useEffect(() => {
+        const pendingDeletion = sessionStorage.getItem('pendingDeletion');
+        if (pendingDeletion) {
+            const { listId, token, expires } = JSON.parse(pendingDeletion);
+            if (expires > Date.now() && token === serverToken) {
+                showDeletionConfirmation(listId, token);
+            }
+
+            sessionStorage.removeItem('pendingDeletion');
+        }
+    }, []);
 
 
     // if (loading) return <div>Loading...</div>;
