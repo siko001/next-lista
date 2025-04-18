@@ -14,7 +14,6 @@
 
 #Inner List  ---Main Focus *****
 -Delete List & confirmation modal plus redirect to home.
-- Remve all products -checked and bagged.
 -Dragg and drop products?
 
 

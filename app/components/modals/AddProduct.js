@@ -43,11 +43,11 @@ export default function AddProduct({
 
         if (isAdding) {
             setCheckedProducts(prev => {
-                const uniqueProducts = prev?.filter(product => product.id !== productId);
+                const uniqueProducts = prev?.filter(product => product.id !== productId) || [];
                 return [...uniqueProducts, { id: productId, title: productTitle }];
             });
             setAllLinkedProducts(prev => {
-                const uniqueProducts = prev?.filter(product => product.ID !== productId);
+                const uniqueProducts = prev?.filter(product => product.ID !== productId) || [];
                 return [...uniqueProducts, { ID: productId, title: productTitle }];
             });
             setTotalProductCount(prev => prev + 1);
@@ -232,8 +232,9 @@ export default function AddProduct({
                                             <input
                                                 id={`checkbox-${product.id}`}
                                                 type="checkbox"
+
                                                 className="promoted-input-checkbox peer"
-                                                checked={allLinkedProducts?.some(p => p.ID === product.id)}
+                                                checked={!!allLinkedProducts?.some(p => p.ID === product.id)}
                                                 onChange={(e) => {
                                                     e.stopPropagation();
                                                     handleCheckboxChange(product.id, token);

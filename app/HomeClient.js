@@ -33,11 +33,8 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     const { loading } = useLoadingContext();
     const { userData, token, error } = useUserContext();
     const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists, handleRenameClick, listSettings, setListSettings, handleRenameList } = useListContext();
-    const { overlay } = useOverlayContext();
+    const { overlay, showDeleteListConfirmation } = useOverlayContext();
     const { showNotification } = useNotificationContext();
-
-
-
 
     useEffect(() => {
         if (userData && userData.id && token) {
@@ -168,6 +165,8 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     }, []);
 
 
+
+
     // if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
     return (
@@ -221,7 +220,10 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
                                                                     <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Share
                                                                 </button>
-                                                                <button onClick={() => { handleDeleteList(list.id, token) }} className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
+                                                                <button onClick={() => {
+                                                                    showDeleteListConfirmation(list, token);
+                                                                }}
+                                                                    className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Delete
                                                                 </button>
@@ -269,7 +271,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
             </div>
 
 
-            {overlay && <Overlay />}
+            {overlay && <Overlay handleDeleteList={handleDeleteList} />}
 
             {loading && <div className="fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">  <ListLoader />  </div>}
 

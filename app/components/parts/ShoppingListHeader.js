@@ -1,12 +1,15 @@
 'use client'
-import SettingsIcon from "../svgs/SettingsIcon"
-import SearchIcon from "../svgs/SearchIcon"
-import Progressbar from "./Progressbar"
-import { useListContext } from "../../contexts/ListContext"
-import { decryptToken } from "../../lib/helpers"
 import { useState, useEffect, useRef } from "react"
 import { gsap } from "gsap"
+import { decryptToken, WP_API_BASE } from "../../lib/helpers"
 
+// Contexts
+import { useOverlayContext } from "../../contexts/OverlayContext";
+import { useListContext } from "../../contexts/ListContext"
+
+// Components
+import Overlay from "../../components/modals/Overlay";
+import Progressbar from "./Progressbar"
 
 // Icons
 import ShareIcon from "../svgs/ShareIcon"
@@ -14,8 +17,10 @@ import RenameIcon from "../svgs/RenameIcon"
 import TranshIcon from "../svgs/TranshIcon"
 import CloseIcon from "../svgs/CloseIcon"
 import ThrowIcon from "../svgs/ThrowIcon"
-import { WP_API_BASE } from "../../lib/helpers"
-import { set } from "react-hook-form"
+import SettingsIcon from "../svgs/SettingsIcon"
+import SearchIcon from "../svgs/SearchIcon"
+
+
 
 
 export default function ShoppingListHeader({ setBaggedProductCount, setTotalProductCount, setProgress, progress, list, token, setShareDialogOpen, setAllLinkedProducts, allLinkedProducts, setCheckedProducts, checkedProducts, setBaggedProducts, baggedProducts }) {
@@ -24,6 +29,7 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
     const searchProductRef = useRef(null);
     const [searchValue, setSearchValue] = useState("");
     const [searchIsOpen, setSearchIsOpen] = useState(false)
+    const { overlay, showDeleteListConfirmation } = useOverlayContext();
 
     const handleInputChange = (e) => {
         setSearchValue(e.target.value);
@@ -164,6 +170,7 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
         }
     }
 
+
     const handleDeleteList = async (listId, token) => {
         // In deletion handler before redirect
         sessionStorage.setItem('pendingDeletion', JSON.stringify({
@@ -179,99 +186,106 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
 
 
     return (
-        <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px]  bg-gray-900 h-[100px] mx-auto sticky top-0 z-40">
-            {/* list name */}
-            <div className="flex items-center justify-between gap-12 px-2">
-                {listRename ?
-                    (
-                        <div className="relative w-full  flex gap-2 items-center">
-                            {/* Renaming */}
-                            <input
-                                type="text"
-                                ref={listRenameRef}
+        <>
+            <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px]  bg-gray-900 h-[100px] mx-auto sticky top-0 z-40">
+                {/* list name */}
+                <div className="flex items-center justify-between gap-12 px-2">
+                    {listRename ?
+                        (
+                            <div className="relative w-full  flex gap-2 items-center">
+                                {/* Renaming */}
+                                <input
+                                    type="text"
+                                    ref={listRenameRef}
 
-                                onChange={handleRenameInput}
-                                defaultValue={innerListRef.current?.innerText}
-                                onBlur={() => {
-                                    handleRenameList(listRenameRef.current.value, token, "in-list")
-                                    setListRename(false)
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
+                                    onChange={handleRenameInput}
+                                    defaultValue={innerListRef.current?.innerText}
+                                    onBlur={() => {
                                         handleRenameList(listRenameRef.current.value, token, "in-list")
                                         setListRename(false)
-                                    }
-                                }}
-                                className="w-full dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
-                                placeholder="List-A Name"
-                            />
-
-                            <div>
-                                {/* quanity of words */}
-                                <span className=" text-xs font-bold">{startingValue}/32</span>
-                            </div>
-                        </div>
-                    )
-                    :
-                    (
-                        <h2 ref={innerListRef} onClick={() => handleRenameClick(list.id)} className="text-xl md:text-2xl font-bold">
-                            {listName || list?.title}
-                        </h2>
-                    )
-                }
-
-                <div className="flex gap-6 items-center">
-                    <div
-                        onClick={handleSearchProduct}
-                        className="flex items-center gap-2 group relative"
-                    >
-                        <div className="flex items-center pr-1 relative overflow-hidden dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 max-w-[400px]">
-                            <input
-                                ref={searchProductRef}
-                                type="text"
-                                placeholder="Search"
-                                value={searchValue}
-                                onChange={handleInputChange}
-                                onBlur={handleBlurSearchProduct}
-                                className="w-0 transition-all !outline-0 !border-0 peer duration-700 pl-2 outline-none text-lg font-bold"
-                            />
-                            {searchValue && (
-                                <CloseIcon
-                                    onClick={handleCloseSearch}
-                                    className="w-6 h-6 dark:text-gray-600 text-gray-800 hover:text-red-500 duration-200 transition-colors cursor-pointer"
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            handleRenameList(listRenameRef.current.value, token, "in-list")
+                                            setListRename(false)
+                                        }
+                                    }}
+                                    className="w-full dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
+                                    placeholder="List-A Name"
                                 />
-                            )}
-                        </div>
-                        <SearchIcon className={`w-6 h-6 md:w-8 md:h-8 ${searchIsOpen ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors cursor-pointer`} />
-                    </div>
-                    <div onClick={handleListSettings} className="relative ">
-                        {openSettings && (
-                            <div className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
-                                <div className="flex flex-col gap-0.5">
-                                    <button onClick={() => handleRenameClick(list.id)} className=" cursor-pointer px-2 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                        <RenameIcon className="w-4 h-4 inline-block mr-1" />
-                                        Rename
-                                    </button>
-                                    <button onClick={() => setShareDialogOpen(list.id)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                        <ShareIcon className="w-4 h-4 inline-block mr-1" />
-                                        Share
-                                    </button>
-                                    <button onClick={() => handleEmptyList(list.id, token)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                        <ThrowIcon className="w-4 h-4 inline-block mr-1" />
-                                        Empty
-                                    </button>
-                                    <button onClick={() => { handleDeleteList(list.id, token) }} className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
-                                        <TranshIcon className="w-4 h-4 inline-block mr-1" />
-                                        Delete
-                                    </button>
+
+                                <div>
+                                    {/* quanity of words */}
+                                    <span className=" text-xs font-bold">{startingValue}/32</span>
                                 </div>
                             </div>
-                        )}
-                        <SettingsIcon className={`w-6 h-6 md:w-8 md:h-8 ${openSettings ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors cursor-pointer`} />
+                        )
+                        :
+                        (
+                            <h2 ref={innerListRef} onClick={() => handleRenameClick(list.id)} className="text-xl md:text-2xl font-bold">
+                                {listName || list?.title}
+                            </h2>
+                        )
+                    }
+
+                    <div className="flex gap-6 items-center">
+                        <div
+                            onClick={handleSearchProduct}
+                            className="flex items-center gap-2 group relative"
+                        >
+                            <div className="flex items-center pr-1 relative overflow-hidden dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 max-w-[400px]">
+                                <input
+                                    ref={searchProductRef}
+                                    type="text"
+                                    placeholder="Search"
+                                    value={searchValue}
+                                    onChange={handleInputChange}
+                                    onBlur={handleBlurSearchProduct}
+                                    className="w-0 transition-all !outline-0 !border-0 peer duration-700 pl-2 outline-none text-lg font-bold"
+                                />
+                                {searchValue && (
+                                    <CloseIcon
+                                        onClick={handleCloseSearch}
+                                        className="w-6 h-6 dark:text-gray-600 text-gray-800 hover:text-red-500 duration-200 transition-colors cursor-pointer"
+                                    />
+                                )}
+                            </div>
+                            <SearchIcon className={`w-6 h-6 md:w-8 md:h-8 ${searchIsOpen ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors cursor-pointer`} />
+                        </div>
+                        <div onClick={handleListSettings} className="relative ">
+                            {openSettings && (
+                                <div className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                    <div className="flex flex-col gap-0.5">
+                                        <button onClick={() => handleRenameClick(list.id)} className=" cursor-pointer px-2 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                            <RenameIcon className="w-4 h-4 inline-block mr-1" />
+                                            Rename
+                                        </button>
+                                        <button onClick={() => setShareDialogOpen(list.id)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                            <ShareIcon className="w-4 h-4 inline-block mr-1" />
+                                            Share
+                                        </button>
+                                        <button onClick={() => handleEmptyList(list.id, token)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                            <ThrowIcon className="w-4 h-4 inline-block mr-1" />
+                                            Empty
+                                        </button>
+                                        <button onClick={() => {
+                                            showDeleteListConfirmation(list, token)
+                                            // handleDeleteList(list.id, token)
+                                        }} className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
+                                            <TranshIcon className="w-4 h-4 inline-block mr-1" />
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            <SettingsIcon className={`w-6 h-6 md:w-8 md:h-8 ${openSettings ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors cursor-pointer`} />
+                        </div>
                     </div>
                 </div>
+                <Progressbar progress={progress} />
             </div>
-            <Progressbar progress={progress} />
-        </div>
+
+            {overlay && <Overlay handleDeleteList={handleDeleteList} />}
+        </>
     )
 }

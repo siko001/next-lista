@@ -67,6 +67,17 @@ export default function Button(props) {
 		}
 
 
+		// Delete a list
+		if (props.action === "delete-a-list") {
+			const listId = props.data[0].id;
+			const token = props.data[1];
+			props.handleDeleteList(listId, token)
+			setOverlay((prev) => !prev);
+			return
+		}
+
+
+
 		if (props.action === "create-list") {
 			setOverlay((prev) => !prev);
 			setOverlayContent({

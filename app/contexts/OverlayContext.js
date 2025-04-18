@@ -46,6 +46,21 @@ export const OverlayProvider = ({ children }) => {
 		});
 	};
 
+
+
+	const showDeleteListConfirmation = (list, token) => {
+		// open a modal or dialog to confirm deletion
+		const titlesToCheck = ["list", "shopping list", 'lista', "list name", "list name here", "list name goes here", 'lista', 'lista de compras', 'lista de compras aqui', 'lista de compras vai aqui', 'shopping list here', 'shopping list goes here', 'shopping list name', 'shopping list name here', 'shopping list name goes here'];
+		setOverlay((prev) => !prev);
+		setOverlayContent({
+			title: `Are you sure you want to delete ${!titlesToCheck.includes(list.title.toLowerCase()) ? "list " + list.title : "this list"}?`,
+			action: "delete-a-list",
+			cta: "Delete list",
+			cancelAction: true,
+			data: [list, token],
+		});
+	}
+
 	return (
 		<OverlayContext.Provider value={{
 			overlay,
@@ -53,7 +68,8 @@ export const OverlayProvider = ({ children }) => {
 			overlayContent,
 			setOverlayContent,
 			closeOverlay,
-			convertContentToComponent
+			convertContentToComponent,
+			showDeleteListConfirmation
 		}}>
 			{children}
 		</OverlayContext.Provider>

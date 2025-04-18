@@ -6,6 +6,7 @@ import { calculateProgress, WP_API_BASE, decryptToken } from "../../lib/helpers"
 
 // Contexts
 import { useNotificationContext } from "../../contexts/NotificationContext";
+import { useOverlayContext } from "../../contexts/OverlayContext";
 import { useProductContext } from "../../contexts/ProductContext";
 
 // Components
@@ -16,6 +17,9 @@ import AddProduct from '../../components/modals/AddProduct';
 import ShoppingListHeader from '../../components/parts/ShoppingListHeader';
 import Product from '../../components/parts/Product';
 import ShareListDialog from '../../components/modals/ShareListDialog';
+import Overlay from "../../components/modals/Overlay";
+
+// Icons
 import SettingsIcon from '../../components/svgs/SettingsIcon';
 import BagIcon from '../../components/svgs/BagIcon';
 import XBagIcon from '../../components/svgs/XBagIcon';
@@ -23,6 +27,11 @@ import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
 
 export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts }) {
+
+
+    const { overlay } = useOverlayContext();
+
+
     const [productOverlay, setProductOverlay] = useState(false);
 
     const [allLinkedProducts, setAllLinkedProducts] = useState(list.acf.linked_products);
@@ -476,6 +485,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             </div>
 
             <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 bg-black py-14  px-4 flex items-center justify-between"></div>
+
 
             {
                 shareDialogOpen && (
