@@ -33,7 +33,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     const { loading } = useLoadingContext();
     const { userData, token, error } = useUserContext();
     const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists, handleRenameClick, listSettings, setListSettings, handleRenameList } = useListContext();
-    const { overlay, showDeleteListConfirmation } = useOverlayContext();
+    const { overlay, showVerbConfirmation } = useOverlayContext();
     const { showNotification } = useNotificationContext();
 
     useEffect(() => {
@@ -207,7 +207,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
                                                 {
                                                     listSettings === list.id && (
                                                         <div className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
-                                                            <div className="flex flex-col gap-0.5">
+                                                            <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                                 <button onClick={() => handleRenameClick(list.id)} className=" cursor-pointer px-3 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                                     <RenameIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Rename
@@ -221,7 +221,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
                                                                     Share
                                                                 </button>
                                                                 <button onClick={() => {
-                                                                    showDeleteListConfirmation(list, token);
+                                                                    showVerbConfirmation(list, token, "delete");
                                                                 }}
                                                                     className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />

@@ -32,7 +32,6 @@ export default function SingleInput() {
 		// Set a new timeout for validation message
 		timeoutRef.current = setTimeout(() => {
 			if (parentRef.current) {
-				console.log("value", value);
 				if (value.length === 0) {
 					setErrors({ message: "List Name required" });
 					parentRef.current.classList.add("border-red-500");

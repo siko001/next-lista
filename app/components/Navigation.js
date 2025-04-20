@@ -6,12 +6,12 @@ export default function Navigation(props) {
 
 	return (
 		<div className={" py-4 md:py-6 px-4 md:px-8 xl:px-16 flex justify-between items-center gap-12"}>
-			<Link id="site-logo" href={"/"} className={"font-bold text-3xl"}>Lista</Link>
+			<Link id="site-logo" href={"/"} className={"font-bold font-saira uppercase text-3xl"}>Lista</Link>
 
 			<div className="flex gap-4 items-center">
 				{(userData && userData.registered === "yes") && <div className={"text-white flex gap-2"}>
 
-					<span className="inline-block wave-emoji">👋</span> {userData?.name}</div>}
+					<span className="inline-block font-saira wave-emoji">👋</span> {userData?.name}</div>}
 
 				<Link href={`${props.route}`} className={" text-primary overflow-hidden group relative  py-3 px-6 xl:px-10 font-bold rounded-full bg-blue-800"}>
 					<p className="relative z-20 group-hover:text-black duration-700 text-white">

@@ -1,7 +1,8 @@
 'use client';
 import Button from '../../components/Button';
 import gsap from 'gsap';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import Fuse from 'fuse.js';
 import SearchIcon from '../svgs/SearchIcon';
 import { decryptToken, WP_API_BASE } from '../../lib/helpers';
 import "../../css/checkbox.css";
@@ -9,6 +10,7 @@ import CloseIcon from '../svgs/CloseIcon';
 import { useParams } from 'next/navigation';
 import Lenis from 'lenis';
 import { useListContext } from '../../contexts/ListContext';
+import ErrorIcon from '../svgs/ErrorIcon';
 
 export default function AddProduct({
     totalProductCount,
@@ -27,13 +29,31 @@ export default function AddProduct({
     setBaggedProducts,
 }) {
     const [products, setProducts] = useState(allProducts);
+    const [customProducts, setCustomProducts] = useState([]);
+    const [favouriteProducts, setFavouriteProducts] = useState([]);
+
+    const customProductInputRef = useRef(null);
+
+
+
     const [originalProducts] = useState(allProducts);
     const searchRef = useRef();
     const productListRef = useRef();
     const shoppingListId = useParams().id;
     const { lenis: globalLenis } = useListContext();
     const lenisRef = useRef(null);
-    const rafIdRef = useRef(null); // Store requestAnimationFrame ID
+    const rafIdRef = useRef(null);
+
+    const [selectedProductsSection, setSelectedProductsSection] = useState('popular');
+
+    // Create Fuse instance for fuzzy search
+    const fuseOptions = {
+        keys: ['title'],
+        threshold: 0.3,
+        distance: 100,
+    };
+
+    const fuse = useMemo(() => new Fuse(originalProducts, fuseOptions), [originalProducts]);
 
     const updateProductInShoppingList = async (productId, isAdding, token) => {
         if (!shoppingListId || !token) return;
@@ -99,21 +119,37 @@ export default function AddProduct({
         gsap.to(".close-product-overlay-btn", { y: 0, duration: 0.5, ease: "power2.out" });
     }, []);
 
-    // Search functionality
+    // Search functionality with fuzzy search
     const [searchValue, setSearchValue] = useState("");
 
     const handleSearchProduct = (e) => {
-        const value = e.target.value.toLowerCase();
+        const value = e.target.value;
         setSearchValue(value);
+
         if (value === "") {
             setProducts(originalProducts);
         } else {
-            const filteredProducts = originalProducts.filter(product =>
-                product.title.toLowerCase().includes(value)
-            );
+            const searchResults = fuse.search(value);
+            const filteredProducts = searchResults.map(result => result.item);
             setProducts(filteredProducts);
         }
     };
+
+    // Animate search results with simple fade-in
+    useEffect(() => {
+        if (productListRef.current) {
+            const productItems = productListRef.current.querySelectorAll('.product-list-content > div:not(.bg-gray-800)');
+            gsap.fromTo(
+                productItems,
+                { opacity: 0 },
+                {
+                    opacity: 1,
+                    duration: 0.3,
+                    ease: "power2.out",
+                }
+            );
+        }
+    }, [products]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -145,16 +181,17 @@ export default function AddProduct({
             globalLenis.current.stop();
         }
 
-        // Initialize Lenis for the product list
         if (productListRef.current) {
             lenisRef.current = new Lenis({
                 wrapper: productListRef.current,
                 content: productListRef.current.querySelector('.product-list-content'),
                 lerp: 0.1,
                 smoothWheel: true,
+                touchMultiplier: 2, // Add this for better touch handling
+                smoothTouch: true,    // Enable smooth scrolling for touch devices
+                infinite: false,
             });
 
-            // Animation frame for Lenis
             const raf = (time) => {
                 if (lenisRef.current) {
                     lenisRef.current.raf(time);
@@ -162,16 +199,15 @@ export default function AddProduct({
                 }
             };
             rafIdRef.current = requestAnimationFrame(raf);
+            productListRef.current.style.touchAction = 'pan-y';
         }
 
         return () => {
-            // Cancel requestAnimationFrame
             if (rafIdRef.current) {
                 cancelAnimationFrame(rafIdRef.current);
                 rafIdRef.current = null;
             }
 
-            // Resume global Lenis and destroy product list Lenis
             if (globalLenis?.current) {
                 globalLenis.current.start();
             }
@@ -182,9 +218,36 @@ export default function AddProduct({
         };
     }, [globalLenis]);
 
+
+
+    const [error, setError] = useState(null);
+    const handleCreateCustomProduct = () => {
+        if (customProductInputRef.current.value.trim() === '' || !customProductInputRef.current) {
+            setError('Please enter a product name');
+            setTimeout(() => {
+                setError(null);
+            }, 4000);
+            return
+        }
+
+        const customProductTitle = customProductInputRef.current.value.trim();
+        if (customProductTitle) {
+            const newCustomProduct = {
+                id: Date.now(),
+                title: customProductTitle,
+            };
+
+            console.log("New Custom Product:", newCustomProduct.id);
+            setCustomProducts((prev) => [...prev, newCustomProduct]);
+            setProducts((prev) => [...prev, newCustomProduct]);
+            customProductInputRef.current.value = '';
+        }
+    }
+
+
+
     return (
         <div className="w-full absolute top-0">
-
             <div className="fixed top-4 right-6 w-10 h-10 z-[100]">
                 <CloseIcon
                     className="absolute top-4 right-4 w-8 h-8 text-white cursor-pointer"
@@ -194,10 +257,9 @@ export default function AddProduct({
                 />
             </div>
             <div className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#000000ef] blur-sm close-product-overlay"></div>
-            <div className="relative top-0">
-                <div className="absolute top-0 z-[100] inset-x-0 bg-black gap-4 left-1/2  -translate-x-1/2 w-[90%] md:w-1/2 md:min-w-[550px] max-w-[750px] flex flex-col items-center mt-3 mb-8 md:my-6">
-                    {/* Search Input - Sticky */}
-                    <div className="w-full bg-gray-700 sticky top-0 z-20 rounded-md ">
+            <div className="relative top-0 ">
+                <div className="absolute top-0 z-[100]  inset-x-0 bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 md:min-w-[550px] max-w-[750px] flex flex-col items-center mt-3 mb-8 md:my-6">
+                    <div className="w-full bg-gray-700 sticky top-0 z-20 rounded-md">
                         <div className="relative flex items-center">
                             <input
                                 value={searchValue}
@@ -212,72 +274,145 @@ export default function AddProduct({
                         </div>
                     </div>
 
-                    {/* Scrollable Product List with Lenis */}
-                    <div ref={productListRef} className="w-full bg-gray-700 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-hidden">
+                    <div
+                        ref={productListRef}
+                        className="w-full bg-gray-700 pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
+                        style={{
+                            WebkitOverflowScrolling: 'touch',
+                            overscrollBehavior: 'contain',
+                        }}
+                    >
                         <div className="product-list-content flex flex-col gap-3 px-4 pb-4">
-                            <div className="bg-gray-800 w-min whitespace-pre relative font-bold rounded-br-xl -left-4 mb-2 py-2 px-4">
-                                <div>Custom Products</div>
-                            </div>
-                            {products.map(product => (
-                                <div
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCheckboxChange(product.id, token);
-                                    }}
-                                    key={product.id}
-                                    className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-900 hover:bg-gray-800 duration-200 ease-linear tranisition-colors text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
-                                >
-                                    <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
-                                        <div className="checkbox-wrapper-28">
-                                            <input
-                                                id={`checkbox-${product.id}`}
-                                                type="checkbox"
 
-                                                className="promoted-input-checkbox peer"
-                                                checked={!!allLinkedProducts?.some(p => p.ID === product.id)}
-                                                onChange={(e) => {
+                            {/* Navigation buttons */}
+                            <div className="flex w-min whitespace-pre relative font-bold  overflow-hidden rounded-br-xl -left-4 mb-4">
+                                <div onClick={() => setSelectedProductsSection("popular")} className={`py-2 pl-5 pr-4 ${selectedProductsSection === "popular" ? "bg-gray-700 hover:bg-gray-700" : "hover:opacity-70 bg-gray-800 cursor-pointer"}`} >Popular</div>
+                                <div onClick={() => setSelectedProductsSection("custom")} className={`py-2 px-4  ${selectedProductsSection === "custom" ? "bg-gray-700 hover:bg-gray-700" : "hover:opacity-70 bg-gray-800 cursor-pointer"}`} >Custom</div>
+                                <div onClick={() => setSelectedProductsSection("favourite")} className={`py-2 px-4  ${selectedProductsSection === "favourite" ? "bg-gray-700 hover:bg-gray-700" : "hover:opacity-70 bg-gray-800 cursor-pointer"}`} >Favourites</div>
+                            </div>
+
+
+                            {/* Custom Products Input */}
+                            {
+                                selectedProductsSection === "custom" &&
+                                (
+                                    <div>
+                                        <div className="w-full flex items-center  text-gray-400 text-lg font-bold group">
+                                            <input ref={customProductInputRef} placeholder='Input Product' className="w-full px-3 py-[9.5px] peer group-hover:!border-primary rounded-l-md h-full text-white !border-r-0 placeholder:text-white  !border-blue-800  focus:!border-primary"></input>
+                                            <button onClick={handleCreateCustomProduct} className="whitespace-pre  px-3 py-1.5 !border-blue-800 peer  group-hover:!border-primary  peer-focus:!border-primary cursor-pointer hover:!border-primary  rounded-r-md h-full bg-blue-800 text-white">Add product</button>
+                                        </div>
+
+                                        {
+                                            error && (
+                                                <p className="w-min mt-2 whitespace-pre ml-1 py-2 px-2 bg-red-400 rounded-sm text-white flex gap-1 items-center text-xs"><ErrorIcon className={"h-5 w-5"} />{error}</p>
+
+                                            )
+                                        }
+                                    </div>
+                                )
+                            }
+
+
+                            {
+                                (selectedProductsSection === "popular" ? products :
+                                    selectedProductsSection === "custom" ? customProducts :
+                                        favouriteProducts)?.map((product) => (
+                                            <div
+                                                onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleCheckboxChange(product.id, token);
                                                 }}
-                                            />
-                                            <label
-                                                htmlFor={`checkbox-${product.id}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    handleCheckboxChange(product.id, token);
-                                                }}
-                                            ></label>
-                                            <svg className="absolute -z-0">
-                                                <use href="#checkmark-28" />
-                                            </svg>
-                                            <svg xmlns="http://www.w3.org/2000/svg" style={{ display: 'none' }}>
-                                                <symbol id="checkmark-28" viewBox="0 0 24 24">
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeMiterlimit="10"
-                                                        fill="none"
-                                                        d="M22.9 3.7l-15.2 16.6-6.6-7.1"
-                                                    />
-                                                </symbol>
-                                            </svg>
-                                        </div>
-                                        {product.title}
+                                                key={product.id}
+                                                className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-900 hover:bg-gray-800 duration-200 ease-linear transition-colors text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
+                                            >
+                                                <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
+                                                    <div className="checkbox-wrapper-28">
+                                                        <input
+                                                            id={`checkbox-${product.id}`}
+                                                            type="checkbox"
+                                                            className="promoted-input-checkbox peer"
+                                                            checked={!!allLinkedProducts?.some(p => p.ID === product.id)}
+                                                            onChange={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCheckboxChange(product.id, token);
+                                                            }}
+                                                        />
+                                                        <label
+                                                            htmlFor={`checkbox-${product.id}`}
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleCheckboxChange(product.id, token);
+                                                            }}
+                                                        ></label>
+                                                        <svg className="absolute -z-0">
+                                                            <use href="#checkmark-28" />
+                                                        </svg>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" style={{ display: 'none' }}>
+                                                            <symbol id="checkmark-28" viewBox="0 0 24 24">
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeMiterlimit="10"
+                                                                    fill="none"
+                                                                    d="M22.9 3.7l-15.2 16.6-6.6-7.1"
+                                                                />
+                                                            </symbol>
+                                                        </svg>
+                                                    </div>
+                                                    {product.title}
+                                                </div>
+                                                <div className={`flex items-center transition-opacity duration-300 gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'opacity-100' : 'opacity-0'}`}>
+                                                    <CloseIcon className="w-6 h-6 text-red-500 hover:text-white transition-colors duration-200 cursor-pointer" />
+                                                </div>
+                                            </div>
+
+                                        )
+                                        )
+                            }
+
+
+                            {/* No Products Found */}
+                            {
+                                products.length === 0 && selectedProductsSection === "popular" &&
+                                (
+                                    <div className="w-full font-quicksand uppercase  mt-28 flex items-center justify-center text-gray-400 text-2xl font-bold">
+                                        No products found
                                     </div>
-                                    <div className={`flex items-center transition-opacity duration-300 gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'opacity-100' : 'opacity-0'}`}>
-                                        <CloseIcon className="w-6 h-6 text-red-500 hover:text-white transition-colors duration-200 cursor-pointer" />
+                                )
+                            }
+
+
+
+                            {/* No Custom Productss */}
+                            {
+                                customProducts.length === 0 && selectedProductsSection === "custom" &&
+                                (
+                                    <div className="w-full font-quicksand uppercase  mt-14 flex items-center justify-center text-gray-400 text-2xl font-bold">
+                                        No products found
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            }
+
+                            {/* No Favourite Products */}
+                            {
+                                favouriteProducts.length === 0 && selectedProductsSection === "favourite" &&
+                                (
+                                    <div className="w-full font-quicksand uppercase  mt-28 flex items-center justify-center text-gray-400 text-2xl font-bold">
+                                        No products found
+                                    </div>
+                                )
+                            }
+
+
                         </div>
                     </div>
                 </div>
-                <div className="fixed bottom-4  sm:hidden w-full  mx-auto justify-center flex gap-2  opacity-0 z-[100] close-product-overlay-btn">
+                <div className="fixed bottom-4 sm:hidden w-full mx-auto justify-center flex gap-2 opacity-0 z-[100] close-product-overlay-btn">
                     <Button
                         cta="Close Products List"
                         color="#82181a"
                         hover="inwards"
                         action="close-product-overlay"
-                        overrideDefaultClasses="bg-red-500  whitespace-nowrap text-black text-sm md:text-base"
+                        overrideDefaultClasses="bg-red-500 whitespace-nowrap text-black text-sm md:text-base"
                         light={true}
                         setProductOverlay={() => {
                             document.body.style.overflow = 'auto';
@@ -286,6 +421,6 @@ export default function AddProduct({
                     />
                 </div>
             </div>
-        </div >
+        </div>
     );
 }

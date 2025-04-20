@@ -1,13 +1,15 @@
 'use client'
 import gsap from 'gsap';
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import Fuse from 'fuse.js';
 import { calculateProgress, WP_API_BASE, decryptToken } from "../../lib/helpers"
 
 // Contexts
-import { useNotificationContext } from "../../contexts/NotificationContext";
 import { useOverlayContext } from "../../contexts/OverlayContext";
 import { useProductContext } from "../../contexts/ProductContext";
+import { useNotificationContext } from '../../contexts/NotificationContext';
+
 
 // Components
 import Header from "../../components/Header";
@@ -28,50 +30,74 @@ import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
 export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts }) {
 
-
     const { overlay } = useOverlayContext();
-
-
     const [productOverlay, setProductOverlay] = useState(false);
 
     const [allLinkedProducts, setAllLinkedProducts] = useState(list.acf.linked_products);
     const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
     const [baggedProducts, setBaggedProducts] = useState(baggedItems.baggedProducts);
 
+    // Store original product lists for search functionality
+    const [originalCheckedProducts, setOriginalCheckedProducts] = useState(checkedProductList);
+    const [originalBaggedProducts, setOriginalBaggedProducts] = useState(baggedItems.baggedProducts);
+
     const [allProducts, setAllProducts] = useState(AllProducts);
-    const [shareDialogOpen, setShareDialogOpen] = useState(false)
-
-
+    const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const [checklistSettings, setChecklistSettings] = useState(false);
     const [baggedSettings, setBaggedSettings] = useState(false);
 
-
     const [totalProductCount, setTotalProductCount] = useState(Number(list?.acf?.product_count) || 0);
     const [baggedProductCount, setBaggedProductCount] = useState(Number(list?.acf?.bagged_product_count) || 0);
-
     const [progress, setProgress] = useState(calculateProgress(totalProductCount, baggedProductCount) || 0);
 
-    // const fetchProducts = async (token) => {
-    //     return await getAllProducts(token);
-    // }
 
+    const { showNotification } = useNotificationContext();
+    // Create Fuse instances for fuzzy search
+    const fuseCheckedOptions = {
+        keys: ['title'],
+        threshold: 0.4, // Lower threshold means more strict matching
+        distance: 100,  // How far to extend the fuzzy match
+    };
 
-    // useEffect(() => {
-    //     const fetchAllData = async () => {
-    //         if (!shoppingListId || !token) return;
-    //         try {
-    //             // 1. Fetch ALL products
-    //             const allProducts = await fetchProducts(token);
-    //             setAllProducts(allProducts);
-    //         } catch (error) {
-    //             console.error('Error:', error);
-    //         }
-    //     };
+    const fuseChecked = useMemo(() => new Fuse(originalCheckedProducts, fuseCheckedOptions), [originalCheckedProducts]);
+    const fuseBagged = useMemo(() => new Fuse(originalBaggedProducts, fuseCheckedOptions), [originalBaggedProducts]);
 
-    //     fetchAllData();
-    // }, [shoppingListId, token]);
+    // Update original product lists when primary lists change (outside of search)
+    useEffect(() => {
+        if (checkedProducts && !isSearching) {
+            setOriginalCheckedProducts([...checkedProducts]);
+        }
+    }, [checkedProducts]);
 
+    useEffect(() => {
+        if (baggedProducts && !isSearching) {
+            setOriginalBaggedProducts([...baggedProducts]);
+        }
+    }, [baggedProducts]);
 
+    // Track if we're currently searching
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Handle search functionality with fuzzy matching
+    const handleSearchProducts = (searchTerm) => {
+        if (searchTerm === "") {
+            // If search is cleared, restore original lists
+            setCheckedProducts([...originalCheckedProducts]);
+            setBaggedProducts([...originalBaggedProducts]);
+            setIsSearching(false);
+            return;
+        }
+
+        setIsSearching(true);
+
+        // Use Fuse.js to perform fuzzy search on both lists
+        const filteredCheckedProducts = fuseChecked.search(searchTerm).map(result => result.item);
+        const filteredBaggedProducts = fuseBagged.search(searchTerm).map(result => result.item);
+
+        // Update the state with filtered results
+        setCheckedProducts(filteredCheckedProducts);
+        setBaggedProducts(filteredBaggedProducts);
+    };
 
     const handleOpenChecklistSettings = () => {
         setChecklistSettings((prev) => !prev);
@@ -83,7 +109,6 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
 
     useEffect(() => {
-        // Close the checklist settings when clicking outside
         const handleClickOutside = (event) => {
             if (event.target.closest('.checklist-settings') === null) {
                 setChecklistSettings(false);
@@ -91,6 +116,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             if (event.target.closest('.bagged-settings') === null) {
                 setBaggedSettings(false);
             }
+
         };
 
         // close if esc is pressed  
@@ -107,16 +133,15 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('click', handleClickOutside);
         };
-    })
+    }, [])
 
     // Update progress when baggedProductCount or totalProductCount changes
     useEffect(() => {
         if (totalProductCount === 0) setProgress(0)
         if (baggedProductCount === 0) setProgress(0)
-
-        const newProgress = calculateProgress(totalProductCount, baggedProductCount);
+        const newProgress = calculateProgress(totalProductCount, baggedProductCount)
         setProgress(newProgress);
-    }, [totalProductCount, baggedProductCount])
+    }, [totalProductCount, baggedProductCount, checkedProducts, baggedProducts]);
 
 
 
@@ -133,11 +158,13 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 stagger: 0.05,
                 onComplete: updateStates
             });
+            showNotification("Products Bagged", "success", 1000);
         } else {
             updateStates();
         }
 
         function updateStates() {
+
             const baggedProducts = checkedProducts.map((product) => ({
                 id: product.id,
                 title: product.title,
@@ -147,6 +174,12 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             setBaggedProducts(prev => [...prev, ...baggedProducts]);
             setCheckedProducts([]);
             setBaggedProductCount(prev => prev + checkedProducts.length);
+
+            // Also update original states if not searching
+            if (!isSearching) {
+                setOriginalBaggedProducts(prev => [...prev, ...baggedProducts]);
+                setOriginalCheckedProducts([]);
+            }
 
             // Send API request
             sendApiRequest(listId, baggedProducts);
@@ -183,7 +216,6 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
     const handleUnbagAllProducts = async (listId) => {
         const container = document.querySelector('.bagged-products-container');
-
         // Add fade-out animation to all bagged products
         if (container) {
             gsap.to(container.children, {
@@ -193,6 +225,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 stagger: 0.05,
                 onComplete: updateStates
             });
+            showNotification("Products Unbagged", "success", 1000);
         } else {
             updateStates();
         }
@@ -205,6 +238,12 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             setCheckedProducts(prev => [...prev, ...productsToUnbag]);
             setBaggedProducts([]);
             setBaggedProductCount(0);
+
+            // Also update original states if not searching
+            if (!isSearching) {
+                setOriginalCheckedProducts(prev => [...prev, ...productsToUnbag]);
+                setOriginalBaggedProducts([]);
+            }
 
             // Send API request
             sendApiRequest(listId, productsToUnbag);
@@ -226,7 +265,6 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                     }),
                 });
 
-                console.log(res)
             } catch (error) {
                 console.error('Unbagging error:', error);
                 // Revert state on error
@@ -255,6 +293,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 stagger: 0.05,
                 onComplete: () => updateStates(productsToRemove)
             });
+            showNotification("Products Removed", "success", 1000);
         } else {
             updateStates(productsToRemove);
         }
@@ -264,6 +303,12 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             setCheckedProducts([]);
             setTotalProductCount(prev => prev - productsToRemove.length);
             setAllLinkedProducts(prev => prev.filter(p => !productsToRemove.some(r => r.id === p.ID)));
+
+            // Also update original checked products if not searching
+            if (!isSearching) {
+                setOriginalCheckedProducts([]);
+            }
+
             // Also remove from bagged if any were bagged
             setBaggedProducts(prev => {
                 const newBagged = prev.filter(p =>
@@ -272,6 +317,13 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 setBaggedProductCount(newBagged.length);
                 return newBagged;
             });
+
+            // Update original bagged products if not searching
+            if (!isSearching) {
+                setOriginalBaggedProducts(prev =>
+                    prev.filter(p => !productsToRemove.some(r => r.id === p.id))
+                );
+            }
 
             // Send API request
             sendApiRequest(listId, productsToRemove);
@@ -294,7 +346,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 });
 
                 const data = await res.json();
-                console.log('Removal successful:', data);
+
 
             } catch (error) {
                 console.error('Removal error:', error);
@@ -321,6 +373,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 stagger: 0.05,
                 onComplete: () => updateStates(productsToRemove)
             });
+            showNotification("Products Removed", "success", 1000);
         } else {
             updateStates(productsToRemove);
         }
@@ -331,6 +384,11 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             setBaggedProductCount(0);
             setTotalProductCount(prev => prev - productsToRemove.length);
             setAllLinkedProducts(prev => prev.filter(p => !productsToRemove.some(r => r.id === p.ID)));
+
+            // Update original bagged products if not searching
+            if (!isSearching) {
+                setOriginalBaggedProducts([]);
+            }
 
             // Send API request
             sendApiRequest(listId, productsToRemove);
@@ -353,7 +411,6 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 });
 
                 const data = await res.json();
-                console.log('Bagged products removal successful:', data);
 
             } catch (error) {
                 console.error('Removal error:', error);
@@ -365,116 +422,106 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
         }
     }
 
-
-
-
     return (
         <main >
-
             <Header isRegistered={isRegistered} userName={userName} />
 
             <div className="relatve px-4">
-
-                <ShoppingListHeader setProgress={setProgress} setAllLinkedProducts={setAllLinkedProducts} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} progress={progress} setTotalProductCount={setTotalProductCount} setBaggedProductCount={setBaggedProductCount} Count setShareDialogOpen={setShareDialogOpen} token={token} list={list} />
+                <ShoppingListHeader
+                    setProgress={setProgress}
+                    totalProductCount={totalProductCount}
+                    setAllLinkedProducts={setAllLinkedProducts}
+                    setCheckedProducts={setCheckedProducts}
+                    setBaggedProducts={setBaggedProducts}
+                    progress={progress}
+                    setTotalProductCount={setTotalProductCount}
+                    setBaggedProductCount={setBaggedProductCount}
+                    setShareDialogOpen={setShareDialogOpen}
+                    token={token}
+                    list={list}
+                    handleSearchProducts={handleSearchProducts}
+                    checkedProducts={checkedProducts}
+                    baggedProducts={baggedProducts}
+                    allLinkedProducts={allLinkedProducts}
+                />
 
                 <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32">
-
                     <div className="flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2">
+                        {(checkedProducts && checkedProducts?.length !== 0) && (
+                            <>
+                                <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
+                                <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative z-20  gap-1 checklist-settings">
+                                    <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
+                                    <div className="">
+                                        <span className="text-2xl font-bold">Checklist </span>
+                                        <span className="text-sm text-gray-500 font-quicksand ml-2">{checkedProducts?.length} products</span>
+                                    </div>
 
-                        {(checkedProducts && checkedProducts?.length !== 0) &&
-                            (
-                                <>
-                                    <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
-                                    <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative z-20  gap-1 checklist-settings">
-                                        <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
-                                        <div className="">
-                                            <span className="text-2xl font-bold">Checklist </span>
-                                            <span className="text-sm text-gray-500 ml-2">{checkedProducts?.length} products</span>
-                                        </div>
-
-                                        {
-                                            checklistSettings && (
-                                                <>
-                                                    {/* Settings for checklist */}
-                                                    <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
-                                                        <div className="flex flex-col gap-0.5">
-
-                                                            <button onClick={() => handleBagAllItems(list.id)} className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                                                <BagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
-                                                                Bag All Items
-                                                            </button>
-                                                            <button onClick={() => { handleRemoveCheckedItems(list.id) }} className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
-                                                                <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
-                                                                Remove All Items
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )
-                                        }
-
-                                    </h3>
-                                </>
-                            )
-                        }
+                                    {checklistSettings && (
+                                        <>
+                                            <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                                <div className="flex font-quicksand font-[500] flex-col gap-0.5">
+                                                    <button onClick={() => handleBagAllItems(list.id)} className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                        <BagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
+                                                        Bag All Items
+                                                    </button>
+                                                    <button onClick={() => { handleRemoveCheckedItems(list.id) }} className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
+                                                        <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
+                                                        Remove All Items
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </h3>
+                            </>
+                        )}
                     </div>
                     <div className="checked-products-container flex flex-col gap-4">
-                        { /* Products */}
                         {checkedProducts?.length !== 0 && checkedProducts?.map((product, index) => (
-                            product === 0 ? null : <Product setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} baggedProductCount={baggedProductCount} setProgress={setProgress} setCheckedProducts={setCheckedProducts} isBagged={false} setBaggedProducts={setBaggedProducts} token={token} product={product} key={index} />
+                            product === 0 ? null : <Product setAllLinkedProducts={setAllLinkedProducts} setBaggedProductCount={setBaggedProductCount} setTotalProductCount={setTotalProductCount} totalProductCount={totalProductCount} baggedProductCount={baggedProductCount} setProgress={setProgress} setCheckedProducts={setCheckedProducts} isBagged={false} setBaggedProducts={setBaggedProducts} token={token} product={product} key={index} />
                         ))}
                     </div>
 
                     <div className={`flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${checkedProducts?.length !== 0 ? 'mt-10' : 'mt-0'} py-2 z-20 px-4 `}>
-                        {(
-                            baggedProducts && baggedProducts?.length !== 0) &&
-                            (
-                                <>
-                                    <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
-                                    <h3 onClick={handleOpenBaggedSettings} className={`flex cursor-pointer relative z-20  gap-1 bagged-settings`}>
-                                        <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
-                                        <div>
-                                            <span className="text-2xl font-bold">Bagged</span>
-                                            <span className="text-sm text-gray-500 ml-2">{baggedProducts?.length !== 0 ? baggedProducts?.length : baggedItems.baggedCount !== 0 && baggedItems.baggedCount} products</span>
-                                        </div>
+                        {(baggedProducts && baggedProducts?.length !== 0) && (
+                            <>
+                                <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
+                                <h3 onClick={handleOpenBaggedSettings} className={`flex cursor-pointer relative z-20  gap-1 bagged-settings`}>
+                                    <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
+                                    <div>
+                                        <span className="text-2xl font-bold">Bagged</span>
+                                        <span className="text-sm text-gray-500 font-quicksand ml-2">{baggedProducts?.length !== 0 ? baggedProducts?.length : baggedItems.baggedCount !== 0 && baggedItems.baggedCount} products</span>
+                                    </div>
 
-                                        {
-                                            baggedSettings && (
-                                                <>
-                                                    {/* Settings for checklist */}
-                                                    <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <button onClick={() => { handleUnbagAllProducts(list.id) }} className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                                                <EmptyBagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
-                                                                Unbag All Items
-                                                            </button>
-                                                            <button onClick={() => { handleRemoveBaggedItems(list.id) }} className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
-                                                                <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
-                                                                Remove All Items
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )
-                                        }
-                                    </h3>
-                                </>
-                            )}
+                                    {baggedSettings && (
+                                        <>
+                                            <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                                <div className="flex flex-col font-quicksand font-[500] gap-0.5">
+                                                    <button onClick={() => { handleUnbagAllProducts(list.id) }} className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                        <EmptyBagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
+                                                        Unbag All Items
+                                                    </button>
+                                                    <button onClick={() => { handleRemoveBaggedItems(list.id) }} className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm">
+                                                        <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
+                                                        Remove All Items
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </h3>
+                            </>
+                        )}
                     </div>
 
-                    {/* Products */}
                     <div className="bagged-products-container flex flex-col gap-4">
                         {baggedProducts?.length !== 0 && baggedProducts?.map((product, index) => (
-                            product === 0 ? null : <Product setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} baggedProductCount={baggedProductCount} setProgress={setProgress} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} isBagged={true} token={token} product={product} key={index} />
+                            product === 0 ? null : <Product setAllLinkedProducts={setAllLinkedProducts} setBaggedProductCount={setBaggedProductCount} setTotalProductCount={setTotalProductCount} totalProductCount={totalProductCount} baggedProductCount={baggedProductCount} setProgress={setProgress} setCheckedProducts={setCheckedProducts} setBaggedProducts={setBaggedProducts} isBagged={true} token={token} product={product} key={index} />
                         ))}
                     </div>
-
-                </div >
-
-            </div >
-
-
-
+                </div>
+            </div>
 
             {productOverlay && <AddProduct baggedProducts={baggedProducts} progress={progress} setProgress={setProgress} baggedProductCount={baggedProductCount} setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} setTotalProductCount={setTotalProductCount} allLinkedProducts={allLinkedProducts} setAllLinkedProducts={setAllLinkedProducts} setBaggedProducts={setBaggedProducts} allProducts={allProducts} setCheckedProducts={setCheckedProducts} token={token} setProductOverlay={setProductOverlay} />}
 
@@ -486,16 +533,12 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
             <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 bg-black py-14  px-4 flex items-center justify-between"></div>
 
-
-            {
-                shareDialogOpen && (
-                    <ShareListDialog
-                        listId={shareDialogOpen}
-                        onClose={() => setShareDialogOpen(null)}
-                    />
-                )
-            }
-
-        </main >
+            {shareDialogOpen && (
+                <ShareListDialog
+                    listId={shareDialogOpen}
+                    onClose={() => setShareDialogOpen(null)}
+                />
+            )}
+        </main>
     )
 }

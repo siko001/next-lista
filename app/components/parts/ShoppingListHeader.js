@@ -6,6 +6,7 @@ import { decryptToken, WP_API_BASE } from "../../lib/helpers"
 // Contexts
 import { useOverlayContext } from "../../contexts/OverlayContext";
 import { useListContext } from "../../contexts/ListContext"
+import { useNotificationContext } from '../../contexts/NotificationContext';
 
 // Components
 import Overlay from "../../components/modals/Overlay";
@@ -23,16 +24,18 @@ import SearchIcon from "../svgs/SearchIcon"
 
 
 
-export default function ShoppingListHeader({ setBaggedProductCount, setTotalProductCount, setProgress, progress, list, token, setShareDialogOpen, setAllLinkedProducts, allLinkedProducts, setCheckedProducts, checkedProducts, setBaggedProducts, baggedProducts }) {
+export default function ShoppingListHeader({ totalProductCount, handleSearchProducts, setBaggedProductCount, setTotalProductCount, setProgress, progress, list, token, setShareDialogOpen, setAllLinkedProducts, allLinkedProducts, setCheckedProducts, checkedProducts, setBaggedProducts, baggedProducts }) {
     const { handleRenameInput, handleRenameClick, listRenameRef, handleRenameList, listRename, setListRename, innerListRef, listName, startingValue } = useListContext();
     const [openSettings, setOpenSettings] = useState(false)
     const searchProductRef = useRef(null);
     const [searchValue, setSearchValue] = useState("");
     const [searchIsOpen, setSearchIsOpen] = useState(false)
-    const { overlay, showDeleteListConfirmation } = useOverlayContext();
+    const { overlay, showVerbConfirmation } = useOverlayContext();
+    const { showNotification } = useNotificationContext();
 
     const handleInputChange = (e) => {
         setSearchValue(e.target.value);
+        handleSearchProducts(e.target.value);
     };
 
     const handleListSettings = () => {
@@ -43,7 +46,7 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
     useEffect(() => {
         // handle click outside of the settings menu
         const handleClickOutside = (e) => {
-            if (openSettings && !e.target.closest(".relative")) {
+            if (e.target.closest(".shopping-list-header-settings") === null) {
                 setOpenSettings(false)
             }
         }
@@ -60,7 +63,7 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
             document.removeEventListener("keydown", handleKeyDown)
         }
 
-    })
+    }, [])
 
 
     const handleSearchProduct = (e) => {
@@ -99,6 +102,7 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
     const handleCloseSearch = (e) => {
         e.stopPropagation();
         setSearchValue("");
+        handleSearchProducts(""); // Clear the search and restore original products
         gsap.to(searchProductRef.current, {
             width: 0,
             duration: 0.3,
@@ -112,61 +116,61 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
 
 
     const handleEmptyList = async (id, token) => {
+        if (!id || !token) return;
+        const updateStates = async () => {
+            setAllLinkedProducts([])
+            setCheckedProducts([])
+            setBaggedProducts([])
+            setBaggedProductCount(0)
+            setTotalProductCount(0)
+            setProgress(0)
+            showNotification("List emptied successfully", "success", 1000)
+        }
 
-        if (confirm("Are you sure you want to empty this list?")) {
-            const updateStates = async () => {
-                setAllLinkedProducts([])
-                setCheckedProducts([])
-                setBaggedProducts([])
-                setBaggedProductCount(0)
-                setTotalProductCount(0)
-                setProgress(0)
+        const baggedContainer = document.querySelector('.bagged-products-container');
+        const checkedContainer = document.querySelector('.checked-products-container');
+
+        if ((checkedContainer || baggedContainer)) {
+            if (checkedContainer) {
+                gsap.to(checkedContainer.children, {
+                    opacity: 0,
+                    y: 60,
+                    duration: 0.3,
+                    backgroundColor: '#ff0000',
+                    stagger: 0.05,
+                    onComplete: () => updateStates()
+                });
             }
-
-            const baggedContainer = document.querySelector('.bagged-products-container');
-            const checkedContainer = document.querySelector('.checked-products-container');
-
-            if ((checkedContainer || baggedContainer)) {
-                if (checkedContainer) {
-                    gsap.to(checkedContainer.children, {
-                        opacity: 0,
-                        y: 60,
-                        duration: 0.3,
-                        backgroundColor: '#ff0000',
-                        stagger: 0.05,
-                        onComplete: () => updateStates()
-                    });
-                }
-                if (baggedContainer) {
-                    gsap.to(baggedContainer.children, {
-                        opacity: 0,
-                        y: 60,
-                        duration: 0.3,
-                        backgroundColor: '#ff0000',
-                        stagger: 0.05,
-                        onComplete: () => updateStates()
-                    });
-                }
-            } else {
-                updateStates();
+            if (baggedContainer) {
+                gsap.to(baggedContainer.children, {
+                    opacity: 0,
+                    y: 60,
+                    duration: 0.3,
+                    backgroundColor: '#ff0000',
+                    stagger: 0.05,
+                    onComplete: () => updateStates()
+                });
             }
+        } else {
+            updateStates();
+        }
 
-            const decryptedToken = decryptToken(token);
-            const res = await fetch(`${WP_API_BASE}/custom/v1/empty/${id}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${decryptedToken}`,
-                },
-                shoppingListId: id,
-            })
-            const data = await res.json()
-            if (!data.success) {
-                setAllLinkedProducts(allLinkedProducts)
-                setCheckedProducts(checkedProducts)
-                setBaggedProducts(baggedProducts)
-                setProgress(progress)
-            }
+        const decryptedToken = decryptToken(token);
+        const res = await fetch(`${WP_API_BASE}/custom/v1/empty/${id}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${decryptedToken}`,
+            },
+            shoppingListId: id,
+        })
+        const data = await res.json()
+        console.log("Empty list response", data.code)
+        if (!data.success || data.code == "jwt_auth_invalid_token") {
+            setAllLinkedProducts(allLinkedProducts)
+            setCheckedProducts(checkedProducts)
+            setBaggedProducts(baggedProducts)
+            setProgress(progress)
         }
     }
 
@@ -187,9 +191,9 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
 
     return (
         <>
-            <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px]  bg-gray-900 h-[100px] mx-auto sticky top-0 z-40">
+            <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px]  bg-gray-900 min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40">
                 {/* list name */}
-                <div className="flex items-center justify-between gap-12 px-2">
+                <div className="flex items-center justify-between  px-2">
                     {listRename ?
                         (
                             <div className="relative w-full  flex gap-2 items-center">
@@ -197,7 +201,6 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
                                 <input
                                     type="text"
                                     ref={listRenameRef}
-
                                     onChange={handleRenameInput}
                                     defaultValue={innerListRef.current?.innerText}
                                     onBlur={() => {
@@ -222,7 +225,7 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
                         )
                         :
                         (
-                            <h2 ref={innerListRef} onClick={() => handleRenameClick(list.id)} className="text-xl md:text-2xl font-bold">
+                            <h2 ref={innerListRef} onClick={() => handleRenameClick(list.id)} className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold">
                                 {listName || list?.title}
                             </h2>
                         )
@@ -252,10 +255,10 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
                             </div>
                             <SearchIcon className={`w-6 h-6 md:w-8 md:h-8 ${searchIsOpen ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors cursor-pointer`} />
                         </div>
-                        <div onClick={handleListSettings} className="relative ">
+                        <div onClick={handleListSettings} className="relative shopping-list-header-settings">
                             {openSettings && (
                                 <div className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
-                                    <div className="flex flex-col gap-0.5">
+                                    <div className="flex flex-col gap-0.5 font-quicksand font-[500]">
                                         <button onClick={() => handleRenameClick(list.id)} className=" cursor-pointer px-2 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
                                             <RenameIcon className="w-4 h-4 inline-block mr-1" />
                                             Rename
@@ -264,17 +267,19 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
                                             <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                             Share
                                         </button>
-                                        <button onClick={() => handleEmptyList(list.id, token)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                            <ThrowIcon className="w-4 h-4 inline-block mr-1" />
-                                            Empty
-                                        </button>
-                                        <button onClick={() => {
-                                            showDeleteListConfirmation(list, token)
-                                            // handleDeleteList(list.id, token)
-                                        }} className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
+                                        {
+                                            totalProductCount > 0 &&
+                                            <button onClick={() => totalProductCount > 0 && showVerbConfirmation(list, token, "Empty")} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                                <ThrowIcon className="w-4 h-4 inline-block mr-1" />
+                                                Empty
+                                            </button>
+                                        }
+
+                                        <button onClick={() => showVerbConfirmation(list, token, 'Delete')} className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
                                             <TranshIcon className="w-4 h-4 inline-block mr-1" />
                                             Delete
                                         </button>
+
                                     </div>
                                 </div>
                             )}
@@ -285,7 +290,7 @@ export default function ShoppingListHeader({ setBaggedProductCount, setTotalProd
                 <Progressbar progress={progress} />
             </div>
 
-            {overlay && <Overlay handleDeleteList={handleDeleteList} />}
+            {overlay && <Overlay handleEmptyList={handleEmptyList} handleDeleteList={handleDeleteList} />}
         </>
     )
 }

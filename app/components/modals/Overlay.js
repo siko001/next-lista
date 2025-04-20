@@ -4,10 +4,10 @@ import { useOverlayContext } from "../../contexts/OverlayContext";
 
 import CloseIcon from "../svgs/CloseIcon";
 import Button from "../Button";
+import { useListContext } from "../../contexts/ListContext";
 
-export default function Overlay({ handleDeleteList }) {
-	const { closeOverlay, overlayContent, convertContentToComponent } = useOverlayContext();
-
+export default function Overlay({ handleDeleteList, handleEmptyList }) {
+	const { closeOverlay, overlayContent, convertContentToComponent } = useOverlayContext()
 
 	useEffect(() => {
 		// trigger gsap animation when overlay is opening
@@ -22,7 +22,6 @@ export default function Overlay({ handleDeleteList }) {
 		return () => window.removeEventListener("keydown", closeOnEsc);
 	}, []);
 
-
 	return (
 		<div className={"w-full h-screen fixed z-50 inset-0 grid place-items-center overlay"}>
 			<div id={"overlay-backdrop"} className="absolute inset-0 opacity-0 w-full h-full backdrop-blur z-10"></div>
@@ -33,7 +32,7 @@ export default function Overlay({ handleDeleteList }) {
 
 				{
 					overlayContent.title &&
-					<h2 className="text-3xl md:text-4xl max-w-[15ch] font-bold text-blue-700">
+					<h2 className="text-3xl md:text-4xl max-w-[15ch] overflow-scroll font-bold text-blue-700">
 						{overlayContent.title}
 					</h2>
 				}
@@ -41,7 +40,7 @@ export default function Overlay({ handleDeleteList }) {
 				{overlayContent.content && convertContentToComponent(overlayContent.content)}
 
 				<div className={"flex gap-4 justify-between mt-6"}>
-					{overlayContent.action && <Button cta={overlayContent.cta} action={overlayContent.action} textColorOverride={'text-white'} color={'#000'} hover={"borders"} handleDeleteList={handleDeleteList} data={overlayContent.data} />}
+					{overlayContent.action && <Button cta={overlayContent.cta} action={overlayContent.action} textColorOverride={'text-white'} color={'#000'} hover={"borders"} handleEmptyList={handleEmptyList} handleDeleteList={handleDeleteList} data={overlayContent.data} />}
 
 					{overlayContent.cancelAction && <Button cta={"Cancel"} action={"close-overlay"} color={'#fff'} textColorOverride={'text-white'} overrideDefaultClasses={"bg-red-500"} hover={"borders"} />}
 				</div>

@@ -1,7 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&family=Saira:ital,wght@0,100..900;1,100..900&display=swap");
+
 @import "tailwindcss";
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-quicksand: "Quicksand", sans-serif;
+  --font-saira: "Saira", sans-serif;
   --color-primary: #21ba9c;
 }
 
@@ -21,6 +25,11 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+
+  input[type="text"],
+  label {
+    @apply placeholder:font-saira font-saira font-[500];
+  }
 
   ::selection {
     background-color: #00000000;

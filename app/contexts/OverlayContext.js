@@ -5,11 +5,14 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useValidationContext } from './ValidationContext';
 import { useLoadingContext } from "./LoadingContext";
 import SingleInput from '../components/parts/SingleInput';
-import { set } from "react-hook-form";
+import { useListContext } from "./ListContext";
+
 
 const OverlayContext = createContext();
 
 export const OverlayProvider = ({ children }) => {
+	const { listName } = useListContext();
+
 	const { setLoading } = useLoadingContext();
 	const { setErrors, setHasTyped } = useValidationContext();
 	const [overlay, setOverlay] = useState(null);
@@ -48,18 +51,28 @@ export const OverlayProvider = ({ children }) => {
 
 
 
-	const showDeleteListConfirmation = (list, token) => {
-		// open a modal or dialog to confirm deletion
-		const titlesToCheck = ["list", "shopping list", 'lista', "list name", "list name here", "list name goes here", 'lista', 'lista de compras', 'lista de compras aqui', 'lista de compras vai aqui', 'shopping list here', 'shopping list goes here', 'shopping list name', 'shopping list name here', 'shopping list name goes here'];
+	const showVerbConfirmation = (list, token, verb) => {
+
+		// Open a modal or dialog to confirm the action
+		const titlesToCheck = [
+			"list", "shopping list", "lista", "list name", "list name here", "list name goes here",
+			"lista de compras", "lista de compras aqui", "lista de compras vai aqui",
+			"shopping list here", "shopping list goes here", "shopping list name",
+			"shopping list name here", "shopping list name goes here",
+		];
+
 		setOverlay((prev) => !prev);
+
 		setOverlayContent({
-			title: `Are you sure you want to delete ${!titlesToCheck.includes(list.title.toLowerCase()) ? "list " + list.title : "this list"}?`,
-			action: "delete-a-list",
-			cta: "Delete list",
+			title: `Are you sure you want to ${verb.toLowerCase()} ${!titlesToCheck.includes(list.title.toLowerCase()) ? "list " + listName && listName || list.title : "this list"}?`,
+			action: `${verb}-a-list`,
+			cta: `${verb} list`,
 			cancelAction: true,
 			data: [list, token],
 		});
-	}
+	};
+
+
 
 	return (
 		<OverlayContext.Provider value={{
@@ -69,7 +82,7 @@ export const OverlayProvider = ({ children }) => {
 			setOverlayContent,
 			closeOverlay,
 			convertContentToComponent,
-			showDeleteListConfirmation
+			showVerbConfirmation,
 		}}>
 			{children}
 		</OverlayContext.Provider>

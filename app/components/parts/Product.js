@@ -5,9 +5,14 @@ import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { set } from 'react-hook-form';
 import CloseIcon from '../svgs/CloseIcon';
+import { useNotificationContext } from '../../contexts/NotificationContext';
 
 export default function Product({
-    setTotalProductCount, baggedProductCount, setBaggedProductCount, progress,
+    setTotalProductCount,
+    baggedProductCount,
+    setBaggedProductCount,
+    progress,
+    setAllLinkedProducts,
     product,
     token,
     isBagged,
@@ -19,6 +24,7 @@ export default function Product({
     const shoppingListId = useParams().id;
     const itemRef = useRef(null);
     const animationRef = useRef(null);
+    const { showNotification } = useNotificationContext();
 
     // Function to cleanup animations
     const killAnimation = () => {
@@ -202,6 +208,53 @@ export default function Product({
         );
     };
 
+    const animateToRemove = async (productId) => {
+        return new Promise((resolve) => {
+            killAnimation();
+            animationRef.current = gsap.to(itemRef.current, {
+                scale: 1.1,
+                duration: 0.2,
+                onComplete: () => {
+                    animationRef.current = gsap.to(itemRef.current, {
+                        backgroundColor: '#dc2626', // Red background
+                        duration: 0.2,
+                        onComplete: () => {
+                            showNotification('Product removed', 'success', 1200);
+                            animationRef.current = gsap.to(itemRef.current, {
+                                y: 40,
+                                opacity: 0,
+                                duration: 0.3,
+                                onUpdate: function () {
+                                    // Execute logic mid-animation (e.g., at 50% progress)
+                                    const progress = this.progress(); // Get animation progress (0 to 1)
+                                    if (progress >= 0.5 && !this.midActionExecuted) {
+                                        this.midActionExecuted = true; // Ensure this logic runs only once
+                                        // Perform mid-animation logic here
+                                        // do somehting half way in the animation
+                                        setBaggedProducts(prev => prev.filter(p => p.id !== productId));
+                                        setAllLinkedProducts(prev => prev.filter(p => p.ID !== productId));
+                                        setBaggedProductCount(prev => prev - 1);
+                                        setTotalProductCount(prev => prev - 1);
+                                        setProgress((prev) => {
+                                            const newProgress = prev - (1 / totalProductCount) * 100;
+                                            return newProgress < 0 ? 0 : newProgress;
+                                        });
+                                    }
+                                },
+                                onComplete: () => {
+
+                                    animationRef.current = null;
+                                    gsap.set(itemRef.current, { clearProps: 'all' });
+                                    resolve();
+                                },
+                            });
+                        },
+                    });
+                },
+            });
+        });
+    };
+
     const handleClick = async () => {
         if (isBagged) {
             await animateToChecked();
@@ -213,6 +266,43 @@ export default function Product({
             animateAppearInBagged();
         }
     };
+
+    // remove from linked and bagged
+    const handleRemoveSingleProduct = async () => {
+        const decryptedToken = decryptToken(token);
+        const productId = product.id;
+        if (!shoppingListId || !token) return;
+        // animate the removal
+        await animateToRemove(productId);
+
+        try {
+            const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${decryptedToken}`,
+                },
+                body: JSON.stringify({
+                    shoppingListId,
+                    productId,
+                    action: 'remove'
+                }),
+            });
+            await response.json();
+
+        } catch (error) {
+
+            console.error('Error:', error);
+            setBaggedProducts(prev => [...prev, product]);
+            setAllLinkedProducts(prev => [...prev, product]);
+            setBaggedProductCount(prev => prev + 1);
+            setTotalProductCount(prev => prev + 1);
+            setProgress((prev) => {
+                const newProgress = prev + (1 / totalProductCount) * 100;
+                return newProgress > 100 ? 100 : newProgress;
+            });
+        }
+    }
 
 
     return (
@@ -242,10 +332,15 @@ export default function Product({
                     </div>
                     {product.title}
                 </h3>
-
-
             </div>
-            {isBagged && <CloseIcon onClick={(e) => { e.stopPropagation(); alert('remove from list') }} className="group-hover:opacity-100 group-hover:visible mr-4 sm:invisible  sm:opacity-0 duration-200 transition-opcaity text-red-600 w-8 h-8" />
+            {
+                isBagged &&
+                (
+                    <CloseIcon onClick={(e, product) => {
+                        e.stopPropagation();
+                        handleRemoveSingleProduct(product)
+                    }} className="group-hover:opacity-100 group-hover:visible mr-4 sm:invisible  sm:opacity-0 duration-200 transition-opcaity text-red-600 w-8 h-8" />
+                )
             }
         </div>
     )

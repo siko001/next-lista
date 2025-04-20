@@ -1,6 +1,9 @@
-# Lists View ---Third ***
--Delete list confimartion modal
--View users which list is shared with
+#Products. ---Main Focus *****
+-Custom Products
+-Favourit Products
+-Add Categories
+-Sort By Categories
+-Products Show up According to users Choice + most clicked.
 
 
 ##shared list ---Second Main Focus ***
@@ -11,20 +14,8 @@
 -REAL TIME UPDATES. + (products + Progress)
 
 
-
-#Inner List  ---Main Focus *****
--Delete List & confirmation modal plus redirect to home.
--Dragg and drop products?
-
-
-#Products. ---Main Focus *****
--Custom Products
--Favourit Products
--Add Categories
--Sort By Categories
--Products Show up According to users Choice + most clicked.
-
-
+# Lists View ---Third ***
+-View users which list is shared with
 
 #login ---Last**
 -Wordpress wrong password warning
@@ -35,7 +26,16 @@
 -Fix Registering Emails
 -Forgot password Emails
 
-
 #user ---Last**
--User settings
--User Themes
+-User settings -basic, change name, change password, 
+
+
+
+### After Project ready ###
+email confimartions
+Quanitity + Pricing.
+User Themes
+Languages ??
+Dragg and drop products to arrange?
+user specific ordering for Lists
+user specific ordering for products

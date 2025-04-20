@@ -281,7 +281,7 @@ export const ListProvider = ({ children }) => {
         }
 
         if (view === "in-list" && value) {
-            console.log(value)
+            
         }
 
         // Optimistic UI update

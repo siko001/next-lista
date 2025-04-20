@@ -53,22 +53,23 @@ export default function Button(props) {
 	const handleClick = async () => {
 		if (errors.message) return;
 		// console.log(props)
+		const action = props.action.toLowerCase();
 
 		// Open ALl Products Overlay
-		if (props.action === "add-product-overlay") {
+		if (action === "add-product-overlay") {
 			props.setProductOverlay(true);
 			return;
 		}
 
 		// Close All Products Overlay
-		if (props.action === "close-product-overlay") {
+		if (action === "close-product-overlay") {
 			props.setProductOverlay(false);
 			return;
 		}
 
 
 		// Delete a list
-		if (props.action === "delete-a-list") {
+		if (action === "delete-a-list") {
 			const listId = props.data[0].id;
 			const token = props.data[1];
 			props.handleDeleteList(listId, token)
@@ -76,9 +77,16 @@ export default function Button(props) {
 			return
 		}
 
+		if (action === "empty-a-list") {
+			const listId = props.data[0].id;
+			const token = props.data[1];
+			props.handleEmptyList(listId, token)
+			setOverlay((prev) => !prev);
+			return
+		}
 
 
-		if (props.action === "create-list") {
+		if (action === "create-list") {
 			setOverlay((prev) => !prev);
 			setOverlayContent({
 				title: "Create a new list",

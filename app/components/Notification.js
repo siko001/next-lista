@@ -40,7 +40,7 @@ export default function Notification() {
 	// Only render notification if there is a message
 	return (
 		notification.message && (
-			<div ref={notificationRef} className={`${notificationTypeError} fixed bottom-8 right-8  p-4 rounded-md shadow-md`} >
+			<div ref={notificationRef} className={`${notificationTypeError} fixed bottom-8 z-[9999] right-8 font-quicksand font-[600] p-4 rounded-md shadow-md`} >
 
 				{notification.message}
 			</div >
