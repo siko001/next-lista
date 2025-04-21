@@ -1,9 +1,12 @@
 #Products. ---Main Focus *****
--Custom Products
--Favourit Products
+-Search includes custom products
+-cam edit custom prouct name
+-limit custom product name to 36 chars
+-Favourit Products 
 -Add Categories
 -Sort By Categories
 -Products Show up According to users Choice + most clicked.
+-Show No products In List if non in linked
 
 
 ##shared list ---Second Main Focus ***
@@ -28,6 +31,11 @@
 
 #user ---Last**
 -User settings -basic, change name, change password, 
+
+
+
+#GENERAL ---- LAST**
+Fix up lightmode --all app
 
 
 

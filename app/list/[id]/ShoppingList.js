@@ -28,14 +28,16 @@ import XBagIcon from '../../components/svgs/XBagIcon';
 import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
 
-export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts }) {
+export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts, userCustomProducts }) {
 
     const { overlay } = useOverlayContext();
     const [productOverlay, setProductOverlay] = useState(false);
 
     const [allLinkedProducts, setAllLinkedProducts] = useState(list.acf.linked_products);
+
     const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
     const [baggedProducts, setBaggedProducts] = useState(baggedItems.baggedProducts);
+    const [customProducts, setCustomProducts] = useState(userCustomProducts);
 
     // Store original product lists for search functionality
     const [originalCheckedProducts, setOriginalCheckedProducts] = useState(checkedProductList);
@@ -523,7 +525,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                 </div>
             </div>
 
-            {productOverlay && <AddProduct baggedProducts={baggedProducts} progress={progress} setProgress={setProgress} baggedProductCount={baggedProductCount} setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} setTotalProductCount={setTotalProductCount} allLinkedProducts={allLinkedProducts} setAllLinkedProducts={setAllLinkedProducts} setBaggedProducts={setBaggedProducts} allProducts={allProducts} setCheckedProducts={setCheckedProducts} token={token} setProductOverlay={setProductOverlay} />}
+            {productOverlay && <AddProduct customProducts={customProducts} setCustomProducts={setCustomProducts} baggedProducts={baggedProducts} progress={progress} setProgress={setProgress} baggedProductCount={baggedProductCount} setBaggedProductCount={setBaggedProductCount} totalProductCount={totalProductCount} setTotalProductCount={setTotalProductCount} allLinkedProducts={allLinkedProducts} setAllLinkedProducts={setAllLinkedProducts} setBaggedProducts={setBaggedProducts} allProducts={allProducts} setCheckedProducts={setCheckedProducts} token={token} setProductOverlay={setProductOverlay} />}
 
             <Notification />
 

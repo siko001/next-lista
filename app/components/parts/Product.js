@@ -305,6 +305,7 @@ export default function Product({
     }
 
 
+
     return (
         <div onClick={(e) => { e.stopPropagation(); handleClick() }} ref={itemRef} className={`flex text-center transition-colors group duration-200  w-full mx-auto items-center justify-between gap-12 px-2 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer ${isBagged && 'border border-primary'}`} >
             <div
@@ -317,7 +318,6 @@ export default function Product({
                             type="checkbox"
                             className="promoted-input-checkbox"
                             checked={isBagged} // Synchronize with isBagged
-
                             onChange={handleClick} // Handle change event
                         />
                         <svg className="absolute -z-0">

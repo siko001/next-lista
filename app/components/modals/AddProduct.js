@@ -4,13 +4,14 @@ import gsap from 'gsap';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import Fuse from 'fuse.js';
 import SearchIcon from '../svgs/SearchIcon';
-import { decryptToken, WP_API_BASE } from '../../lib/helpers';
+import { decryptToken, WP_API_BASE, getAllCustomProducts } from '../../lib/helpers';
 import "../../css/checkbox.css";
 import CloseIcon from '../svgs/CloseIcon';
 import { useParams } from 'next/navigation';
 import Lenis from 'lenis';
 import { useListContext } from '../../contexts/ListContext';
 import ErrorIcon from '../svgs/ErrorIcon';
+import TrashIcon from '../svgs/TranshIcon';
 
 export default function AddProduct({
     totalProductCount,
@@ -27,9 +28,10 @@ export default function AddProduct({
     allProducts,
     baggedProducts,
     setBaggedProducts,
+    customProducts,
+    setCustomProducts,
 }) {
     const [products, setProducts] = useState(allProducts);
-    const [customProducts, setCustomProducts] = useState([]);
     const [favouriteProducts, setFavouriteProducts] = useState([]);
 
     const customProductInputRef = useRef(null);
@@ -59,8 +61,8 @@ export default function AddProduct({
         if (!shoppingListId || !token) return;
         const decryptedToken = decryptToken(token);
         const isProductBagged = baggedProducts?.some(product => product.id === productId);
-        const productTitle = products.find(product => product.id === productId)?.title;
-
+        // 
+        const productTitle = products.find(product => product.id === productId)?.title || customProducts.find(product => product.id === productId)?.title;
         if (isAdding) {
             setCheckedProducts(prev => {
                 const uniqueProducts = prev?.filter(product => product.id !== productId) || [];
@@ -98,7 +100,13 @@ export default function AddProduct({
                     action: isAdding ? 'add' : 'remove',
                 }),
             });
+
+
+
             await response.json();
+
+            console.log('Product updated successfully:', productId, isAdding);
+
         } catch (error) {
             console.error('Error:', error);
         }
@@ -220,8 +228,10 @@ export default function AddProduct({
 
 
 
+
+    // Create Custom Product
     const [error, setError] = useState(null);
-    const handleCreateCustomProduct = () => {
+    const handleCreateCustomProduct = async () => {
         if (customProductInputRef.current.value.trim() === '' || !customProductInputRef.current) {
             setError('Please enter a product name');
             setTimeout(() => {
@@ -233,17 +243,76 @@ export default function AddProduct({
         const customProductTitle = customProductInputRef.current.value.trim();
         if (customProductTitle) {
             const newCustomProduct = {
-                id: Date.now(),
                 title: customProductTitle,
             };
 
-            console.log("New Custom Product:", newCustomProduct.id);
-            setCustomProducts((prev) => [...prev, newCustomProduct]);
-            setProducts((prev) => [...prev, newCustomProduct]);
+            setCustomProducts((prev) => [newCustomProduct, ...prev]);
             customProductInputRef.current.value = '';
         }
+
+        const decryptedToken = decryptToken(token);
+        const res = await fetch(`${WP_API_BASE}/custom/v1/create-custom-product`, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${decryptedToken}`
+            },
+            body: JSON.stringify({
+                title: customProductTitle,
+                // shoppingListId: shoppingListId,
+            }),
+        })
+        const data = await res.json()
+        const customProducts = await getAllCustomProducts(token);
+        setCustomProducts(customProducts);
     }
 
+
+
+    // Delete custom product
+    const handleDeleteCustomProduct = async (productId, token) => {
+        const decryptedToken = decryptToken(token);
+        const res = await fetch(`${WP_API_BASE}/custom/v1/delete-custom-product`, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${decryptedToken}`
+            },
+            body: JSON.stringify({
+                productId: productId,
+            }),
+        })
+
+        console.log(res);
+        const data = await res.json()
+        console.log(data);
+
+        const customProducts = await getAllCustomProducts(token);
+        setCustomProducts(customProducts);
+
+
+        // if in linked products set counter minus 1
+        const isProductLinked = allLinkedProducts?.some(product => product.ID === productId);
+        if (isProductLinked) {
+            setTotalProductCount((prev) => prev - 1);
+        }
+        setAllLinkedProducts((prev) => prev.filter(product => product.ID !== productId));
+        setCheckedProducts((prev) => prev.filter(product => product.id !== productId));
+
+
+        // if in bagged products set counter minus 1
+        const isProductBagged = baggedProducts?.some(product => product.id === productId);
+        if (isProductBagged) {
+            setBaggedProductCount((prev) => prev - 1);
+        }
+        setBaggedProducts((prev) => prev.filter(product => product.id !== productId));
+
+        setProgress((prev) => {
+            const newProgress = prev - (1 / totalProductCount) * 100;
+            return newProgress < 0 ? 0 : newProgress;
+        });
+
+    }
 
 
     return (
@@ -296,7 +365,7 @@ export default function AddProduct({
                             {
                                 selectedProductsSection === "custom" &&
                                 (
-                                    <div>
+                                    <div className="mb-4">
                                         <div className="w-full flex items-center  text-gray-400 text-lg font-bold group">
                                             <input ref={customProductInputRef} placeholder='Input Product' className="w-full px-3 py-[9.5px] peer group-hover:!border-primary rounded-l-md h-full text-white !border-r-0 placeholder:text-white  !border-blue-800  focus:!border-primary"></input>
                                             <button onClick={handleCreateCustomProduct} className="whitespace-pre  px-3 py-1.5 !border-blue-800 peer  group-hover:!border-primary  peer-focus:!border-primary cursor-pointer hover:!border-primary  rounded-r-md h-full bg-blue-800 text-white">Add product</button>
@@ -316,13 +385,14 @@ export default function AddProduct({
                             {
                                 (selectedProductsSection === "popular" ? products :
                                     selectedProductsSection === "custom" ? customProducts :
-                                        favouriteProducts)?.map((product) => (
+                                        favouriteProducts)?.map((product, index) => (
+
                                             <div
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleCheckboxChange(product.id, token);
                                                 }}
-                                                key={product.id}
+                                                key={product.id || index}
                                                 className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-900 hover:bg-gray-800 duration-200 ease-linear transition-colors text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
                                             >
                                                 <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
@@ -360,8 +430,22 @@ export default function AddProduct({
                                                     </div>
                                                     {product.title}
                                                 </div>
-                                                <div className={`flex items-center transition-opacity duration-300 gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'opacity-100' : 'opacity-0'}`}>
-                                                    <CloseIcon className="w-6 h-6 text-red-500 hover:text-white transition-colors duration-200 cursor-pointer" />
+                                                <div className="flex items-center gap-2 md:gap-6">
+
+                                                    {/* if is custom prodiuct display custom */}
+                                                    {
+                                                        selectedProductsSection === "custom" &&
+                                                        <div onClick={((e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteCustomProduct(product.id, token);
+
+                                                        })} className="text-sm font-bold text-gray-400">
+                                                            <TrashIcon className="w-6 h-6 text-yellow-500 hover:text-white transition-colors duration-200 cursor-pointer" />
+                                                        </div>
+                                                    }
+                                                    <div className={`flex items-center transition-opacity duration-300 gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'opacity-100' : 'opacity-0'}`}>
+                                                        <CloseIcon className="w-6 h-6 text-red-500 hover:text-white transition-colors duration-200 cursor-pointer" />
+                                                    </div>
                                                 </div>
                                             </div>
 

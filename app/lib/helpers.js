@@ -200,6 +200,20 @@ export const getBaggedItems = async (shoppingListId, token) => {
     return baggedData;
 }
 
+export const getAllCustomProducts = async (token) => {
+    const decryptedToken = decryptToken(token)
+    const res = await fetch(`${WP_API_BASE}/custom/v1/get-custom-products`, {
+        method: 'GET',
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${decryptedToken}`
+        },
+    })
+    const data = await res.json()
+    return data
+
+}
+
 
 export const calculateProgress = (productCount, baggedProductCount) => {
     if (productCount === 0) {
