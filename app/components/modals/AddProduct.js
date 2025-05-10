@@ -270,7 +270,8 @@ export default function AddProduct({
 
 
     // Delete custom product
-    const handleDeleteCustomProduct = async (productId, token) => {
+    const handleDeleteCustomProduct = async (productId, token, shoppingListId) => {
+        console.log(shoppingListId)
         const decryptedToken = decryptToken(token);
         const res = await fetch(`${WP_API_BASE}/custom/v1/delete-custom-product`, {
             method: 'POST',
@@ -280,10 +281,10 @@ export default function AddProduct({
             },
             body: JSON.stringify({
                 productId: productId,
+                shoppingListId: shoppingListId,
             }),
         })
 
-        console.log(res);
         const data = await res.json()
         console.log(data);
 
@@ -294,6 +295,7 @@ export default function AddProduct({
         // if in linked products set counter minus 1
         const isProductLinked = allLinkedProducts?.some(product => product.ID === productId);
         if (isProductLinked) {
+            console.log("isProductLinked");
             setTotalProductCount((prev) => prev - 1);
         }
         setAllLinkedProducts((prev) => prev.filter(product => product.ID !== productId));
@@ -303,6 +305,7 @@ export default function AddProduct({
         // if in bagged products set counter minus 1
         const isProductBagged = baggedProducts?.some(product => product.id === productId);
         if (isProductBagged) {
+            console.log("isProductBagged");
             setBaggedProductCount((prev) => prev - 1);
         }
         setBaggedProducts((prev) => prev.filter(product => product.id !== productId));
@@ -437,7 +440,7 @@ export default function AddProduct({
                                                         selectedProductsSection === "custom" &&
                                                         <div onClick={((e) => {
                                                             e.stopPropagation();
-                                                            handleDeleteCustomProduct(product.id, token);
+                                                            handleDeleteCustomProduct(product.id, token, shoppingListId);
 
                                                         })} className="text-sm font-bold text-gray-400">
                                                             <TrashIcon className="w-6 h-6 text-yellow-500 hover:text-white transition-colors duration-200 cursor-pointer" />

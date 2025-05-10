@@ -1,8 +1,9 @@
 #Products. ---Main Focus *****
--Search includes custom products
 -cam edit custom prouct name
 -limit custom product name to 36 chars
 -Favourit Products 
+-Search includes custom products and Favourit
+
 -Add Categories
 -Sort By Categories
 -Products Show up According to users Choice + most clicked.
@@ -28,6 +29,8 @@
 #Emails ---Last**
 -Fix Registering Emails
 -Forgot password Emails
+Verify Emails
+
 
 #user ---Last**
 -User settings -basic, change name, change password, 

@@ -485,7 +485,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
                         ))}
                     </div>
 
-                    <div className={`flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${checkedProducts?.length !== 0 ? 'mt-10' : 'mt-0'} py-2 z-20 px-4 `}>
+                    <div className={`flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${checkedProducts?.length !== 0 ? 'mt-10' : '-mt-16'} py-2 z-20 px-4 `}>
                         {(baggedProducts && baggedProducts?.length !== 0) && (
                             <>
                                 <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
