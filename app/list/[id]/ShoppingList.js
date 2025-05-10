@@ -70,11 +70,9 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
             if (scrollDiff > 6) {
                 if (checklistSettings) {
-                    console.log('Closing checklist settings');
                     setChecklistSettings(false);
                 }
                 if (baggedSettings) {
-                    console.log('Closing bagged settings');
                     setBaggedSettings(false);
                 }
             }
