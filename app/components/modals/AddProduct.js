@@ -105,8 +105,6 @@ export default function AddProduct({
 
             await response.json();
 
-            console.log('Product updated successfully:', productId, isAdding);
-
         } catch (error) {
             console.error('Error:', error);
         }
@@ -271,7 +269,6 @@ export default function AddProduct({
 
     // Delete custom product
     const handleDeleteCustomProduct = async (productId, token, shoppingListId) => {
-        console.log(shoppingListId)
         const decryptedToken = decryptToken(token);
         const res = await fetch(`${WP_API_BASE}/custom/v1/delete-custom-product`, {
             method: 'POST',
@@ -286,7 +283,6 @@ export default function AddProduct({
         })
 
         const data = await res.json()
-        console.log(data);
 
         const customProducts = await getAllCustomProducts(token);
         setCustomProducts(customProducts);
@@ -295,7 +291,6 @@ export default function AddProduct({
         // if in linked products set counter minus 1
         const isProductLinked = allLinkedProducts?.some(product => product.ID === productId);
         if (isProductLinked) {
-            console.log("isProductLinked");
             setTotalProductCount((prev) => prev - 1);
         }
         setAllLinkedProducts((prev) => prev.filter(product => product.ID !== productId));
@@ -305,7 +300,6 @@ export default function AddProduct({
         // if in bagged products set counter minus 1
         const isProductBagged = baggedProducts?.some(product => product.id === productId);
         if (isProductBagged) {
-            console.log("isProductBagged");
             setBaggedProductCount((prev) => prev - 1);
         }
         setBaggedProducts((prev) => prev.filter(product => product.id !== productId));

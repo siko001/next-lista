@@ -1,7 +1,7 @@
 'use client'
 import gsap from 'gsap';
 import { useParams } from 'next/navigation'
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Fuse from 'fuse.js';
 import { calculateProgress, WP_API_BASE, decryptToken } from "../../lib/helpers"
 
@@ -51,6 +51,47 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     const [totalProductCount, setTotalProductCount] = useState(Number(list?.acf?.product_count) || 0);
     const [baggedProductCount, setBaggedProductCount] = useState(Number(list?.acf?.bagged_product_count) || 0);
     const [progress, setProgress] = useState(calculateProgress(totalProductCount, baggedProductCount) || 0);
+
+
+
+    // Close the corresposing settings if scrolling and open
+    const checkedListSettings = useRef()
+    const baggedListSettings = useRef()
+    const lastScrollY = useRef(0);
+    const [isScrolling, setIsScrolling] = useState(false);
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        let scrollTimeout;
+        lastScrollY.current = window.scrollY;
+
+        const handleScroll = () => {
+            const currentScroll = window.scrollY;
+            const scrollDiff = Math.abs(currentScroll - lastScrollY.current);
+
+            if (scrollDiff > 6) {
+                if (checklistSettings) {
+                    console.log('Closing checklist settings');
+                    setChecklistSettings(false);
+                }
+                if (baggedSettings) {
+                    console.log('Closing bagged settings');
+                    setBaggedSettings(false);
+                }
+            }
+            lastScrollY.current = currentScroll;
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                setIsScrolling(false);
+            }, 150);
+
+            setIsScrolling(true);
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            clearTimeout(scrollTimeout);
+        };
+    }, [checklistSettings, baggedSettings, setChecklistSettings, setBaggedSettings]);
 
 
     const { showNotification } = useNotificationContext();
@@ -461,7 +502,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
                                     {checklistSettings && (
                                         <>
-                                            <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                            <div ref={checkedListSettings} className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
                                                 <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                     <button onClick={() => handleBagAllItems(list.id)} className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                         <BagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
@@ -498,7 +539,7 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
 
                                     {baggedSettings && (
                                         <>
-                                            <div className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                            <div ref={baggedListSettings} className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
                                                 <div className="flex flex-col font-quicksand font-[500] gap-0.5">
                                                     <button onClick={() => { handleUnbagAllProducts(list.id) }} className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
                                                         <EmptyBagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
