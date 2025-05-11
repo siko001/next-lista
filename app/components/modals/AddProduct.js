@@ -103,7 +103,8 @@ export default function AddProduct({
 
 
 
-            await response.json();
+            const data = await response.json();
+            console.log(data)
 
         } catch (error) {
             console.error('Error:', error);
