@@ -104,7 +104,6 @@ export default function AddProduct({
 
 
             const data = await response.json();
-            console.log(data)
 
         } catch (error) {
             console.error('Error:', error);
@@ -245,8 +244,23 @@ export default function AddProduct({
                 title: customProductTitle,
             };
 
-            setCustomProducts((prev) => [newCustomProduct, ...prev]);
+            const animatedProduct = { ...newCustomProduct, id: Date.now() };
+
+            setTimeout(() => {
+                if (productListRef.current) {
+                    const firstProduct = productListRef.current.querySelector('.product-list-content > div:nth-child(3)');
+                    if (firstProduct) {
+                        gsap.fromTo(
+                            firstProduct,
+                            { opacity: 0.4, y: -100 },
+                            { opacity: 1, y: 0, duration: 1.2, ease: "power2.out" }
+                        );
+                    }
+                }
+            }, 1);
+
             customProductInputRef.current.value = '';
+            setCustomProducts((prev) => [animatedProduct, ...prev]);
         }
 
         const decryptedToken = decryptToken(token);
@@ -268,8 +282,30 @@ export default function AddProduct({
 
 
 
+
+
     // Delete custom product
-    const handleDeleteCustomProduct = async (productId, token, shoppingListId) => {
+    const handleDeleteCustomProduct = async (productId, token, shoppingListId, customProductss) => {
+        // Animate the products getting deleted
+        if (productListRef.current) {
+            const productDiv = productListRef.current.querySelector(`.product-list-content > div:nth-child(${customProductss.findIndex(p => p.id === productId) + 3})`);
+            if (productDiv) {
+                await new Promise((resolve) => {
+                    gsap.to(productDiv, {
+                        y: 80,
+                        opacity: 0,
+                        backgroundColor: "#dc2626",
+                        duration: 0.5,
+                        ease: "power2.in",
+                        onComplete: resolve,
+                    });
+                });
+            }
+        }
+        // Update the list locally
+        setCustomProducts((prev) => prev.filter(p => p.id !== productId));
+
+        // Delete the actual product in the server
         const decryptedToken = decryptToken(token);
         const res = await fetch(`${WP_API_BASE}/custom/v1/delete-custom-product`, {
             method: 'POST',
@@ -282,20 +318,15 @@ export default function AddProduct({
                 shoppingListId: shoppingListId,
             }),
         })
-
         const data = await res.json()
-
-        const customProducts = await getAllCustomProducts(token);
-        setCustomProducts(customProducts);
-
 
         // if in linked products set counter minus 1
         const isProductLinked = allLinkedProducts?.some(product => product.ID === productId);
         if (isProductLinked) {
             setTotalProductCount((prev) => prev - 1);
         }
-        setAllLinkedProducts((prev) => prev.filter(product => product.ID !== productId));
-        setCheckedProducts((prev) => prev.filter(product => product.id !== productId));
+        setAllLinkedProducts((prev) => prev?.filter(product => product.ID !== productId));
+        setCheckedProducts((prev) => prev?.filter(product => product.id !== productId));
 
 
         // if in bagged products set counter minus 1
@@ -303,13 +334,22 @@ export default function AddProduct({
         if (isProductBagged) {
             setBaggedProductCount((prev) => prev - 1);
         }
-        setBaggedProducts((prev) => prev.filter(product => product.id !== productId));
+        setBaggedProducts((prev) => prev?.filter(product => product.id !== productId));
 
         setProgress((prev) => {
             const newProgress = prev - (1 / totalProductCount) * 100;
             return newProgress < 0 ? 0 : newProgress;
         });
+    }
 
+
+    // Reusable NoProductsFound component
+    function NoProductsFound({ mtClass = "mt-28" }) {
+        return (
+            <div className={`w-full font-quicksand uppercase ${mtClass} flex items-center justify-center text-gray-400 text-2xl font-bold`}>
+                No products found
+            </div>
+        );
     }
 
 
@@ -435,7 +475,7 @@ export default function AddProduct({
                                                         selectedProductsSection === "custom" &&
                                                         <div onClick={((e) => {
                                                             e.stopPropagation();
-                                                            handleDeleteCustomProduct(product.id, token, shoppingListId);
+                                                            handleDeleteCustomProduct(product.id, token, shoppingListId, customProducts);
 
                                                         })} className="text-sm font-bold text-gray-400">
                                                             <TrashIcon className="w-6 h-6 text-yellow-500 hover:text-white transition-colors duration-200 cursor-pointer" />
@@ -452,35 +492,19 @@ export default function AddProduct({
                             }
 
 
-                            {/* No Products Found */}
                             {
-                                products.length === 0 && selectedProductsSection === "popular" &&
-                                (
-                                    <div className="w-full font-quicksand uppercase  mt-28 flex items-center justify-center text-gray-400 text-2xl font-bold">
-                                        No products found
-                                    </div>
+                                selectedProductsSection === "popular" && products.length === 0 && (
+                                    <NoProductsFound />
                                 )
                             }
-
-
-
-                            {/* No Custom Productss */}
                             {
-                                customProducts.length === 0 && selectedProductsSection === "custom" &&
-                                (
-                                    <div className="w-full font-quicksand uppercase  mt-14 flex items-center justify-center text-gray-400 text-2xl font-bold">
-                                        No products found
-                                    </div>
+                                selectedProductsSection === "custom" && customProducts.length === 0 && (
+                                    <NoProductsFound mtClass="mt-14" />
                                 )
                             }
-
-                            {/* No Favourite Products */}
                             {
-                                favouriteProducts.length === 0 && selectedProductsSection === "favourite" &&
-                                (
-                                    <div className="w-full font-quicksand uppercase  mt-28 flex items-center justify-center text-gray-400 text-2xl font-bold">
-                                        No products found
-                                    </div>
+                                selectedProductsSection === "favourite" && favouriteProducts.length === 0 && (
+                                    <NoProductsFound />
                                 )
                             }
 
