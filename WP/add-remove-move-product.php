@@ -104,9 +104,6 @@
 
 
 
-
-
-// Register REST endpoint
 add_action('rest_api_init', function() {
     register_rest_route('custom/v1', '/update-shopping-list', array(
         'methods' => 'POST',
@@ -117,7 +114,6 @@ add_action('rest_api_init', function() {
     ));
 });
 
-// Helper: Convert IDs to objects
 function acf_relationship_to_objects($ids) {
     return array_map(function($id) {
         $post = get_post($id);
@@ -128,7 +124,6 @@ function acf_relationship_to_objects($ids) {
     }, $ids ?: []);
 }
 
-// Main callback
 function update_shopping_list_products(WP_REST_Request $request) {
     $params = $request->get_json_params();
     $shopping_list_id = intval($params['shoppingListId']);
@@ -174,7 +169,7 @@ function update_shopping_list_products(WP_REST_Request $request) {
             }
             break;
     }
-
+$linked_products = array_unique(array_merge($checked_products, $bagged_products));
     // Clean arrays
     $linked_products = array_values(array_unique($linked_products));
     $checked_products = array_values(array_unique($checked_products));
@@ -185,21 +180,12 @@ function update_shopping_list_products(WP_REST_Request $request) {
     update_field('checked_products', $checked_products, $shopping_list_id);
     update_field('bagged_linked_products', $bagged_products, $shopping_list_id);
 
-    // Get fresh data from database
+    // Get fresh data from database (no filtering for published posts)
     $linked_products = get_field('linked_products', $shopping_list_id, false) ?: [];
     $checked_products = get_field('checked_products', $shopping_list_id, false) ?: [];
     $bagged_products = get_field('bagged_linked_products', $shopping_list_id, false) ?: [];
 
-    // Filter out non-existent posts
-    $filter_exists = function($id) {
-        $post = get_post(absint($id));
-        return $post && $post->post_status === 'publish';
-    };
-    $linked_products = array_values(array_filter($linked_products, $filter_exists));
-    $checked_products = array_values(array_filter($checked_products, $filter_exists));
-    $bagged_products = array_values(array_filter($bagged_products, $filter_exists));
-
-    // Update counts
+    // Update counts (no filtering)
     update_field('product_count', count($linked_products), $shopping_list_id);
     update_field('checked_product_count', count($checked_products), $shopping_list_id);
     update_field('bagged_product_count', count($bagged_products), $shopping_list_id);
@@ -218,7 +204,6 @@ function update_shopping_list_products(WP_REST_Request $request) {
 
     // --- Real-time update trigger (replace with your actual trigger function) ---
     if (!function_exists('trigger_list_update')) {
-        // Example using Pusher directly (replace with your setup)
         require_once __DIR__ . '/vendor/autoload.php';
         $pusher = new Pusher\Pusher(
             'a9f747a06cd5ec1d8c62', // key
@@ -242,7 +227,6 @@ function update_shopping_list_products(WP_REST_Request $request) {
             'event_id' => uniqid(),
         ]);
     }
-    // ---------------------------------------------------------------------------
 
     return new WP_REST_Response([
         'success' => true,
@@ -252,4 +236,3 @@ function update_shopping_list_products(WP_REST_Request $request) {
         'action' => $action,
     ], 200);
 }
-
