@@ -165,8 +165,6 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     }, []);
 
 
-
-
     // if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
     return (

@@ -8,8 +8,8 @@ export default async function Page() {
     const token = cookieStore.get('token')?.value
     const reg = cookieStore.get('registered')?.value
     const userName = cookieStore.get('username')?.value
-    // const id = cookieStore.get('id')?.value
     const listId = cookieStore.get('listId')?.value
+    const userId = cookieStore.get('id')?.value
 
     let isRegistered = false
     if (reg === "yes") {
@@ -26,6 +26,6 @@ export default async function Page() {
     ])
 
     return (
-        <ShoppingList AllProducts={AllProducts} baggedItems={products} isRegistered={isRegistered} userName={userName} list={list} token={token} checkedProductList={products.checkedProducts} products={products.linkedProducts} userCustomProducts={customProducts} />
+        <ShoppingList listId={listId} userId={userId} AllProducts={AllProducts} baggedItems={products} isRegistered={isRegistered} userName={userName} list={list} token={token} checkedProductList={products.checkedProducts} products={products.linkedProducts} userCustomProducts={customProducts} />
     )
 }

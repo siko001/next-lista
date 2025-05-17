@@ -9,7 +9,7 @@ import { calculateProgress, WP_API_BASE, decryptToken } from "../../lib/helpers"
 import { useOverlayContext } from "../../contexts/OverlayContext";
 import { useProductContext } from "../../contexts/ProductContext";
 import { useNotificationContext } from '../../contexts/NotificationContext';
-
+import useListaRealtimeUpdates from '../../lib/RealTimeUpdates'
 
 // Components
 import Header from "../../components/Header";
@@ -27,8 +27,7 @@ import BagIcon from '../../components/svgs/BagIcon';
 import XBagIcon from '../../components/svgs/XBagIcon';
 import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
 
-
-export default function ShoppingList({ isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts, userCustomProducts }) {
+export default function ShoppingList({ listId, userId, isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts, userCustomProducts }) {
 
     const { overlay } = useOverlayContext();
     const [productOverlay, setProductOverlay] = useState(false);
@@ -51,6 +50,9 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
     const [totalProductCount, setTotalProductCount] = useState(Number(list?.acf?.product_count) || 0);
     const [baggedProductCount, setBaggedProductCount] = useState(Number(list?.acf?.bagged_product_count) || 0);
     const [progress, setProgress] = useState(calculateProgress(totalProductCount, baggedProductCount) || 0);
+
+
+
 
 
 
@@ -462,6 +464,19 @@ export default function ShoppingList({ isRegistered, userName, list, token, bagg
             }
         }
     }
+
+    useListaRealtimeUpdates(listId, (data) => {
+        if (!data || !data.fields || userId == data.sender_id) return;
+        console.log(data)
+        setAllLinkedProducts(data.fields.linked_products || []);
+        setCheckedProducts(data.fields.checked_products || []);
+        setBaggedProducts(data.fields.bagged_linked_products || []);
+        setTotalProductCount(Number(data.fields.product_count) || 0);
+        setBaggedProductCount(Number(data.fields.bagged_product_count) || 0);
+        showNotification('List Updated')
+    });
+
+
 
     return (
         <main >
