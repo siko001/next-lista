@@ -27,6 +27,7 @@ export const ListProvider = ({ children }) => {
     }, []);
 
     const { showNotification } = useNotificationContext();
+    const [isInInnerList, setIsInnerList] = useState(false);
     const [listRename, setListRename] = useState(false);
     const [hasDeletedLists, setHasDeletedLists] = useState(false);
     const [startingValue, setStartingValue] = useState(null);
@@ -281,7 +282,7 @@ export const ListProvider = ({ children }) => {
         }
 
         if (view === "in-list" && value) {
-            
+
         }
 
         // Optimistic UI update
@@ -361,7 +362,9 @@ export const ListProvider = ({ children }) => {
             handleRenameList,
             listName,
             setListName,
-            lenis
+            lenis,
+            isInInnerList,
+            setIsInnerList
         }}>
             {children}
         </ListContext.Provider>

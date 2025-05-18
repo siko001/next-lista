@@ -10,6 +10,7 @@ import { useOverlayContext } from "../../contexts/OverlayContext";
 import { useProductContext } from "../../contexts/ProductContext";
 import { useNotificationContext } from '../../contexts/NotificationContext';
 import useListaRealtimeUpdates from '../../lib/RealTimeUpdates'
+import useRealtimeRename from '../../lib/RealtimeRename';
 
 // Components
 import Header from "../../components/Header";
@@ -26,6 +27,7 @@ import SettingsIcon from '../../components/svgs/SettingsIcon';
 import BagIcon from '../../components/svgs/BagIcon';
 import XBagIcon from '../../components/svgs/XBagIcon';
 import EmptyBagIcon from '../../components/svgs/EmptyBagIcon';
+import { useListContext } from '../../contexts/ListContext';
 
 export default function ShoppingList({ listId, userId, isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts, userCustomProducts }) {
 
@@ -50,11 +52,7 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
     const [totalProductCount, setTotalProductCount] = useState(Number(list?.acf?.product_count) || 0);
     const [baggedProductCount, setBaggedProductCount] = useState(Number(list?.acf?.bagged_product_count) || 0);
     const [progress, setProgress] = useState(calculateProgress(totalProductCount, baggedProductCount) || 0);
-
-
-
-
-
+    const { setIsInnerList, isInInnerList } = useListContext();
 
     // Close the corresposing settings if scrolling and open
     const checkedListSettings = useRef()
@@ -62,6 +60,7 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
     const lastScrollY = useRef(0);
     const [isScrolling, setIsScrolling] = useState(false);
     useEffect(() => {
+        setIsInnerList(true);
         if (typeof window === "undefined") return;
         let scrollTimeout;
         lastScrollY.current = window.scrollY;
@@ -466,7 +465,6 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
     }
 
     useListaRealtimeUpdates(listId, (data) => {
-        console.log(data)
         if (!data || !data.fields || userId == data.sender_id) return;
         setAllLinkedProducts(data.fields.linked_products || []);
         setCheckedProducts(data.fields.checked_products || []);
@@ -475,8 +473,8 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
         setBaggedProductCount(Number(data.fields.bagged_product_count) || 0);
         showNotification(data.message ? data.message : "List Updated")
     });
-
-
+    const [listTitle, setListTitle] = useState(list.title);
+    useRealtimeRename(userId, setListTitle, isInInnerList)
 
     return (
         <main >
@@ -495,6 +493,7 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
                     setShareDialogOpen={setShareDialogOpen}
                     token={token}
                     list={list}
+                    title={listTitle}
                     handleSearchProducts={handleSearchProducts}
                     checkedProducts={checkedProducts}
                     baggedProducts={baggedProducts}

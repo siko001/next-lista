@@ -24,7 +24,7 @@ import SearchIcon from "../svgs/SearchIcon"
 
 
 
-export default function ShoppingListHeader({ totalProductCount, handleSearchProducts, setBaggedProductCount, setTotalProductCount, setProgress, progress, list, token, setShareDialogOpen, setAllLinkedProducts, allLinkedProducts, setCheckedProducts, checkedProducts, setBaggedProducts, baggedProducts }) {
+export default function ShoppingListHeader({ title, totalProductCount, handleSearchProducts, setBaggedProductCount, setTotalProductCount, setProgress, progress, list, token, setShareDialogOpen, setAllLinkedProducts, allLinkedProducts, setCheckedProducts, checkedProducts, setBaggedProducts, baggedProducts }) {
     const { handleRenameInput, handleRenameClick, listRenameRef, handleRenameList, listRename, setListRename, innerListRef, listName, startingValue } = useListContext();
     const [openSettings, setOpenSettings] = useState(false)
     const searchProductRef = useRef(null);
@@ -226,7 +226,7 @@ export default function ShoppingListHeader({ totalProductCount, handleSearchProd
                         :
                         (
                             <h2 ref={innerListRef} onClick={() => handleRenameClick(list.id)} className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold">
-                                {listName || list?.title}
+                                {listName || title || list?.title}
                             </h2>
                         )
                     }

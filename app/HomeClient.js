@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { WP_API_BASE } from "./lib/helpers";
-import useListaRealtimeUpdates from "./lib/RealTimeUpdates"
+import useUserListsRealtime from "./lib/UserListsRealTime"
 
 
 // Contexts
@@ -34,11 +34,12 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
     const { loading } = useLoadingContext();
     const { userData, token, error } = useUserContext();
-    const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists, handleRenameClick, listSettings, setListSettings, handleRenameList } = useListContext();
+    const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists, handleRenameClick, listSettings, setListSettings, handleRenameList, setIsInnerList } = useListContext();
     const { overlay, showVerbConfirmation } = useOverlayContext();
     const { showNotification } = useNotificationContext();
 
     useEffect(() => {
+        setIsInnerList(false);
         if (userData && userData.id && token) {
             getShoppingList(userData.id, token)
         }
@@ -166,11 +167,8 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
         }
     }, []);
 
+    useUserListsRealtime(userData?.id, setUserLists);
 
-    useListaRealtimeUpdates()
-
-
-    // if (loading) return <div>Loading...</div>;
     if (error) return <div>Error: {error}</div>;
     return (
         <main className=" transition-all duration-300">
