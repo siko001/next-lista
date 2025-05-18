@@ -1,4 +1,5 @@
 <?php
+
 add_action('rest_api_init', function() {
     register_rest_route('custom/v1', '/empty/(?P<id>\d+)', array(
         'methods' => 'POST',
@@ -11,7 +12,6 @@ add_action('rest_api_init', function() {
 
 function empty_shopping_list(WP_REST_Request $request) {
     $shopping_list_id = (int) $request->get_param('id');
-	
     
     // Validate input
     if (!$shopping_list_id) {
@@ -36,7 +36,27 @@ function empty_shopping_list(WP_REST_Request $request) {
     update_field('checked_product_count', 0, $shopping_list_id);
     update_field('bagged_product_count', 0, $shopping_list_id);
     
-    // Prepare  response matching your format
+    // Prepare fields for real-time update
+    $fields = [
+        'linked_products' => [],
+        'checked_products' => [],
+        'bagged_linked_products' => [],
+        'product_count' => 0,
+        'checked_product_count' => 0,
+        'bagged_product_count' => 0,
+    ];
+
+    // Trigger real-time update
+    $current_user_id = get_current_user_id();
+    trigger_list_update($shopping_list_id, [
+        'list_id' => $shopping_list_id,
+        'fields' => $fields,
+        'sender_id' => $current_user_id,
+        'message' => 'Other user emptied the list',
+        'event_id' => uniqid(),
+    ]);
+    
+    // Prepare response matching your format
     $response = [
         'success' => true,
         'message' => 'Shopping list emptied successfully',

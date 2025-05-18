@@ -466,14 +466,14 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
     }
 
     useListaRealtimeUpdates(listId, (data) => {
-        if (!data || !data.fields || userId == data.sender_id) return;
         console.log(data)
+        if (!data || !data.fields || userId == data.sender_id) return;
         setAllLinkedProducts(data.fields.linked_products || []);
         setCheckedProducts(data.fields.checked_products || []);
         setBaggedProducts(data.fields.bagged_linked_products || []);
         setTotalProductCount(Number(data.fields.product_count) || 0);
         setBaggedProductCount(Number(data.fields.bagged_product_count) || 0);
-        showNotification('List Updated')
+        showNotification(data.message ? data.message : "List Updated")
     });
 
 

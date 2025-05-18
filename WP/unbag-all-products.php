@@ -62,11 +62,31 @@ function unbag_all_products(WP_REST_Request $request) {
     update_field('checked_products', $checked_products, $shopping_list_id);
     update_field('bagged_linked_products', $bagged_products, $shopping_list_id);
     
-    // Update counts
-    update_field('product_count', count($linked_products), $shopping_list_id);
-    update_field('checked_product_count', count($checked_products), $shopping_list_id);
-    update_field('bagged_product_count', count($bagged_products), $shopping_list_id);
-    
+    // Get fresh data after update
+    $linked_products = get_field('linked_products', $shopping_list_id, false) ?: [];
+    $checked_products = get_field('checked_products', $shopping_list_id, false) ?: [];
+    $bagged_products = get_field('bagged_linked_products', $shopping_list_id, false) ?: [];
+
+    // Convert to objects for frontend
+    $fields = [
+        'linked_products' => acf_relationship_to_objects($linked_products),
+        'checked_products' => acf_relationship_to_objects($checked_products),
+        'bagged_linked_products' => acf_relationship_to_objects($bagged_products),
+        'product_count' => count($linked_products),
+        'checked_product_count' => count($checked_products),
+        'bagged_product_count' => count($bagged_products),
+    ];
+
+    // Trigger real-time update
+    $current_user_id = get_current_user_id();
+    trigger_list_update($shopping_list_id, [
+        'list_id' => $shopping_list_id,
+        'fields' => $fields,
+        'sender_id' => $current_user_id,
+        'message' => 'Other user unbagged all products',
+        'event_id' => uniqid(),
+    ]);
+
     // Prepare response
     $response = [
         'success' => true,
