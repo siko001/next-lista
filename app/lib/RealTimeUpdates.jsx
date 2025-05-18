@@ -19,6 +19,12 @@ export default function useListaRealtimeUpdates(listId, callback) {
       callbackRef.current(data);
     };
 
+    channel.bind("list-deleted", (data) => {
+      // You can show a notification, redirect, or remove the list from UI
+      showNotification("This list was deleted by another user", "info");
+      setUserLists((prev) => prev.filter((list) => list.id !== data.list_id));
+    });
+
     channel.bind("list-updated", handler);
 
     return () => {

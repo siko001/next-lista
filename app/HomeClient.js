@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { WP_API_BASE } from "./lib/helpers";
+import useListaRealtimeUpdates from "./lib/RealTimeUpdates"
+
 
 // Contexts
 import { useUserContext } from "./contexts/UserContext";
@@ -163,6 +165,9 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
             sessionStorage.removeItem('pendingDeletion');
         }
     }, []);
+
+
+    useListaRealtimeUpdates()
 
 
     // if (loading) return <div>Loading...</div>;
