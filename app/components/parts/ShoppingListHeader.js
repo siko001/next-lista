@@ -191,7 +191,7 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
 
     return (
         <>
-            <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px]  bg-gray-900 min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40">
+            <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px] border dark:border-transparent bg-gray-200 dark:bg-gray-900 min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40">
                 {/* list name */}
                 <div className="flex items-center justify-between  px-2">
                     {listRename ?
@@ -236,7 +236,7 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
                             onClick={handleSearchProduct}
                             className="flex items-center gap-2 group relative"
                         >
-                            <div className="flex items-center pr-1 relative overflow-hidden dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 max-w-[400px]">
+                            <div className="flex items-center pr-1 relative overflow-hidden dark:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 bg-gray-200 max-w-[400px]">
                                 <input
                                     ref={searchProductRef}
                                     type="text"

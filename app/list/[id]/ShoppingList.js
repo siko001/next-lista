@@ -1,16 +1,16 @@
 'use client'
 import gsap from 'gsap';
-import { useParams } from 'next/navigation'
 import { useEffect, useState, useMemo, useRef } from "react";
 import Fuse from 'fuse.js';
 import { calculateProgress, WP_API_BASE, decryptToken } from "../../lib/helpers"
 
 // Contexts
-import { useOverlayContext } from "../../contexts/OverlayContext";
-import { useProductContext } from "../../contexts/ProductContext";
 import { useNotificationContext } from '../../contexts/NotificationContext';
+
+// Websockets
 import useListaRealtimeUpdates from '../../lib/RealTimeUpdates'
 import useRealtimeRename from '../../lib/RealtimeRename';
+import useRealtimeListDelete from "../../lib/DeleteListRealtime"
 
 // Components
 import Header from "../../components/Header";
@@ -20,7 +20,6 @@ import AddProduct from '../../components/modals/AddProduct';
 import ShoppingListHeader from '../../components/parts/ShoppingListHeader';
 import Product from '../../components/parts/Product';
 import ShareListDialog from '../../components/modals/ShareListDialog';
-import Overlay from "../../components/modals/Overlay";
 
 // Icons
 import SettingsIcon from '../../components/svgs/SettingsIcon';
@@ -31,7 +30,7 @@ import { useListContext } from '../../contexts/ListContext';
 
 export default function ShoppingList({ listId, userId, isRegistered, userName, list, token, baggedItems, checkedProductList, AllProducts, userCustomProducts }) {
 
-    const { overlay } = useOverlayContext();
+
     const [productOverlay, setProductOverlay] = useState(false);
 
     const [allLinkedProducts, setAllLinkedProducts] = useState(list.acf.linked_products);
@@ -464,6 +463,8 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
         }
     }
 
+
+    // Real time updating
     useListaRealtimeUpdates(listId, (data) => {
         if (!data || !data.fields || userId == data.sender_id) return;
         setAllLinkedProducts(data.fields.linked_products || []);
@@ -475,7 +476,7 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
     });
     const [listTitle, setListTitle] = useState(list.title);
     useRealtimeRename(userId, setListTitle, isInInnerList)
-
+    useRealtimeListDelete(listId, userId, showNotification);
     return (
         <main >
             <Header isRegistered={isRegistered} userName={userName} />
@@ -501,10 +502,10 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
                 />
 
                 <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32">
-                    <div className="flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2">
+                    <div className="flex items-center justify-between sticky top-24 bg-[#f8f8ff] dark:bg-[#0a0a0a] z-20 px-4 pt-4 pb-2">
                         {(checkedProducts && checkedProducts?.length !== 0) && (
                             <>
-                                <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
+                                <div className="bg-[#ededed] dark:bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
                                 <h3 onClick={handleOpenChecklistSettings} className="flex cursor-pointer relative z-20  gap-1 checklist-settings">
                                     <SettingsIcon className={`w-7 h-7  ${checklistSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"} transition-colors duration-200 `} />
                                     <div className="">
@@ -538,10 +539,10 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
                         ))}
                     </div>
 
-                    <div className={`flex items-center justify-between sticky top-24 bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${checkedProducts?.length !== 0 ? 'mt-10' : '-mt-16'} py-2 z-20 px-4 `}>
+                    <div className={`flex items-center justify-between sticky top-24 bg-[#f8f8ff] dark:bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${checkedProducts?.length !== 0 ? 'mt-10' : '-mt-16'} py-2 z-20 px-4 `}>
                         {(baggedProducts && baggedProducts?.length !== 0) && (
                             <>
-                                <div className="bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
+                                <div className="bg-[#ededed] dark:bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
                                 <h3 onClick={handleOpenBaggedSettings} className={`flex cursor-pointer relative z-20  gap-1 bagged-settings`}>
                                     <SettingsIcon className={`w-7 h-7   ${baggedSettings ? 'text-primary' : "text-gray-500 hover:text-gray-700"}  transition-colors duration-200 `} />
                                     <div>
@@ -586,7 +587,7 @@ export default function ShoppingList({ listId, userId, isRegistered, userName, l
                 <Button cta="Add Products" color="#21ba9c" hover="inwards" action="add-product-overlay" textColorOverride={"text-white"} overrideDefaultClasses={"bg-blue-800 text-black text-sm md:text-base"} setProductOverlay={setProductOverlay} />
             </div>
 
-            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 bg-black py-14  px-4 flex items-center justify-between"></div>
+            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 dark:bg-black bg-[#ededed] py-14  px-4 flex items-center justify-between"></div>
 
             {shareDialogOpen && (
                 <ShareListDialog

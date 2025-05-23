@@ -100,10 +100,11 @@ export default function AddProduct({
                     action: isAdding ? 'add' : 'remove',
                 }),
             });
-
+            console.log(response)
 
 
             const data = await response.json();
+            console.log(data)
 
         } catch (error) {
             console.error('Error:', error);
@@ -363,10 +364,10 @@ export default function AddProduct({
                     }}
                 />
             </div>
-            <div className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#000000ef] blur-sm close-product-overlay"></div>
+            <div className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#fefefeef] dark:bg-[#000000ef] blur-sm close-product-overlay"></div>
             <div className="relative top-0 ">
-                <div className="absolute top-0 z-[100]  inset-x-0 bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 md:min-w-[550px] max-w-[750px] flex flex-col items-center mt-3 mb-8 md:my-6">
-                    <div className="w-full bg-gray-700 sticky top-0 z-20 rounded-md">
+                <div className="absolute top-0 z-[100]  inset-x-0 bg-white dark:bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 md:min-w-[550px] max-w-[750px] flex flex-col items-center mt-3 mb-8 md:my-6">
+                    <div className="w-full bg-gray-300 dark:bg-gray-700 sticky top-0 z-20 rounded-md">
                         <div className="relative flex items-center">
                             <input
                                 value={searchValue}
@@ -383,7 +384,7 @@ export default function AddProduct({
 
                     <div
                         ref={productListRef}
-                        className="w-full bg-gray-700 pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
+                        className="w-full bg-gray-300 dark:bg-gray-700 pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
                         style={{
                             WebkitOverflowScrolling: 'touch',
                             overscrollBehavior: 'contain',
@@ -393,9 +394,9 @@ export default function AddProduct({
 
                             {/* Navigation buttons */}
                             <div className="flex w-min whitespace-pre relative font-bold  overflow-hidden rounded-br-xl -left-4 mb-4">
-                                <div onClick={() => setSelectedProductsSection("popular")} className={`py-2 pl-5 pr-4 ${selectedProductsSection === "popular" ? "bg-gray-700 hover:bg-gray-700" : "hover:opacity-70 bg-gray-800 cursor-pointer"}`} >Popular</div>
-                                <div onClick={() => setSelectedProductsSection("custom")} className={`py-2 px-4  ${selectedProductsSection === "custom" ? "bg-gray-700 hover:bg-gray-700" : "hover:opacity-70 bg-gray-800 cursor-pointer"}`} >Custom</div>
-                                <div onClick={() => setSelectedProductsSection("favourite")} className={`py-2 px-4  ${selectedProductsSection === "favourite" ? "bg-gray-700 hover:bg-gray-700" : "hover:opacity-70 bg-gray-800 cursor-pointer"}`} >Favourites</div>
+                                <div onClick={() => setSelectedProductsSection("popular")} className={`py-2 pl-5 pr-4 ${selectedProductsSection === "popular" ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700" : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"}`} >Popular</div>
+                                <div onClick={() => setSelectedProductsSection("custom")} className={`py-2 px-4  ${selectedProductsSection === "custom" ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700" : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"}`} >Custom</div>
+                                <div onClick={() => setSelectedProductsSection("favourite")} className={`py-2 px-4  ${selectedProductsSection === "favourite" ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700" : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"}`} >Favourites</div>
                             </div>
 
 
@@ -431,7 +432,7 @@ export default function AddProduct({
                                                     handleCheckboxChange(product.id, token);
                                                 }}
                                                 key={product.id || index}
-                                                className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-900 hover:bg-gray-800 duration-200 ease-linear transition-colors text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
+                                                className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
                                             >
                                                 <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
                                                     <div className="checkbox-wrapper-28">

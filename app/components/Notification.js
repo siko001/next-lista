@@ -6,44 +6,47 @@ import { gsap } from 'gsap';
 export default function Notification() {
 	const { notification, clearNotification } = useNotificationContext();
 	const notificationRef = useRef(null);
+	const timeoutRef = useRef(null);
 
-	// Only animate when there is a new notification
 	useEffect(() => {
-		if (notification.message) {
-			// Animate the notification up from below
+		if (notification && notification.message) {
+			// Animate in
 			gsap.fromTo(
 				notificationRef.current,
 				{ y: 100, opacity: 0 },
 				{ y: 0, opacity: 1, duration: 0.5 }
 			);
 
-			// Animate it down and remove after timeout
-			setTimeout(() => {
+			// Animate out after timeout
+			timeoutRef.current = setTimeout(() => {
 				gsap.to(notificationRef.current, {
 					y: 100,
 					opacity: 0,
-					duration: 0.5
+					duration: 0.5,
+					onComplete: clearNotification
 				});
-				setTimeout(() => {
-					clearNotification();
-				}, 500);
 			}, notification.timeout);
 		}
-		// 	cleanup function
+		// Cleanup function
 		return () => {
+			clearTimeout(timeoutRef.current);
 			gsap.killTweensOf(notificationRef.current);
-		}
-	}, [notification]);
+		};
+	}, [notification, clearNotification]);
 
-	const notificationTypeError = notification.type === 'error' ? 'bg-red-500 text-white' : ' bg-green-500 text-black';
+	const notificationTypeError =
+		notification?.type === 'error'
+			? 'bg-red-500 text-white'
+			: ' bg-green-500 text-black';
 
-	// Only render notification if there is a message
 	return (
-		notification.message && (
-			<div ref={notificationRef} className={`${notificationTypeError} fixed bottom-8 z-[9999] right-8 font-quicksand font-[600] p-4 rounded-md shadow-md`} >
-
+		notification && notification.message && (
+			<div
+				ref={notificationRef}
+				className={`${notificationTypeError} fixed bottom-8 z-[9999] right-8 font-quicksand font-[600] p-4 rounded-md shadow-md`}
+			>
 				{notification.message}
-			</div >
+			</div>
 		)
 	);
 }

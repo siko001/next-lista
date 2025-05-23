@@ -307,7 +307,7 @@ export default function Product({
 
 
     return (
-        <div onClick={(e) => { e.stopPropagation(); handleClick() }} ref={itemRef} className={`flex text-center transition-colors group duration-200  w-full mx-auto items-center justify-between gap-12 px-2 py-4 bg-gray-800 hover:bg-gray-700 rounded-lg cursor-pointer ${isBagged && 'border border-primary'}`} >
+        <div onClick={(e) => { e.stopPropagation(); handleClick() }} ref={itemRef} className={`flex text-center transition-colors group duration-200  w-full mx-auto items-center justify-between gap-12 px-2 py-4 bg-gray-100 border  dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 rounded-lg cursor-pointer ${isBagged && 'border border-primary'}`} >
             <div
                 className="flex items-center  w-full gap-4">
                 <h3 className="max-[376px]:text-base text-lg md:text-xl font-semibold pl-3 flex gap-1 items-center">

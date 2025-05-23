@@ -2,8 +2,10 @@
 import { useEffect, useState } from "react";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { WP_API_BASE } from "./lib/helpers";
-import useUserListsRealtime from "./lib/UserListsRealTime"
 
+// Websockets
+import useUserListsRealtime from "./lib/UserListsRealTime"
+import useRealtimeAllListDelete from "./lib/DeleteAllListRealtime"
 
 // Contexts
 import { useUserContext } from "./contexts/UserContext";
@@ -168,6 +170,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
     }, []);
 
     useUserListsRealtime(userData?.id, setUserLists);
+    useRealtimeAllListDelete(userLists, setUserLists, userData?.id, showNotification);
 
     if (error) return <div>Error: {error}</div>;
     return (
