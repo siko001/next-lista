@@ -36,8 +36,6 @@ export default function AddProduct({
 
     const customProductInputRef = useRef(null);
 
-
-
     const [originalProducts] = useState(allProducts);
     const searchRef = useRef();
     const productListRef = useRef();
@@ -129,23 +127,36 @@ export default function AddProduct({
     // Search functionality with fuzzy search
     const [searchValue, setSearchValue] = useState("");
 
-    const handleSearchProduct = (e) => {
+    const handleSearchProduct = async (e) => {
         const value = e.target.value;
         setSearchValue(value);
 
-        if (value === "") {
-            setProducts(originalProducts);
-        } else {
-            const searchResults = fuse.search(value);
-            const filteredProducts = searchResults.map(result => result.item);
-            setProducts(filteredProducts);
+        if (selectedProductsSection === 'popular') {
+            if (value === "") {
+                setProducts(allProducts);
+            } else {
+                const fuse = new Fuse(allProducts, fuseOptions);
+                const searchResults = fuse.search(value);
+                const filteredProducts = searchResults.map(result => result.item);
+                setProducts(filteredProducts);
+            }
+        } else if (selectedProductsSection === 'custom') {
+            if (value === "") {
+                const freshCustomProducts = await getAllCustomProducts(token);
+                setCustomProducts(freshCustomProducts);
+            } else {
+                const fuse = new Fuse(customProducts, fuseOptions);
+                const searchResults = fuse.search(value);
+                const filteredProducts = searchResults.map(result => result.item);
+                setCustomProducts(filteredProducts);
+            }
         }
     };
 
     // Animate search results with simple fade-in
     useEffect(() => {
         if (productListRef.current) {
-            const productItems = productListRef.current.querySelectorAll('.product-list-content > div:not(.bg-gray-800)');
+            const productItems = productListRef.current.querySelectorAll('.product-list-content > div:not(.bg-gray-800):not(:first-child):not(.mb-4)');
             gsap.fromTo(
                 productItems,
                 { opacity: 0 },
@@ -156,7 +167,7 @@ export default function AddProduct({
                 }
             );
         }
-    }, [products]);
+    }, [products, customProducts]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -406,7 +417,7 @@ export default function AddProduct({
                                 (
                                     <div className="mb-4">
                                         <div className="w-full flex items-center  text-gray-400 text-lg font-bold group">
-                                            <input ref={customProductInputRef} placeholder='Input Product' className="w-full px-3 py-[9.5px] peer group-hover:!border-primary rounded-l-md h-full text-white !border-r-0 placeholder:text-white  !border-blue-800  focus:!border-primary"></input>
+                                            <input ref={customProductInputRef} placeholder='Input Product' className="w-full px-3 py-[9.5px] peer group-hover:!border-primary rounded-l-md h-full text-black dark:text-white !border-r-0 placeholder:text-gray-700 dark:placeholder:text-white  !border-blue-800  focus:!border-primary"></input>
                                             <button onClick={handleCreateCustomProduct} className="whitespace-pre  px-3 py-1.5 !border-blue-800 peer  group-hover:!border-primary  peer-focus:!border-primary cursor-pointer hover:!border-primary  rounded-r-md h-full bg-blue-800 text-white">Add product</button>
                                         </div>
 
