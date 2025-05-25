@@ -18,6 +18,9 @@ import ErrorIcon from "../svgs/ErrorIcon";
 import TrashIcon from "../svgs/TranshIcon";
 import StarIcon from "../svgs/StarIcon";
 
+// Contexts
+import {useNotificationContext} from "../../contexts/NotificationContext";
+
 export default function AddProduct({
     favourites,
     totalProductCount,
@@ -44,6 +47,8 @@ export default function AddProduct({
     const [searchResults, setSearchResults] = useState(null);
     const [popularSearchResults, setPopularSearchResults] = useState(null);
     const customProductInputRef = useRef(null);
+
+    const {showNotification} = useNotificationContext();
 
     const [originalProducts] = useState(allProducts);
     const searchRef = useRef();
@@ -456,6 +461,12 @@ export default function AddProduct({
             setFavouriteProducts((prev) =>
                 prev?.filter((p) => p.id !== productId)
             );
+            showNotification(
+                `Removed ${productTitle} from favourites`,
+                "success",
+                1000
+            );
+
             // send to server
             const decryptedToken = decryptToken(token);
             const res = await fetch(
@@ -479,6 +490,13 @@ export default function AddProduct({
                 ...prev,
                 {id: productId, title: productTitle},
             ]);
+
+            showNotification(
+                `Added ${productTitle} to favourites`,
+                "success",
+                1000
+            );
+
             // send to server
             const decryptedToken = decryptToken(token);
             const res = await fetch(
