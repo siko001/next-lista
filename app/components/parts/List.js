@@ -42,7 +42,7 @@ export default function List({
                 setListMetadata(metadata);
             });
         }
-    }, [list]);
+    }, [list?.id, list?.acf?.owner_id, list?.acf?.owner_name, userData?.id]);
 
     const handleGoToList = (e) => {
         e.stopPropagation();
@@ -131,15 +131,17 @@ export default function List({
                     </p>
                 )}
 
-                {listMetadata && !listMetadata.isOwner && (
-                    <div
-                        className={`absolute z-0 left-6 top-8 sm:top-9 w-full h-full text-[8px] whitespace-nowrap ${
-                            listRename === list.id ? "hidden" : ""
-                        }`}
-                    >
-                        Owned by: {listMetadata.ownerName}
-                    </div>
-                )}
+                {listMetadata &&
+                    !listMetadata.isOwner &&
+                    listMetadata.ownerName && (
+                        <div
+                            className={`absolute z-0 left-6 top-8 sm:top-9 w-full h-full text-[8px] whitespace-nowrap ${
+                                listRename === list.id ? "hidden" : ""
+                            }`}
+                        >
+                            Owned by: {listMetadata.ownerName}
+                        </div>
+                    )}
 
                 <div className="flex items-center gap-2 justify-between ">
                     <div className="text-xs md:text-base 2xl:text-lg font-bold whitespace-pre text-gray-600 dark:text-gray-400 relative top-[1px]">

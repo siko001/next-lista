@@ -278,7 +278,7 @@ export default function ShoppingListHeader({
                             <h2
                                 ref={innerListRef}
                                 onClick={() => handleRenameClick(list.id)}
-                                className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold relative"
+                                className="text-xl -left-2  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold relative"
                             >
                                 {listName || title || list?.title}
                             </h2>

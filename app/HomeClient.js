@@ -181,12 +181,14 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
                 title: copiedList.new_list_title,
                 acf: {
                     product_count: copiedList.product_count,
+                    owner_id: userData?.id,
                     products: [],
                 },
                 isNew: true,
             },
             ...prev,
         ]);
+        // set
 
         setTimeout(() => {
             setUserLists((prev) =>

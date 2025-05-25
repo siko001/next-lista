@@ -1,8 +1,7 @@
 ##shared list --- Main Focus ***
--Invitees see who's list it is.
 -Owner can revoke view.
 -Inform user if list has been delete and he wasn't active.
-s
+
 # Lists View --Second Main Focus  ***
 -View users which list is shared with
 
