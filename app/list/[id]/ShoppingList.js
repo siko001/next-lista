@@ -40,6 +40,7 @@ export default function ShoppingList({
     AllProducts,
     userCustomProducts,
     favourites,
+    ownerName,
 }) {
     const [productOverlay, setProductOverlay] = useState(false);
 
@@ -544,6 +545,7 @@ export default function ShoppingList({
 
             <div className="relatve px-4">
                 <ShoppingListHeader
+                    ownerName={ownerName}
                     setProgress={setProgress}
                     totalProductCount={totalProductCount}
                     setAllLinkedProducts={setAllLinkedProducts}

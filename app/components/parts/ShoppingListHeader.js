@@ -22,6 +22,7 @@ import SettingsIcon from "../svgs/SettingsIcon";
 import SearchIcon from "../svgs/SearchIcon";
 
 export default function ShoppingListHeader({
+    ownerName,
     title,
     totalProductCount,
     handleSearchProducts,
@@ -273,13 +274,23 @@ export default function ShoppingListHeader({
                             </div>
                         </div>
                     ) : (
-                        <h2
-                            ref={innerListRef}
-                            onClick={() => handleRenameClick(list.id)}
-                            className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold"
-                        >
-                            {listName || title || list?.title}
-                        </h2>
+                        <>
+                            <h2
+                                ref={innerListRef}
+                                onClick={() => handleRenameClick(list.id)}
+                                className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold relative"
+                            >
+                                {listName || title || list?.title}
+                            </h2>
+
+                            {!isListOwner(list, userId) && (
+                                <div>
+                                    <div className="absolute top-12 sm:top-13 left-6 w-full h-full text-[10px] whitespace-nowrap">
+                                        Owned by: {ownerName}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
 
                     <div className="flex gap-6 items-center">

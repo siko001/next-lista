@@ -11,6 +11,7 @@ add_action('rest_api_init', function () {
 function get_shopping_lists_by_owner($data) {
     $user_id = $data['owner_id']; 
     
+    
     $args = array(
         'post_type' => 'shopping-list',
         'posts_per_page' => -1,
@@ -41,7 +42,6 @@ function get_shopping_lists_by_owner($data) {
         while ($query->have_posts()) {
             $query->the_post();
             $post_id = get_the_ID();
-            
             $list_data = array(
                 'id' => $post_id,
                 'title' => html_entity_decode(get_the_title()),
@@ -51,7 +51,8 @@ function get_shopping_lists_by_owner($data) {
                     'owner_token' => get_field('owner_token', $post_id),
                     'product_count' => get_field('product_count', $post_id),
 					'bagged_product_count' => get_field('bagged_product_count', $post_id),
-                    'shared_with_users' => get_field("shared_with_users", $post_id)
+                    'shared_with_users' => get_field("shared_with_users", $post_id),
+                    "owner_name" => get_user_by('id', get_field('owner_id', $post_id))->display_name,
                 )
             );
             

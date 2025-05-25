@@ -1,5 +1,4 @@
 ##shared list --- Main Focus ***
--Invitees cannot delete list / can remove list.
 -Invitees see who's list it is.
 -Owner can revoke view.
 -Inform user if list has been delete and he wasn't active.
