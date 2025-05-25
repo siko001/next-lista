@@ -48,6 +48,8 @@ export default function AddProduct({
     const [popularSearchResults, setPopularSearchResults] = useState(null);
     const [favouriteSearchResults, setFavouriteSearchResults] = useState(null);
     const customProductInputRef = useRef(null);
+    const [customProductLength, setCustomProductLength] = useState(0);
+    const maxLength = 36;
 
     const {showNotification} = useNotificationContext();
 
@@ -360,6 +362,7 @@ export default function AddProduct({
             }, 1);
 
             customProductInputRef.current.value = "";
+            setCustomProductLength(0);
             setCustomProducts((prev) => [animatedProduct, ...prev]);
         }
 
@@ -620,15 +623,35 @@ export default function AddProduct({
                             {/* Custom Products Input */}
                             {selectedProductsSection === "custom" && (
                                 <div className="mb-4">
-                                    <div className="w-full flex items-center  text-gray-400 text-lg font-bold group">
-                                        <input
-                                            ref={customProductInputRef}
-                                            placeholder="Input Product"
-                                            className="w-full px-3 py-[9.5px] peer group-hover:!border-primary rounded-l-md h-full text-black dark:text-white !border-r-0 placeholder:text-gray-700 dark:placeholder:text-white  !border-blue-800  focus:!border-primary"
-                                        ></input>
+                                    <div className="w-full flex items-center text-gray-400 text-lg font-bold group relative">
+                                        <div className="w-full relative">
+                                            <input
+                                                ref={customProductInputRef}
+                                                placeholder="Input Product"
+                                                maxLength={maxLength}
+                                                onChange={(e) => {
+                                                    const value =
+                                                        e.target.value.slice(
+                                                            0,
+                                                            maxLength
+                                                        );
+                                                    e.target.value = value;
+                                                    setCustomProductLength(
+                                                        value.length
+                                                    );
+                                                }}
+                                                className="w-full px-3 py-[9.5px] pr-12 sm:pr-14 md:pr-16 peer group-hover:!border-primary rounded-l-md h-full text-black dark:text-white !border-r-0 placeholder:text-gray-700 dark:placeholder:text-white !border-blue-800 focus:!border-primary"
+                                            />
+                                            <div className="hidden peer-focus:block text-xs sm:text-sm md:text-base absolute right-2 top-[50%] -translate-y-1/2">
+                                                <span>
+                                                    {customProductLength}
+                                                </span>
+                                                &nbsp;/&nbsp;{maxLength}
+                                            </div>
+                                        </div>
                                         <button
                                             onClick={handleCreateCustomProduct}
-                                            className="whitespace-pre  px-3 py-1.5 !border-blue-800 peer  group-hover:!border-primary  peer-focus:!border-primary cursor-pointer hover:!border-primary  rounded-r-md h-full bg-blue-800 text-white"
+                                            className="whitespace-pre px-3 py-1.5 !border-blue-800 peer group-hover:!border-primary peer-focus:!border-primary cursor-pointer hover:!border-primary rounded-r-md h-full bg-blue-800 text-white"
                                         >
                                             Add product
                                         </button>
@@ -654,7 +677,7 @@ export default function AddProduct({
                                             );
                                         }}
                                         key={product.id || index}
-                                        className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 ${
+                                        className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
                                             allLinkedProducts?.some(
                                                 (p) => p.ID === product.id
                                             )
@@ -726,10 +749,18 @@ export default function AddProduct({
                                                             token
                                                         );
                                                     }}
-                                                    className="text-sm font-bold text-gray-400"
+                                                    className={`text-sm font-bold text-gray-400 block ${
+                                                        favouriteProducts?.some(
+                                                            (p) =>
+                                                                p.id ===
+                                                                product.id
+                                                        )
+                                                            ? "opacity-100"
+                                                            : "sm:opacity-0 group-hover:opacity-100"
+                                                    } transition-opacity duration-200`}
                                                 >
                                                     <StarIcon
-                                                        className={`w-6 h-6  hover:text-white transition-colors duration-200 cursor-pointer ${
+                                                        className={`w-6 h-6 hover:text-white transition-colors duration-200 cursor-pointer ${
                                                             favouriteProducts?.some(
                                                                 (p) =>
                                                                     p.id ===

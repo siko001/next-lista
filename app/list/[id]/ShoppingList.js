@@ -625,7 +625,19 @@ export default function ShoppingList({
                         )}
                     </div>
                     <div className="checked-products-container flex flex-col gap-4">
-                        {checkedProducts?.length !== 0 &&
+                        {checkedProducts?.length === 0 &&
+                        baggedProducts?.length === 0 ? (
+                            <p className="w-full font-quicksand mt-28 flex items-center justify-center text-gray-900/60 dark:text-gray-400/60 text-lg md:text-2xl font-normal">
+                                Click
+                                <span
+                                    onClick={() => setProductOverlay(true)}
+                                    className="text-primary hover:text-primary/70  dark:text-primary/70 font-medium dark:hover:text-primary cursor-pointer duration-200 transition-colors ease"
+                                >
+                                    &nbsp;Add Products&nbsp;
+                                </span>
+                                to start building your list
+                            </p>
+                        ) : (
                             checkedProducts?.map((product, index) =>
                                 product === 0 ? null : (
                                     <Product
@@ -649,13 +661,20 @@ export default function ShoppingList({
                                         key={index}
                                     />
                                 )
-                            )}
+                            )
+                        )}
                     </div>
 
                     <div
-                        className={`flex items-center justify-between sticky top-24 bg-[#f8f8ff] dark:bg-[#0a0a0a] z-20 px-4 pt-4 pb-2 ${
-                            checkedProducts?.length !== 0 ? "mt-10" : "-mt-16"
-                        } py-2 z-20 px-4 `}
+                        className={`flex items-center justify-between sticky top-24 ${
+                            checkedProducts?.length !== 0
+                                ? "bg-[#f8f8ff] dark:bg-[#0a0a0a]"
+                                : "bg-transparent"
+                        }
+                            z-20 px-4 pt-4 pb-2 
+                         ${checkedProducts?.length !== 0 ? "mt-10" : "-mt-16"}
+                             py-2 z-20 px-4 
+                         `}
                     >
                         {baggedProducts && baggedProducts?.length !== 0 && (
                             <>
@@ -724,31 +743,26 @@ export default function ShoppingList({
                     </div>
 
                     <div className="bagged-products-container flex flex-col gap-4">
-                        {baggedProducts?.length !== 0 &&
-                            baggedProducts?.map((product, index) =>
-                                product === 0 ? null : (
-                                    <Product
-                                        setAllLinkedProducts={
-                                            setAllLinkedProducts
-                                        }
-                                        setBaggedProductCount={
-                                            setBaggedProductCount
-                                        }
-                                        setTotalProductCount={
-                                            setTotalProductCount
-                                        }
-                                        totalProductCount={totalProductCount}
-                                        baggedProductCount={baggedProductCount}
-                                        setProgress={setProgress}
-                                        setCheckedProducts={setCheckedProducts}
-                                        setBaggedProducts={setBaggedProducts}
-                                        isBagged={true}
-                                        token={token}
-                                        product={product}
-                                        key={index}
-                                    />
-                                )
-                            )}
+                        {baggedProducts?.map((product, index) =>
+                            product === 0 ? null : (
+                                <Product
+                                    setAllLinkedProducts={setAllLinkedProducts}
+                                    setBaggedProductCount={
+                                        setBaggedProductCount
+                                    }
+                                    setTotalProductCount={setTotalProductCount}
+                                    totalProductCount={totalProductCount}
+                                    baggedProductCount={baggedProductCount}
+                                    setProgress={setProgress}
+                                    setCheckedProducts={setCheckedProducts}
+                                    setBaggedProducts={setBaggedProducts}
+                                    isBagged={true}
+                                    token={token}
+                                    product={product}
+                                    key={index}
+                                />
+                            )
+                        )}
                     </div>
                 </div>
             </div>

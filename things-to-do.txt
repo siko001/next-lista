@@ -1,24 +1,21 @@
-#Products. ---Main Focus *****
--cam edit custom prouct name
--limit custom product name to 36 chars
--Favourit Products 
--Search includes Favourite
-
--Add Categories
--Sort By Categories
--Products Show up According to users Choice + most clicked.
--Show No products In List if non in linked
-
-
-##shared list ---Second Main Focus ***
+##shared list --- Main Focus ***
 -Invitees cannot delete list / can remove list.
 -Invitees see who's list it is.
 -Owner can revoke view.
 -Inform user if list has been delete and he wasn't active.
 
 
-# Lists View ---Third ***
+# Lists View --Second Main Focus  ***
 -View users which list is shared with
+
+
+-Add Categories ---Third Main Focus  ***
+-Sort By Categories
+-Products Show up According to users Choice + most clicked.
+
+
+
+
 
 #login ---Last**
 -Wordpress wrong password warning
@@ -36,11 +33,6 @@ Verify Emails
 
 
 
-#GENERAL ---- LAST**
-Fix up lightmode --all app
-
-
-
 ### After Project ready ###
 email confimartions
 Quanitity + Pricing.
@@ -49,3 +41,4 @@ Languages ??
 Dragg and drop products to arrange?
 user specific ordering for Lists
 user specific ordering for products
+-cam edit custom prouct name
