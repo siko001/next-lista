@@ -2,7 +2,7 @@
 -cam edit custom prouct name
 -limit custom product name to 36 chars
 -Favourit Products 
--Search includes custom products and Favourit
+-Search includes Favourite
 
 -Add Categories
 -Sort By Categories
@@ -15,7 +15,6 @@
 -Invitees see who's list it is.
 -Owner can revoke view.
 -Inform user if list has been delete and he wasn't active.
--REAL TIME UPDATES. + (products + Progress)
 
 
 # Lists View ---Third ***

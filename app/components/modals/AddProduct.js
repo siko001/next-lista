@@ -1,19 +1,25 @@
-'use client';
-import Button from '../../components/Button';
-import gsap from 'gsap';
-import { useEffect, useRef, useState, useMemo } from 'react';
-import Fuse from 'fuse.js';
-import SearchIcon from '../svgs/SearchIcon';
-import { decryptToken, WP_API_BASE, getAllCustomProducts } from '../../lib/helpers';
+"use client";
+import Button from "../../components/Button";
+import gsap from "gsap";
+import {useEffect, useRef, useState, useMemo} from "react";
+import Fuse from "fuse.js";
+import SearchIcon from "../svgs/SearchIcon";
+import {
+    decryptToken,
+    WP_API_BASE,
+    getAllCustomProducts,
+} from "../../lib/helpers";
 import "../../css/checkbox.css";
-import CloseIcon from '../svgs/CloseIcon';
-import { useParams } from 'next/navigation';
-import Lenis from 'lenis';
-import { useListContext } from '../../contexts/ListContext';
-import ErrorIcon from '../svgs/ErrorIcon';
-import TrashIcon from '../svgs/TranshIcon';
+import CloseIcon from "../svgs/CloseIcon";
+import {useParams} from "next/navigation";
+import Lenis from "lenis";
+import {useListContext} from "../../contexts/ListContext";
+import ErrorIcon from "../svgs/ErrorIcon";
+import TrashIcon from "../svgs/TranshIcon";
+import StarIcon from "../svgs/StarIcon";
 
 export default function AddProduct({
+    favourites,
     totalProductCount,
     setTotalProductCount,
     baggedProductCount,
@@ -32,53 +38,83 @@ export default function AddProduct({
     setCustomProducts,
 }) {
     const [products, setProducts] = useState(allProducts);
-    const [favouriteProducts, setFavouriteProducts] = useState([]);
-
+    const [favouriteProducts, setFavouriteProducts] = useState(favourites);
+    const [initialCustomProducts, setInitialCustomProducts] =
+        useState(customProducts);
+    const [searchResults, setSearchResults] = useState(null);
+    const [popularSearchResults, setPopularSearchResults] = useState(null);
     const customProductInputRef = useRef(null);
 
     const [originalProducts] = useState(allProducts);
     const searchRef = useRef();
     const productListRef = useRef();
     const shoppingListId = useParams().id;
-    const { lenis: globalLenis } = useListContext();
+    const {lenis: globalLenis} = useListContext();
     const lenisRef = useRef(null);
     const rafIdRef = useRef(null);
 
-    const [selectedProductsSection, setSelectedProductsSection] = useState('popular');
+    const [selectedProductsSection, setSelectedProductsSection] =
+        useState("popular");
 
     // Create Fuse instance for fuzzy search
     const fuseOptions = {
-        keys: ['title'],
+        keys: ["title"],
         threshold: 0.3,
         distance: 100,
     };
 
-    const fuse = useMemo(() => new Fuse(originalProducts, fuseOptions), [originalProducts]);
+    const fuse = useMemo(
+        () => new Fuse(originalProducts, fuseOptions),
+        [originalProducts]
+    );
+
+    // Update initialCustomProducts when customProducts prop changes
+    useEffect(() => {
+        setInitialCustomProducts(customProducts);
+    }, [customProducts]);
 
     const updateProductInShoppingList = async (productId, isAdding, token) => {
         if (!shoppingListId || !token) return;
         const decryptedToken = decryptToken(token);
-        const isProductBagged = baggedProducts?.some(product => product.id === productId);
-        // 
-        const productTitle = products.find(product => product.id === productId)?.title || customProducts.find(product => product.id === productId)?.title;
+        const isProductBagged = baggedProducts?.some(
+            (product) => product.id === productId
+        );
+        //
+        const productTitle =
+            products.find((product) => product.id === productId)?.title ||
+            customProducts.find((product) => product.id === productId)?.title;
         if (isAdding) {
-            setCheckedProducts(prev => {
-                const uniqueProducts = prev?.filter(product => product.id !== productId) || [];
-                return [...uniqueProducts, { id: productId, title: productTitle }];
+            setCheckedProducts((prev) => {
+                const uniqueProducts =
+                    prev?.filter((product) => product.id !== productId) || [];
+                return [
+                    ...uniqueProducts,
+                    {id: productId, title: productTitle},
+                ];
             });
-            setAllLinkedProducts(prev => {
-                const uniqueProducts = prev?.filter(product => product.ID !== productId) || [];
-                return [...uniqueProducts, { ID: productId, title: productTitle }];
+            setAllLinkedProducts((prev) => {
+                const uniqueProducts =
+                    prev?.filter((product) => product.ID !== productId) || [];
+                return [
+                    ...uniqueProducts,
+                    {ID: productId, title: productTitle},
+                ];
             });
-            setTotalProductCount(prev => prev + 1);
+            setTotalProductCount((prev) => prev + 1);
         } else {
-            setCheckedProducts(prev => prev?.filter(product => product.id !== productId));
-            setBaggedProducts(prev => prev?.filter(product => product.id !== productId));
-            setAllLinkedProducts(prev => prev?.filter(product => product.ID !== productId));
-            setTotalProductCount(prev => prev - 1);
+            setCheckedProducts((prev) =>
+                prev?.filter((product) => product.id !== productId)
+            );
+            setBaggedProducts((prev) =>
+                prev?.filter((product) => product.id !== productId)
+            );
+            setAllLinkedProducts((prev) =>
+                prev?.filter((product) => product.ID !== productId)
+            );
+            setTotalProductCount((prev) => prev - 1);
             if (isProductBagged) {
-                setBaggedProductCount(prev => prev - 1);
-                setProgress(prev => {
+                setBaggedProductCount((prev) => prev - 1);
+                setProgress((prev) => {
                     const newProgress = prev - (1 / totalProductCount) * 100;
                     return newProgress < 0 ? 0 : newProgress;
                 });
@@ -86,26 +122,27 @@ export default function AddProduct({
         }
 
         try {
-            const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${decryptedToken}`,
-                },
-                body: JSON.stringify({
-                    shoppingListId,
-                    productId,
-                    action: isAdding ? 'add' : 'remove',
-                }),
-            });
-            console.log(response)
-
+            const response = await fetch(
+                `${WP_API_BASE}/custom/v1/update-shopping-list`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${decryptedToken}`,
+                    },
+                    body: JSON.stringify({
+                        shoppingListId,
+                        productId,
+                        action: isAdding ? "add" : "remove",
+                    }),
+                }
+            );
+            console.log(response);
 
             const data = await response.json();
-            console.log(data)
-
+            console.log(data);
         } catch (error) {
-            console.error('Error:', error);
+            console.error("Error:", error);
         }
     };
 
@@ -113,53 +150,79 @@ export default function AddProduct({
     const handleCheckboxChange = (productId, token) => {
         if (isUpdating) return;
         isUpdating = true;
-        const isCurrentlyChecked = allLinkedProducts?.some(product => product.ID === productId);
-        updateProductInShoppingList(productId, !isCurrentlyChecked, token).finally(() => {
+        const isCurrentlyChecked = allLinkedProducts?.some(
+            (product) => product.ID === productId
+        );
+        updateProductInShoppingList(
+            productId,
+            !isCurrentlyChecked,
+            token
+        ).finally(() => {
             isUpdating = false;
         });
     };
 
     useEffect(() => {
-        gsap.set(".close-product-overlay-btn", { y: 200, opacity: 1 });
-        gsap.to(".close-product-overlay-btn", { y: 0, duration: 0.5, ease: "power2.out" });
+        gsap.set(".close-product-overlay-btn", {y: 200, opacity: 1});
+        gsap.to(".close-product-overlay-btn", {
+            y: 0,
+            duration: 0.5,
+            ease: "power2.out",
+        });
     }, []);
 
     // Search functionality with fuzzy search
     const [searchValue, setSearchValue] = useState("");
 
-    const handleSearchProduct = async (e) => {
+    const handleSearchProduct = (e) => {
         const value = e.target.value;
         setSearchValue(value);
 
-        if (selectedProductsSection === 'popular') {
-            if (value === "") {
-                setProducts(allProducts);
-            } else {
-                const fuse = new Fuse(allProducts, fuseOptions);
-                const searchResults = fuse.search(value);
-                const filteredProducts = searchResults.map(result => result.item);
-                setProducts(filteredProducts);
-            }
-        } else if (selectedProductsSection === 'custom') {
-            if (value === "") {
-                const freshCustomProducts = await getAllCustomProducts(token);
-                setCustomProducts(freshCustomProducts);
-            } else {
-                const fuse = new Fuse(customProducts, fuseOptions);
-                const searchResults = fuse.search(value);
-                const filteredProducts = searchResults.map(result => result.item);
-                setCustomProducts(filteredProducts);
-            }
+        // Handle popular products search
+        if (value === "") {
+            setPopularSearchResults(null);
+            setSearchResults(null);
+        } else {
+            // Search in popular products
+            const popularFuse = new Fuse(allProducts, fuseOptions);
+            const popularResults = popularFuse.search(value);
+            setPopularSearchResults(
+                popularResults.map((result) => result.item)
+            );
+
+            // Search in custom products
+            const customFuse = new Fuse(customProducts, fuseOptions);
+            const customResults = customFuse.search(value);
+            setSearchResults(customResults.map((result) => result.item));
         }
     };
+
+    // Get the correct products to display based on the selected section
+    const displayedProducts = useMemo(() => {
+        if (selectedProductsSection === "popular") {
+            return popularSearchResults || allProducts;
+        } else if (selectedProductsSection === "custom") {
+            return searchResults || customProducts;
+        }
+        return favouriteProducts;
+    }, [
+        selectedProductsSection,
+        popularSearchResults,
+        searchResults,
+        allProducts,
+        customProducts,
+        favouriteProducts,
+    ]);
 
     // Animate search results with simple fade-in
     useEffect(() => {
         if (productListRef.current) {
-            const productItems = productListRef.current.querySelectorAll('.product-list-content > div:not(.bg-gray-800):not(:first-child):not(.mb-4)');
+            const productItems = productListRef.current.querySelectorAll(
+                ".product-list-content > div:not(.bg-gray-800):not(:first-child):not(.mb-4)"
+            );
             gsap.fromTo(
                 productItems,
-                { opacity: 0 },
+                {opacity: 0},
                 {
                     opacity: 1,
                     duration: 0.3,
@@ -167,34 +230,34 @@ export default function AddProduct({
                 }
             );
         }
-    }, [products, customProducts]);
+    }, [displayedProducts]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
-            if (event.key === 'Escape') {
-                document.body.style.overflow = 'auto';
+            if (event.key === "Escape") {
+                document.body.style.overflow = "auto";
                 setProductOverlay(false);
             }
         };
         const handleOutsideClick = (event) => {
-            if (event.target.classList.contains('close-product-overlay')) {
-                document.body.style.overflow = 'auto';
+            if (event.target.classList.contains("close-product-overlay")) {
+                document.body.style.overflow = "auto";
                 setProductOverlay(false);
             }
         };
 
-        window.addEventListener('click', handleOutsideClick);
-        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener("click", handleOutsideClick);
+        window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            document.body.style.overflow = 'auto';
-            window.removeEventListener('click', handleOutsideClick);
-            window.removeEventListener('keydown', handleKeyDown);
+            document.body.style.overflow = "auto";
+            window.removeEventListener("click", handleOutsideClick);
+            window.removeEventListener("keydown", handleKeyDown);
         };
     }, [setProductOverlay]);
 
     useEffect(() => {
-        window.scrollTo({ top: 0 });
+        window.scrollTo({top: 0});
         if (globalLenis?.current) {
             globalLenis.current.stop();
         }
@@ -202,11 +265,13 @@ export default function AddProduct({
         if (productListRef.current) {
             lenisRef.current = new Lenis({
                 wrapper: productListRef.current,
-                content: productListRef.current.querySelector('.product-list-content'),
+                content: productListRef.current.querySelector(
+                    ".product-list-content"
+                ),
                 lerp: 0.1,
                 smoothWheel: true,
                 touchMultiplier: 2, // Add this for better touch handling
-                smoothTouch: true,    // Enable smooth scrolling for touch devices
+                smoothTouch: true, // Enable smooth scrolling for touch devices
                 infinite: false,
             });
 
@@ -217,7 +282,7 @@ export default function AddProduct({
                 }
             };
             rafIdRef.current = requestAnimationFrame(raf);
-            productListRef.current.style.touchAction = 'pan-y';
+            productListRef.current.style.touchAction = "pan-y";
         }
 
         return () => {
@@ -236,18 +301,18 @@ export default function AddProduct({
         };
     }, [globalLenis]);
 
-
-
-
     // Create Custom Product
     const [error, setError] = useState(null);
     const handleCreateCustomProduct = async () => {
-        if (customProductInputRef.current.value.trim() === '' || !customProductInputRef.current) {
-            setError('Please enter a product name');
+        if (
+            customProductInputRef.current.value.trim() === "" ||
+            !customProductInputRef.current
+        ) {
+            setError("Please enter a product name");
             setTimeout(() => {
                 setError(null);
             }, 4000);
-            return
+            return;
         }
 
         const customProductTitle = customProductInputRef.current.value.trim();
@@ -256,51 +321,65 @@ export default function AddProduct({
                 title: customProductTitle,
             };
 
-            const animatedProduct = { ...newCustomProduct, id: Date.now() };
+            const animatedProduct = {...newCustomProduct, id: Date.now()};
 
             setTimeout(() => {
                 if (productListRef.current) {
-                    const firstProduct = productListRef.current.querySelector('.product-list-content > div:nth-child(3)');
+                    const firstProduct = productListRef.current.querySelector(
+                        ".product-list-content > div:nth-child(3)"
+                    );
                     if (firstProduct) {
                         gsap.fromTo(
                             firstProduct,
-                            { opacity: 0.4, y: -100 },
-                            { opacity: 1, y: 0, duration: 1.2, ease: "power2.out" }
+                            {opacity: 0.4, y: -100},
+                            {
+                                opacity: 1,
+                                y: 0,
+                                duration: 1.2,
+                                ease: "power2.out",
+                            }
                         );
                     }
                 }
             }, 1);
 
-            customProductInputRef.current.value = '';
+            customProductInputRef.current.value = "";
             setCustomProducts((prev) => [animatedProduct, ...prev]);
         }
 
         const decryptedToken = decryptToken(token);
-        const res = await fetch(`${WP_API_BASE}/custom/v1/create-custom-product`, {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${decryptedToken}`
-            },
-            body: JSON.stringify({
-                title: customProductTitle,
-                // shoppingListId: shoppingListId,
-            }),
-        })
-        const data = await res.json()
+        const res = await fetch(
+            `${WP_API_BASE}/custom/v1/create-custom-product`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${decryptedToken}`,
+                },
+                body: JSON.stringify({
+                    title: customProductTitle,
+                }),
+            }
+        );
+        const data = await res.json();
         const customProducts = await getAllCustomProducts(token);
         setCustomProducts(customProducts);
-    }
-
-
-
-
+    };
 
     // Delete custom product
-    const handleDeleteCustomProduct = async (productId, token, shoppingListId, customProductss) => {
+    const handleDeleteCustomProduct = async (
+        productId,
+        token,
+        shoppingListId,
+        customProductss
+    ) => {
         // Animate the products getting deleted
         if (productListRef.current) {
-            const productDiv = productListRef.current.querySelector(`.product-list-content > div:nth-child(${customProductss.findIndex(p => p.id === productId) + 3})`);
+            const productDiv = productListRef.current.querySelector(
+                `.product-list-content > div:nth-child(${
+                    customProductss.findIndex((p) => p.id === productId) + 3
+                })`
+            );
             if (productDiv) {
                 await new Promise((resolve) => {
                     gsap.to(productDiv, {
@@ -315,55 +394,122 @@ export default function AddProduct({
             }
         }
         // Update the list locally
-        setCustomProducts((prev) => prev.filter(p => p.id !== productId));
+        setCustomProducts((prev) => prev.filter((p) => p.id !== productId));
 
         // Delete the actual product in the server
         const decryptedToken = decryptToken(token);
-        const res = await fetch(`${WP_API_BASE}/custom/v1/delete-custom-product`, {
-            method: 'POST',
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${decryptedToken}`
-            },
-            body: JSON.stringify({
-                productId: productId,
-                shoppingListId: shoppingListId,
-            }),
-        })
-        const data = await res.json()
+        const res = await fetch(
+            `${WP_API_BASE}/custom/v1/delete-custom-product`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${decryptedToken}`,
+                },
+                body: JSON.stringify({
+                    productId: productId,
+                    shoppingListId: shoppingListId,
+                }),
+            }
+        );
+        const data = await res.json();
 
         // if in linked products set counter minus 1
-        const isProductLinked = allLinkedProducts?.some(product => product.ID === productId);
+        const isProductLinked = allLinkedProducts?.some(
+            (product) => product.ID === productId
+        );
         if (isProductLinked) {
             setTotalProductCount((prev) => prev - 1);
         }
-        setAllLinkedProducts((prev) => prev?.filter(product => product.ID !== productId));
-        setCheckedProducts((prev) => prev?.filter(product => product.id !== productId));
-
+        setAllLinkedProducts((prev) =>
+            prev?.filter((product) => product.ID !== productId)
+        );
+        setCheckedProducts((prev) =>
+            prev?.filter((product) => product.id !== productId)
+        );
 
         // if in bagged products set counter minus 1
-        const isProductBagged = baggedProducts?.some(product => product.id === productId);
+        const isProductBagged = baggedProducts?.some(
+            (product) => product.id === productId
+        );
         if (isProductBagged) {
             setBaggedProductCount((prev) => prev - 1);
         }
-        setBaggedProducts((prev) => prev?.filter(product => product.id !== productId));
+        setBaggedProducts((prev) =>
+            prev?.filter((product) => product.id !== productId)
+        );
 
         setProgress((prev) => {
             const newProgress = prev - (1 / totalProductCount) * 100;
             return newProgress < 0 ? 0 : newProgress;
         });
-    }
+    };
 
+    const handleAddToFavourites = async (productId, token) => {
+        // title
+        const productTitle =
+            products.find((product) => product.id === productId)?.title ||
+            customProducts.find((product) => product.id === productId)?.title;
+
+        // if already in favourites, remove it
+        if (favouriteProducts?.some((p) => p.id === productId)) {
+            setFavouriteProducts((prev) =>
+                prev?.filter((p) => p.id !== productId)
+            );
+            // send to server
+            const decryptedToken = decryptToken(token);
+            const res = await fetch(
+                `${WP_API_BASE}/custom/v1/remove-from-favourites`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${decryptedToken}`,
+                    },
+                    body: JSON.stringify({
+                        productId: productId,
+                    }),
+                }
+            );
+            const data = await res.json();
+            console.log(data);
+        } else {
+            // add to favourites
+            setFavouriteProducts((prev) => [
+                ...prev,
+                {id: productId, title: productTitle},
+            ]);
+            // send to server
+            const decryptedToken = decryptToken(token);
+            const res = await fetch(
+                `${WP_API_BASE}/custom/v1/add-to-favourites`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${decryptedToken}`,
+                    },
+                    body: JSON.stringify({
+                        productId: productId,
+                        title: productTitle,
+                    }),
+                }
+            );
+            const data = await res.json();
+            console.log(data);
+        }
+    };
 
     // Reusable NoProductsFound component
-    function NoProductsFound({ mtClass = "mt-28" }) {
+    function NoProductsFound({mtClass = "mt-28"}) {
         return (
-            <div className={`w-full font-quicksand uppercase ${mtClass} flex items-center justify-center text-gray-400 text-2xl font-bold`}>
+            <div
+                className={`w-full font-quicksand uppercase ${mtClass} flex items-center justify-center text-gray-400 text-2xl font-bold`}
+            >
                 No products found
             </div>
         );
     }
-
 
     return (
         <div className="w-full absolute top-0">
@@ -397,130 +543,226 @@ export default function AddProduct({
                         ref={productListRef}
                         className="w-full bg-gray-300 dark:bg-gray-700 pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
                         style={{
-                            WebkitOverflowScrolling: 'touch',
-                            overscrollBehavior: 'contain',
+                            WebkitOverflowScrolling: "touch",
+                            overscrollBehavior: "contain",
                         }}
                     >
                         <div className="product-list-content flex flex-col gap-3 px-4 pb-4">
-
                             {/* Navigation buttons */}
                             <div className="flex w-min whitespace-pre relative font-bold  overflow-hidden rounded-br-xl -left-4 mb-4">
-                                <div onClick={() => setSelectedProductsSection("popular")} className={`py-2 pl-5 pr-4 ${selectedProductsSection === "popular" ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700" : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"}`} >Popular</div>
-                                <div onClick={() => setSelectedProductsSection("custom")} className={`py-2 px-4  ${selectedProductsSection === "custom" ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700" : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"}`} >Custom</div>
-                                <div onClick={() => setSelectedProductsSection("favourite")} className={`py-2 px-4  ${selectedProductsSection === "favourite" ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700" : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"}`} >Favourites</div>
+                                <div
+                                    onClick={() =>
+                                        setSelectedProductsSection("popular")
+                                    }
+                                    className={`py-2 pl-5 pr-4 ${
+                                        selectedProductsSection === "popular"
+                                            ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
+                                            : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                    }`}
+                                >
+                                    Popular
+                                </div>
+                                <div
+                                    onClick={() =>
+                                        setSelectedProductsSection("custom")
+                                    }
+                                    className={`py-2 px-4  ${
+                                        selectedProductsSection === "custom"
+                                            ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
+                                            : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                    }`}
+                                >
+                                    Custom
+                                </div>
+                                <div
+                                    onClick={() =>
+                                        setSelectedProductsSection("favourite")
+                                    }
+                                    className={`py-2 px-4  ${
+                                        selectedProductsSection === "favourite"
+                                            ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
+                                            : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                    }`}
+                                >
+                                    Favourites
+                                </div>
                             </div>
 
-
                             {/* Custom Products Input */}
-                            {
-                                selectedProductsSection === "custom" &&
-                                (
-                                    <div className="mb-4">
-                                        <div className="w-full flex items-center  text-gray-400 text-lg font-bold group">
-                                            <input ref={customProductInputRef} placeholder='Input Product' className="w-full px-3 py-[9.5px] peer group-hover:!border-primary rounded-l-md h-full text-black dark:text-white !border-r-0 placeholder:text-gray-700 dark:placeholder:text-white  !border-blue-800  focus:!border-primary"></input>
-                                            <button onClick={handleCreateCustomProduct} className="whitespace-pre  px-3 py-1.5 !border-blue-800 peer  group-hover:!border-primary  peer-focus:!border-primary cursor-pointer hover:!border-primary  rounded-r-md h-full bg-blue-800 text-white">Add product</button>
-                                        </div>
-
-                                        {
-                                            error && (
-                                                <p className="w-min mt-2 whitespace-pre ml-1 py-2 px-2 bg-red-400 rounded-sm text-white flex gap-1 items-center text-xs"><ErrorIcon className={"h-5 w-5"} />{error}</p>
-
-                                            )
-                                        }
+                            {selectedProductsSection === "custom" && (
+                                <div className="mb-4">
+                                    <div className="w-full flex items-center  text-gray-400 text-lg font-bold group">
+                                        <input
+                                            ref={customProductInputRef}
+                                            placeholder="Input Product"
+                                            className="w-full px-3 py-[9.5px] peer group-hover:!border-primary rounded-l-md h-full text-black dark:text-white !border-r-0 placeholder:text-gray-700 dark:placeholder:text-white  !border-blue-800  focus:!border-primary"
+                                        ></input>
+                                        <button
+                                            onClick={handleCreateCustomProduct}
+                                            className="whitespace-pre  px-3 py-1.5 !border-blue-800 peer  group-hover:!border-primary  peer-focus:!border-primary cursor-pointer hover:!border-primary  rounded-r-md h-full bg-blue-800 text-white"
+                                        >
+                                            Add product
+                                        </button>
                                     </div>
-                                )
-                            }
 
+                                    {error && (
+                                        <p className="w-min mt-2 whitespace-pre ml-1 py-2 px-2 bg-red-400 rounded-sm text-white flex gap-1 items-center text-xs">
+                                            <ErrorIcon className={"h-5 w-5"} />
+                                            {error}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
-                            {
-                                (selectedProductsSection === "popular" ? products :
-                                    selectedProductsSection === "custom" ? customProducts :
-                                        favouriteProducts)?.map((product, index) => (
-
-                                            <div
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCheckboxChange(product.id, token);
-                                                }}
-                                                key={product.id || index}
-                                                className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'border-primary' : ''}`}
-                                            >
-                                                <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
-                                                    <div className="checkbox-wrapper-28">
-                                                        <input
-                                                            id={`checkbox-${product.id}`}
-                                                            type="checkbox"
-                                                            className="promoted-input-checkbox peer"
-                                                            checked={!!allLinkedProducts?.some(p => p.ID === product.id)}
-                                                            onChange={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCheckboxChange(product.id, token);
-                                                            }}
-                                                        />
-                                                        <label
-                                                            htmlFor={`checkbox-${product.id}`}
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                handleCheckboxChange(product.id, token);
-                                                            }}
-                                                        ></label>
-                                                        <svg className="absolute -z-0">
-                                                            <use href="#checkmark-28" />
-                                                        </svg>
-                                                        <svg xmlns="http://www.w3.org/2000/svg" style={{ display: 'none' }}>
-                                                            <symbol id="checkmark-28" viewBox="0 0 24 24">
-                                                                <path
-                                                                    strokeLinecap="round"
-                                                                    strokeMiterlimit="10"
-                                                                    fill="none"
-                                                                    d="M22.9 3.7l-15.2 16.6-6.6-7.1"
-                                                                />
-                                                            </symbol>
-                                                        </svg>
-                                                    </div>
-                                                    {product.title}
-                                                </div>
-                                                <div className="flex items-center gap-2 md:gap-6">
-
-                                                    {/* if is custom prodiuct display custom */}
-                                                    {
-                                                        selectedProductsSection === "custom" &&
-                                                        <div onClick={((e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteCustomProduct(product.id, token, shoppingListId, customProducts);
-
-                                                        })} className="text-sm font-bold text-gray-400">
-                                                            <TrashIcon className="w-6 h-6 text-yellow-500 hover:text-white transition-colors duration-200 cursor-pointer" />
-                                                        </div>
+                            {displayedProducts?.length > 0 ? (
+                                displayedProducts.map((product, index) => (
+                                    <div
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCheckboxChange(
+                                                product.id,
+                                                token
+                                            );
+                                        }}
+                                        key={product.id || index}
+                                        className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 ${
+                                            allLinkedProducts?.some(
+                                                (p) => p.ID === product.id
+                                            )
+                                                ? "border-primary"
+                                                : ""
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
+                                            <div className="checkbox-wrapper-28">
+                                                <input
+                                                    id={`checkbox-${product.id}`}
+                                                    type="checkbox"
+                                                    className="promoted-input-checkbox peer"
+                                                    checked={
+                                                        !!allLinkedProducts?.some(
+                                                            (p) =>
+                                                                p.ID ===
+                                                                product.id
+                                                        )
                                                     }
-                                                    <div className={`flex items-center transition-opacity duration-300 gap-2 ${allLinkedProducts?.some(p => p.ID === product.id) ? 'opacity-100' : 'opacity-0'}`}>
-                                                        <CloseIcon className="w-6 h-6 text-red-500 hover:text-white transition-colors duration-200 cursor-pointer" />
-                                                    </div>
-                                                </div>
+                                                    onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        handleCheckboxChange(
+                                                            product.id,
+                                                            token
+                                                        );
+                                                    }}
+                                                />
+                                                <label
+                                                    htmlFor={`checkbox-${product.id}`}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        handleCheckboxChange(
+                                                            product.id,
+                                                            token
+                                                        );
+                                                    }}
+                                                ></label>
+                                                <svg className="absolute -z-0">
+                                                    <use href="#checkmark-28" />
+                                                </svg>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    style={{display: "none"}}
+                                                >
+                                                    <symbol
+                                                        id="checkmark-28"
+                                                        viewBox="0 0 24 24"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeMiterlimit="10"
+                                                            fill="none"
+                                                            d="M22.9 3.7l-15.2 16.6-6.6-7.1"
+                                                        />
+                                                    </symbol>
+                                                </svg>
                                             </div>
+                                            {product.title}
+                                        </div>
+                                        <div className="flex items-center gap-2 md:gap-6">
+                                            {selectedProductsSection !==
+                                                "custom" && (
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAddToFavourites(
+                                                            product.id,
+                                                            token
+                                                        );
+                                                    }}
+                                                    className="text-sm font-bold text-gray-400"
+                                                >
+                                                    <StarIcon
+                                                        className={`w-6 h-6  hover:text-white transition-colors duration-200 cursor-pointer ${
+                                                            favouriteProducts?.some(
+                                                                (p) =>
+                                                                    p.id ===
+                                                                    product.id
+                                                            )
+                                                                ? "fill-yellow-500 text-yellow-500"
+                                                                : ""
+                                                        }`}
+                                                    />
+                                                </div>
+                                            )}
 
-                                        )
-                                        )
-                            }
+                                            {selectedProductsSection ===
+                                                "custom" && (
+                                                <div
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteCustomProduct(
+                                                            product.id,
+                                                            token,
+                                                            shoppingListId,
+                                                            customProducts
+                                                        );
+                                                    }}
+                                                    className="text-sm font-bold text-gray-400"
+                                                >
+                                                    <TrashIcon className="w-6 h-6 text-yellow-500 hover:text-white transition-colors duration-200 cursor-pointer" />
+                                                </div>
+                                            )}
+                                            <div
+                                                className={`flex items-center transition-opacity duration-300 gap-2 ${
+                                                    allLinkedProducts?.some(
+                                                        (p) =>
+                                                            p.ID === product.id
+                                                    )
+                                                        ? "opacity-100"
+                                                        : "opacity-0"
+                                                }`}
+                                            >
+                                                <CloseIcon className="w-6 h-6 text-red-500 hover:text-white transition-colors duration-200 cursor-pointer" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : searchValue ? (
+                                <div className="w-full font-quicksand uppercase mt-28 flex items-center justify-center text-gray-400 text-2xl font-bold">
+                                    No products found
+                                </div>
+                            ) : null}
 
+                            {selectedProductsSection === "popular" &&
+                                products.length === 0 && <NoProductsFound />}
 
-                            {
-                                selectedProductsSection === "popular" && products.length === 0 && (
-                                    <NoProductsFound />
-                                )
-                            }
-                            {
-                                selectedProductsSection === "custom" && customProducts.length === 0 && (
+                            {selectedProductsSection === "custom" &&
+                                customProducts.length === 0 && (
                                     <NoProductsFound mtClass="mt-14" />
-                                )
-                            }
-                            {
-                                selectedProductsSection === "favourite" && favouriteProducts.length === 0 && (
+                                )}
+
+                            {selectedProductsSection === "favourite" &&
+                                favouriteProducts.length === 0 && (
                                     <NoProductsFound />
-                                )
-                            }
-
-
+                                )}
                         </div>
                     </div>
                 </div>
@@ -533,7 +775,7 @@ export default function AddProduct({
                         overrideDefaultClasses="bg-red-500 whitespace-nowrap text-black text-sm md:text-base"
                         light={true}
                         setProductOverlay={() => {
-                            document.body.style.overflow = 'auto';
+                            document.body.style.overflow = "auto";
                             setProductOverlay(false);
                         }}
                     />

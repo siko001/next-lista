@@ -1,19 +1,18 @@
-import CryptoJS from 'crypto-js';
-export const SECRET_KEY = 'your-secret-key-123';
-export const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json';
-
+import CryptoJS from "crypto-js";
+export const SECRET_KEY = "your-secret-key-123";
+export const WP_API_BASE =
+    "https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json";
 
 export const decryptToken = (encryptedToken) => {
     try {
-
         if (!encryptedToken) return null;
         // Decrypt (AES decryption expects a Base64-encoded string)
         const bytes = CryptoJS.AES.decrypt(encryptedToken, SECRET_KEY);
         const decryptedToken = bytes.toString(CryptoJS.enc.Utf8);
 
         // Remove any surrounding quotes
-        const cleanToken = decryptedToken.replace(/^"|"$/g, '');
-        if (!decryptedToken || decryptedToken.split('.').length !== 3) {
+        const cleanToken = decryptedToken.replace(/^"|"$/g, "");
+        if (!decryptedToken || decryptedToken.split(".").length !== 3) {
             throw new Error("Decrypted token is not a valid JWT");
         }
 
@@ -24,11 +23,8 @@ export const decryptToken = (encryptedToken) => {
     }
 };
 
-
-
 // Fetch shopping lists for the user
 export const getShoppingList = async (userId, encryptedToken) => {
-
     // Decrypt the token
     const token = decryptToken(encryptedToken);
     if (!token) {
@@ -43,8 +39,8 @@ export const getShoppingList = async (userId, encryptedToken) => {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            }
+                Authorization: `Bearer ${token}`,
+            },
         });
 
         const data = await response.json();
@@ -59,26 +55,26 @@ export const getShoppingList = async (userId, encryptedToken) => {
         // });
         // return result;
 
-
         const filteredLists = Array.isArray(data)
-            ? data.filter(list => {
-                const isOwner = list?.acf?.owner_id == userId;
-                const isShared = list?.acf?.shared_with_users != false && list?.acf?.shared_with_users?.some(user => user.ID == userId);
-                return isOwner || isShared;
-            })
+            ? data.filter((list) => {
+                  const isOwner = list?.acf?.owner_id == userId;
+                  const isShared =
+                      list?.acf?.shared_with_users != false &&
+                      list?.acf?.shared_with_users?.some(
+                          (user) => user.ID == userId
+                      );
+                  return isOwner || isShared;
+              })
             : [];
 
         // Sort by menu_order
         filteredLists.sort((a, b) => a.menu_order - b.menu_order);
         return filteredLists;
-
-
     } catch (error) {
         console.error("Failed to fetch lists:", error);
         return [];
     }
 };
-
 
 export const getListDetails = async (listId, encryptedToken) => {
     const token = decryptToken(encryptedToken);
@@ -91,8 +87,8 @@ export const getListDetails = async (listId, encryptedToken) => {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            }
+                Authorization: `Bearer ${token}`,
+            },
         });
 
         const data = await response.json();
@@ -101,8 +97,7 @@ export const getListDetails = async (listId, encryptedToken) => {
         console.error("Failed to fetch list details:", error);
         return null;
     }
-}
-
+};
 
 export const getAllProducts = async (encryptedToken) => {
     const token = decryptToken(encryptedToken);
@@ -115,8 +110,8 @@ export const getAllProducts = async (encryptedToken) => {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            }
+                Authorization: `Bearer ${token}`,
+            },
         });
 
         const data = await response.json();
@@ -125,8 +120,7 @@ export const getAllProducts = async (encryptedToken) => {
         console.error("Failed to fetch all products:", error);
         return [];
     }
-}
-
+};
 
 export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
     const token = decryptToken(encryptedToken);
@@ -139,8 +133,8 @@ export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            }
+                Authorization: `Bearer ${token}`,
+            },
         });
 
         const data = await response.json();
@@ -149,9 +143,7 @@ export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
         console.error("Failed to fetch linked products:", error);
         return [];
     }
-}
-
-
+};
 
 export const extractUserName = (jsonString) => {
     try {
@@ -161,24 +153,22 @@ export const extractUserName = (jsonString) => {
         console.error("Invalid JSON:", error);
         return null;
     }
-}
+};
 
 export const decodeHtmlEntities = (text) => {
-    if (!text) return '';
+    if (!text) return "";
 
-    if (typeof document === 'undefined') {
+    if (typeof document === "undefined") {
         return text.replace(/&#(\d+);/g, (match, dec) =>
             String.fromCharCode(dec)
         );
     }
 
     // For browser
-    const textArea = document.createElement('textarea');
+    const textArea = document.createElement("textarea");
     textArea.innerHTML = text;
     return textArea.value;
 };
-
-
 
 // 3. Fetch bagged items for A list
 export const getBaggedItems = async (shoppingListId, token) => {
@@ -191,34 +181,48 @@ export const getBaggedItems = async (shoppingListId, token) => {
         `${WP_API_BASE}/custom/v1/get-bagged-products?shoppingListId=${shoppingListId}`,
         {
             headers: {
-                "Authorization": `Bearer ${decryptedToken}`
-            }
+                Authorization: `Bearer ${decryptedToken}`,
+            },
         }
     );
 
     const baggedData = await baggedResponse.json();
     return baggedData;
-}
+};
 
 export const getAllCustomProducts = async (token) => {
-    const decryptedToken = decryptToken(token)
+    const decryptedToken = decryptToken(token);
     const res = await fetch(`${WP_API_BASE}/custom/v1/get-custom-products`, {
-        method: 'GET',
+        method: "GET",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${decryptedToken}`
+            Authorization: `Bearer ${decryptedToken}`,
         },
-    })
-    const data = await res.json()
-    return data
+    });
+    const data = await res.json();
+    return data;
+};
 
-}
-
+export const getFavourites = async (token) => {
+    const decryptedToken = decryptToken(token);
+    try {
+        const res = await fetch(`${WP_API_BASE}/custom/v1/get-favourites`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${decryptedToken}`,
+            },
+        });
+        return await res.json();
+    } catch (error) {
+        console.error("Error fetching favourites:", error);
+        return {success: false, favourites: []};
+    }
+};
 
 export const calculateProgress = (productCount, baggedProductCount) => {
     if (productCount === 0) {
         return 0;
     }
     return Math.round((baggedProductCount / productCount) * 100);
-}
-
+};
