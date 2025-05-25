@@ -1,7 +1,7 @@
 "use client";
 import {useState, useEffect, useRef} from "react";
 import {gsap} from "gsap";
-import {decryptToken, WP_API_BASE} from "../../lib/helpers";
+import {decryptToken, WP_API_BASE, isListOwner} from "../../lib/helpers";
 
 // Contexts
 import {useOverlayContext} from "../../contexts/OverlayContext";
@@ -30,6 +30,7 @@ export default function ShoppingListHeader({
     setProgress,
     progress,
     list,
+    userId,
     token,
     setShareDialogOpen,
     setAllLinkedProducts,
@@ -356,19 +357,40 @@ export default function ShoppingListHeader({
                                             </button>
                                         )}
 
-                                        <button
-                                            onClick={() =>
-                                                showVerbConfirmation(
-                                                    list,
-                                                    token,
-                                                    "Delete"
-                                                )
-                                            }
-                                            className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
-                                        >
-                                            <TranshIcon className="w-4 h-4 inline-block mr-1" />
-                                            Delete
-                                        </button>
+                                        {/* Only the list owner can delete the list */}
+                                        {isListOwner(list, userId) && (
+                                            <button
+                                                onClick={() =>
+                                                    showVerbConfirmation(
+                                                        list,
+                                                        token,
+                                                        "Delete"
+                                                    )
+                                                }
+                                                className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                            >
+                                                <TranshIcon className="w-4 h-4 inline-block mr-1" />
+                                                Delete
+                                            </button>
+                                        )}
+
+                                        {/* The user can remove themselves from the list */}
+                                        {!isListOwner(list, userId) && (
+                                            <button
+                                                onClick={() =>
+                                                    showVerbConfirmation(
+                                                        list,
+                                                        token,
+                                                        "Remove",
+                                                        userId
+                                                    )
+                                                }
+                                                className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                            >
+                                                <TranshIcon className="w-4 h-4 inline-block mr-1" />
+                                                Remove
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             )}

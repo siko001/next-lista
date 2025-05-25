@@ -1,18 +1,19 @@
-'use client';
-import { useEffect, useState } from "react";
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { WP_API_BASE } from "./lib/helpers";
+"use client";
+import {useEffect, useState} from "react";
+import {DragDropContext, Droppable, Draggable} from "@hello-pangea/dnd";
+import {WP_API_BASE, isListOwner, removeListRelationship} from "./lib/helpers";
+import gsap from "gsap";
 
 // Websockets
-import useUserListsRealtime from "./lib/UserListsRealTime"
-import useRealtimeAllListDelete from "./lib/DeleteAllListRealtime"
+import useUserListsRealtime from "./lib/UserListsRealTime";
+import useRealtimeAllListDelete from "./lib/DeleteAllListRealtime";
 
 // Contexts
-import { useUserContext } from "./contexts/UserContext";
-import { useListContext } from "./contexts/ListContext";
-import { useOverlayContext } from "./contexts/OverlayContext";
-import { useLoadingContext } from "./contexts/LoadingContext";
-import { useNotificationContext } from "./contexts/NotificationContext";
+import {useUserContext} from "./contexts/UserContext";
+import {useListContext} from "./contexts/ListContext";
+import {useOverlayContext} from "./contexts/OverlayContext";
+import {useLoadingContext} from "./contexts/LoadingContext";
+import {useNotificationContext} from "./contexts/NotificationContext";
 
 // Components
 import Header from "./components/Header";
@@ -29,24 +30,77 @@ import RenameIcon from "./components/svgs/RenameIcon";
 import ListLoader from "./components/loaders/ListLoader";
 import List from "./components/parts/List";
 
-
-
-const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
-
+const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
-    const { loading } = useLoadingContext();
-    const { userData, token, error } = useUserContext();
-    const { userLists, getShoppingList, setUserLists, deleteList, copyShoppingList, hasDeletedLists, handleRenameClick, listSettings, setListSettings, handleRenameList, setIsInnerList } = useListContext();
-    const { overlay, showVerbConfirmation } = useOverlayContext();
-    const { showNotification } = useNotificationContext();
+    const {loading} = useLoadingContext();
+    const {userData, token, error} = useUserContext();
+    const {
+        userLists,
+        getShoppingList,
+        setUserLists,
+        deleteList,
+        copyShoppingList,
+        hasDeletedLists,
+        handleRenameClick,
+        listSettings,
+        setListSettings,
+        handleRenameList,
+        setIsInnerList,
+    } = useListContext();
+    const {overlay, showVerbConfirmation} = useOverlayContext();
+    const {showNotification} = useNotificationContext();
 
     useEffect(() => {
         setIsInnerList(false);
         if (userData && userData.id && token) {
-            getShoppingList(userData.id, token)
+            getShoppingList(userData.id, token);
         }
     }, [userData, token]);
 
+    useEffect(() => {
+        const removeListData = sessionStorage.getItem("removeListData");
+        if (removeListData) {
+            try {
+                const {listId, userId, token} = JSON.parse(removeListData);
+                console.log("Parsed data:", {listId, userId, token});
+                sessionStorage.removeItem("removeListData"); // Clear the data
+
+                // Small delay to ensure the page is fully loaded
+                setTimeout(() => {
+                    removeListRelationship(listId, userId, token, "inner");
+                    gsap.fromTo(
+                        `#list-${listId}`,
+                        {
+                            opacity: 1,
+                            border: "1px solid #ff0000",
+                            duration: 0.5,
+                        },
+                        {
+                            opacity: 0,
+                            y: 100,
+                            ease: "power2.out",
+                            duration: 0.8,
+                            onComplete: () => {
+                                setUserLists((prevLists) =>
+                                    prevLists.filter(
+                                        (list) => list.id !== listId
+                                    )
+                                );
+                                showNotification(
+                                    "List Removed successfully",
+                                    "success"
+                                );
+                            },
+                        }
+                    );
+                }, 100);
+            } catch (error) {
+                console.error("Error parsing removeListData:", error);
+                console.log("Raw data:", removeListData);
+                sessionStorage.removeItem("removeListData");
+            }
+        }
+    }, []);
 
     const handleDragEnd = async (result) => {
         if (!result.destination) return;
@@ -56,7 +110,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
         setUserLists(items);
         const updates = items.map((item, index) => ({
             id: item.id,
-            menu_order: index + 1
+            menu_order: index + 1,
         }));
 
         try {
@@ -64,9 +118,9 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ orders: updates })
+                body: JSON.stringify({orders: updates}),
             });
         } catch (error) {
             console.error("Reorder failed:", error);
@@ -76,8 +130,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
 
     const handleDragStart = () => {
         setListSettings(false);
-    }
-
+    };
 
     const handleListSettings = (id) => {
         if (listSettings === id) {
@@ -85,42 +138,36 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
         } else {
             setListSettings(id);
         }
-    }
-
+    };
 
     const handleDeleteList = async (id, token, state) => {
         deleteList(id, token, state);
-    }
-
+    };
 
     // handle esc or click outside to close the settings
     useEffect(() => {
         const handleClickOutside = (event) => {
             const target = event.target;
-            const isSettingsIcon = target.closest('.settings-icon');
+            const isSettingsIcon = target.closest(".settings-icon");
             if (!isSettingsIcon) {
                 setListSettings(false);
             }
         };
         const handleEsc = (event) => {
-            if (event.key === 'Escape') {
+            if (event.key === "Escape") {
                 setListSettings(false);
             }
         };
-        document.addEventListener('click', handleClickOutside);
-        document.addEventListener('keydown', handleEsc);
+        document.addEventListener("click", handleClickOutside);
+        document.addEventListener("keydown", handleEsc);
         return () => {
-            document.removeEventListener('click', handleClickOutside);
-            document.removeEventListener('keydown', handleEsc);
+            document.removeEventListener("click", handleClickOutside);
+            document.removeEventListener("keydown", handleEsc);
         };
     }, []);
 
-
-
-
-
     const handleCopyList = async (id) => {
-        const copiedList = await copyShoppingList(id, token)
+        const copiedList = await copyShoppingList(id, token);
         if (!copiedList) {
             showNotification("Failed to copy list", "error");
             return;
@@ -134,52 +181,65 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
                 title: copiedList.new_list_title,
                 acf: {
                     product_count: copiedList.product_count,
-                    products: []
+                    products: [],
                 },
-                isNew: true
+                isNew: true,
             },
-            ...prev
+            ...prev,
         ]);
 
-
         setTimeout(() => {
-            setUserLists(prev => prev.map(list => ({
-                ...list,
-                isNew: false
-            })));
+            setUserLists((prev) =>
+                prev.map((list) => ({
+                    ...list,
+                    isNew: false,
+                }))
+            );
         }, 3000);
 
         setListSettings(false);
-    }
+    };
 
     const showDeletionConfirmation = (listId, token) => {
-        handleDeleteList(listId, token, 'autoDelete');
-    }
+        handleDeleteList(listId, token, "autoDelete");
+    };
 
     // In homepage component
     useEffect(() => {
-        const pendingDeletion = sessionStorage.getItem('pendingDeletion');
+        const pendingDeletion = sessionStorage.getItem("pendingDeletion");
         if (pendingDeletion) {
-            const { listId, token, expires } = JSON.parse(pendingDeletion);
+            const {listId, token, expires} = JSON.parse(pendingDeletion);
             if (expires > Date.now() && token === serverToken) {
                 showDeletionConfirmation(listId, token);
             }
 
-            sessionStorage.removeItem('pendingDeletion');
+            sessionStorage.removeItem("pendingDeletion");
         }
     }, []);
 
     useUserListsRealtime(userData?.id, setUserLists);
-    useRealtimeAllListDelete(userLists, setUserLists, userData?.id, showNotification);
+    useRealtimeAllListDelete(
+        userLists,
+        setUserLists,
+        userData?.id,
+        showNotification
+    );
 
     if (error) return <div>Error: {error}</div>;
     return (
         <main className=" transition-all duration-300">
-
             <Header isRegistered={isRegistered} userName={userName} />
 
-            <div className={" flex flex-col gap-16 md:gap-36 py-12 md:py-24 px-8 "}>
-                <div className={"mx-auto flex flex-col items-center  w-full  md:w-fit  "}>
+            <div
+                className={
+                    " flex flex-col gap-16 md:gap-36 py-12 md:py-24 px-8 "
+                }
+            >
+                <div
+                    className={
+                        "mx-auto flex flex-col items-center  w-full  md:w-fit  "
+                    }
+                >
                     <Button
                         cta={"Create a new list"}
                         content={"single-input"}
@@ -192,92 +252,176 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
 
                     {/* Actual List */}
                     {userLists && userLists.length > 0 ? (
-                        <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                        <DragDropContext
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                        >
                             <Droppable droppableId="lists">
                                 {(provided) => (
-                                    <div {...provided.droppableProps} ref={provided.innerRef} className="mt-8 flex flex-col gap-6 w-full group  ">
+                                    <div
+                                        {...provided.droppableProps}
+                                        ref={provided.innerRef}
+                                        className="mt-8 flex flex-col gap-6 w-full group  "
+                                    >
                                         {userLists.map((list, index) => (
                                             // List Wrapper
-                                            <div key={list.id} className="relative" >
-
+                                            <div
+                                                key={list.id}
+                                                className="relative"
+                                            >
                                                 {/* Draggable Item */}
-                                                <Draggable key={list.id} draggableId={String(list.id)} index={index}>
+                                                <Draggable
+                                                    key={list.id}
+                                                    draggableId={String(
+                                                        list.id
+                                                    )}
+                                                    index={index}
+                                                >
                                                     {(provided, snapshot) => (
-                                                        <List listSettings={listSettings} token={serverToken} list={list} provided={provided} snapshot={snapshot} handleListSettings={handleListSettings} handleRenameList={handleRenameList} />
+                                                        <List
+                                                            listSettings={
+                                                                listSettings
+                                                            }
+                                                            token={serverToken}
+                                                            list={list}
+                                                            provided={provided}
+                                                            snapshot={snapshot}
+                                                            handleListSettings={
+                                                                handleListSettings
+                                                            }
+                                                            handleRenameList={
+                                                                handleRenameList
+                                                            }
+                                                        />
                                                     )}
                                                 </Draggable>
 
                                                 {/*  List Actions (out for z-index over other lists. closes on drag) */}
-                                                {
-                                                    listSettings === list.id && (
-                                                        <div className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
-                                                            <div className="flex font-quicksand font-[500] flex-col gap-0.5">
-                                                                <button onClick={() => handleRenameClick(list.id)} className=" cursor-pointer px-3 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                                                    <RenameIcon className="w-4 h-4 inline-block mr-1" />
-                                                                    Rename
-                                                                </button>
-                                                                <button onClick={() => handleCopyList(list.id)} className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                                                    <CopyIcon className="w-4 h-4 inline-block mr-1" />
-                                                                    Copy
-                                                                </button>
-                                                                <button onClick={() => setShareDialogOpen(list.id)} className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
-                                                                    <ShareIcon className="w-4 h-4 inline-block mr-1" />
-                                                                    Share
-                                                                </button>
-                                                                <button onClick={() => {
-                                                                    showVerbConfirmation(list, token, "delete");
-                                                                }}
-                                                                    className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
+                                                {listSettings === list.id && (
+                                                    <div className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                                        <div className="flex font-quicksand font-[500] flex-col gap-0.5">
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleRenameClick(
+                                                                        list.id
+                                                                    )
+                                                                }
+                                                                className=" cursor-pointer px-3 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                            >
+                                                                <RenameIcon className="w-4 h-4 inline-block mr-1" />
+                                                                Rename
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleCopyList(
+                                                                        list.id
+                                                                    )
+                                                                }
+                                                                className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                            >
+                                                                <CopyIcon className="w-4 h-4 inline-block mr-1" />
+                                                                Copy
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setShareDialogOpen(
+                                                                        list.id
+                                                                    )
+                                                                }
+                                                                className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                            >
+                                                                <ShareIcon className="w-4 h-4 inline-block mr-1" />
+                                                                Share
+                                                            </button>
+                                                            {isListOwner(
+                                                                list,
+                                                                userData?.id
+                                                            ) && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        showVerbConfirmation(
+                                                                            list,
+                                                                            token,
+                                                                            "delete",
+                                                                            userData?.id
+                                                                        );
+                                                                    }}
+                                                                    className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                                >
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Delete
                                                                 </button>
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                }
+                                                            )}
 
+                                                            {!isListOwner(
+                                                                list,
+                                                                userData?.id
+                                                            ) && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        showVerbConfirmation(
+                                                                            list,
+                                                                            token,
+                                                                            "remove",
+                                                                            userData?.id
+                                                                        );
+                                                                    }}
+                                                                    className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                                >
+                                                                    <TrashIcon className="w-4 h-4 inline-block mr-1" />
+                                                                    Remove
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
 
                                         {provided.placeholder}
                                     </div>
                                 )}
-
                             </Droppable>
                         </DragDropContext>
-
+                    ) : // Lists Loaded from the server (if any pre-rendered)
+                    !hasDeletedLists && lists && lists.length > 0 ? (
+                        <div className="mt-8 flex flex-col gap-6 w-full  ">
+                            {lists.map((list) => (
+                                <List
+                                    token={token}
+                                    decoy={true}
+                                    key={list.id}
+                                    list={list}
+                                    handleListSettings={handleListSettings}
+                                    handleRenameList={handleRenameList}
+                                />
+                            ))}
+                        </div>
                     ) : (
-                        // Lists Loaded from the server (if any pre-rendered)
-                        !hasDeletedLists && lists && lists.length > 0 ? (
-                            <div className="mt-8 flex flex-col gap-6 w-full  ">
-                                {lists.map((list) => (
-                                    <List token={token} decoy={true} key={list.id} list={list} handleListSettings={handleListSettings} handleRenameList={handleRenameList} />
-                                ))}
-                            </div>
-                        ) : (
-
-                            // No lists found
-                            <p className="mt-12 text-xl font-black text-center">No shopping lists found.</p>
-                        )
+                        // No lists found
+                        <p className="mt-12 text-xl font-black text-center">
+                            No shopping lists found.
+                        </p>
                     )}
                 </div>
 
-
                 <div className={"text-center "}>
                     <p className={"text-xl md:text-2xl"}>
-                        <strong>
-                            Let&#39;s plan your shopping list!
-                        </strong>
+                        <strong>Let&#39;s plan your shopping list!</strong>
                     </p>
-                    <p className={"mt-2 md:text-lg text-gray-400"}>Use the button to start a new list </p>
+                    <p className={"mt-2 md:text-lg text-gray-400"}>
+                        Use the button to start a new list
+                    </p>
                 </div>
-
             </div>
-
 
             {overlay && <Overlay handleDeleteList={handleDeleteList} />}
 
-            {loading && <div className="fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">  <ListLoader />  </div>}
+            {loading && (
+                <div className="fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">
+                    <ListLoader />
+                </div>
+            )}
 
             <Notification />
 
@@ -287,8 +431,7 @@ const HomeClient = ({ isRegistered, userName, lists, serverToken }) => {
                     onClose={() => setShareDialogOpen(null)}
                 />
             )}
-
-        </main >
+        </main>
     );
 };
 

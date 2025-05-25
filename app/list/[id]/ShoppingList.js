@@ -554,6 +554,7 @@ export default function ShoppingList({
                     setBaggedProductCount={setBaggedProductCount}
                     setShareDialogOpen={setShareDialogOpen}
                     token={token}
+                    userId={userId}
                     list={list}
                     title={listTitle}
                     handleSearchProducts={handleSearchProducts}

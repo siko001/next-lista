@@ -3,35 +3,25 @@
 -Invitees see who's list it is.
 -Owner can revoke view.
 -Inform user if list has been delete and he wasn't active.
-
-
+s
 # Lists View --Second Main Focus  ***
 -View users which list is shared with
-
 
 -Add Categories ---Third Main Focus  ***
 -Sort By Categories
 -Products Show up According to users Choice + most clicked.
 
-
-
-
-
 #login ---Last**
 -Wordpress wrong password warning
 -forgot Password stuff
-
 
 #Emails ---Last**
 -Fix Registering Emails
 -Forgot password Emails
 Verify Emails
 
-
 #user ---Last**
 -User settings -basic, change name, change password, 
-
-
 
 ### After Project ready ###
 email confimartions

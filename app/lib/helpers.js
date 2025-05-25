@@ -226,3 +226,47 @@ export const calculateProgress = (productCount, baggedProductCount) => {
     }
     return Math.round((baggedProductCount / productCount) * 100);
 };
+
+export function isListOwner(list, userId) {
+    if (!list || !list.acf || !userId) return false;
+    return list.acf.owner_id === userId.toString();
+}
+
+export const removeListRelationship = async (
+    listId,
+    userId,
+    token,
+    origin = "home"
+) => {
+    try {
+        let tokenToUse = token;
+        if (origin === "inner") {
+            tokenToUse = decryptToken(token);
+        }
+
+        const res = await fetch(
+            `${WP_API_BASE}/custom/v1/remove-user-from-shared`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${tokenToUse}`,
+                },
+                body: JSON.stringify({
+                    listId: parseInt(listId),
+                    userId: parseInt(userId),
+                }),
+            }
+        );
+
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const text = await res.text();
+        try {
+            const data = JSON.parse(text);
+            return data;
+        } catch (e) {}
+    } catch (error) {}
+};
