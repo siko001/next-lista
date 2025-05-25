@@ -45,7 +45,7 @@ export default function ShoppingList({
 
     // general products
     const [allLinkedProducts, setAllLinkedProducts] = useState(
-        list.acf.linked_products
+        list?.acf?.linked_products
     );
     const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
     const [baggedProducts, setBaggedProducts] = useState(

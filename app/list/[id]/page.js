@@ -1,5 +1,6 @@
 import ShoppingList from "./ShoppingList";
 import {cookies} from "next/headers";
+import {redirect} from "next/navigation";
 
 import {
     getListDetails,
@@ -31,6 +32,11 @@ export default async function Page() {
             getAllCustomProducts(token),
             getFavourites(token),
         ]);
+
+    // if the list is not found, redirect to the home page
+    if (!products.success) {
+        redirect("/");
+    }
 
     return (
         <ShoppingList
