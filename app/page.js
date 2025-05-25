@@ -23,6 +23,7 @@ export default async function Home() {
             userName={userName}
             lists={lists}
             serverToken={token}
+            userId={id}
         />
     );
 }
