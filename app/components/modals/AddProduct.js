@@ -46,6 +46,7 @@ export default function AddProduct({
         useState(customProducts);
     const [searchResults, setSearchResults] = useState(null);
     const [popularSearchResults, setPopularSearchResults] = useState(null);
+    const [favouriteSearchResults, setFavouriteSearchResults] = useState(null);
     const customProductInputRef = useRef(null);
 
     const {showNotification} = useNotificationContext();
@@ -183,10 +184,10 @@ export default function AddProduct({
         const value = e.target.value;
         setSearchValue(value);
 
-        // Handle popular products search
         if (value === "") {
             setPopularSearchResults(null);
             setSearchResults(null);
+            setFavouriteSearchResults(null);
         } else {
             // Search in popular products
             const popularFuse = new Fuse(allProducts, fuseOptions);
@@ -199,6 +200,13 @@ export default function AddProduct({
             const customFuse = new Fuse(customProducts, fuseOptions);
             const customResults = customFuse.search(value);
             setSearchResults(customResults.map((result) => result.item));
+
+            // Search in favourite products
+            const favouriteFuse = new Fuse(favouriteProducts, fuseOptions);
+            const favouriteResults = favouriteFuse.search(value);
+            setFavouriteSearchResults(
+                favouriteResults.map((result) => result.item)
+            );
         }
     };
 
@@ -208,12 +216,15 @@ export default function AddProduct({
             return popularSearchResults || allProducts;
         } else if (selectedProductsSection === "custom") {
             return searchResults || customProducts;
+        } else if (selectedProductsSection === "favourite") {
+            return favouriteSearchResults || favouriteProducts;
         }
-        return favouriteProducts;
+        return [];
     }, [
         selectedProductsSection,
         popularSearchResults,
         searchResults,
+        favouriteSearchResults,
         allProducts,
         customProducts,
         favouriteProducts,
