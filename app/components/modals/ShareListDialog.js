@@ -9,7 +9,11 @@ import {useListContext} from "../../contexts/ListContext";
 import BinocularIcon from "../svgs/BinocularIcon";
 import CloseIcon from "../svgs/CloseIcon";
 import MinusIcon from "../svgs/MinusIcon";
-import {removeListRelationship, WP_API_BASE} from "../../lib/helpers";
+import {
+    removeListRelationship,
+    WP_API_BASE,
+    isListOwner,
+} from "../../lib/helpers";
 
 const ShareListDialog = ({
     listId,
@@ -17,6 +21,8 @@ const ShareListDialog = ({
     sharedWithUsers,
     token,
     setSharedWithUsers,
+    userId,
+    list,
 }) => {
     const {showNotification} = useNotificationContext();
     const {userLists, setUserLists} = useListContext();
@@ -174,15 +180,16 @@ const ShareListDialog = ({
                             <LinkIcon className="w-7 h-7 mr-3" />
                             Copy Link
                         </button>
-                        {sharedWithUsers?.length > 0 && (
-                            <button
-                                onClick={handleSeeUsersSharedWith}
-                                className="flex cursor-pointer items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full"
-                            >
-                                <BinocularIcon className="w-7 h-7 mr-3" />
-                                See Users Shared With
-                            </button>
-                        )}
+                        {sharedWithUsers?.length > 0 &&
+                            isListOwner(list, userId) && (
+                                <button
+                                    onClick={handleSeeUsersSharedWith}
+                                    className="flex cursor-pointer items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full"
+                                >
+                                    <BinocularIcon className="w-7 h-7 mr-3" />
+                                    See Users Shared With
+                                </button>
+                            )}
                     </div>
 
                     <div>

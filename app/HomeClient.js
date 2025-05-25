@@ -435,6 +435,8 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
             {shareDialogOpen && (
                 <ShareListDialog
                     token={token}
+                    userId={userData?.id}
+                    list={userLists.find((list) => list.id === shareDialogOpen)}
                     listId={shareDialogOpen}
                     sharedWithUsers={sharedWithUsers}
                     onClose={() => setShareDialogOpen(null)}
