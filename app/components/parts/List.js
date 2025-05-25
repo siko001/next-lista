@@ -42,7 +42,7 @@ export default function List({
                 setListMetadata(metadata);
             });
         }
-    }, [list, userData?.id]);
+    }, [list]);
 
     const handleGoToList = (e) => {
         e.stopPropagation();
