@@ -35,7 +35,6 @@ export default function List({
     } = useListContext();
     const {userData} = useUserContext();
     const [listMetadata, setListMetadata] = useState(null);
-
     useEffect(() => {
         if (list && userData?.id) {
             getListMetadata(list, userData.id).then((metadata) => {

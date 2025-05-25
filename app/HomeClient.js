@@ -32,6 +32,7 @@ import List from "./components/parts/List";
 
 const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
+    const [sharedWithUsers, setSharedWithUsers] = useState(null);
     const {loading} = useLoadingContext();
     const {userData, token, error} = useUserContext();
     const {
@@ -325,11 +326,15 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
                                                                 Copy
                                                             </button>
                                                             <button
-                                                                onClick={() =>
+                                                                onClick={() => {
                                                                     setShareDialogOpen(
                                                                         list.id
-                                                                    )
-                                                                }
+                                                                    );
+                                                                    setSharedWithUsers(
+                                                                        list.acf
+                                                                            .shared_with_users
+                                                                    );
+                                                                }}
                                                                 className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                                             >
                                                                 <ShareIcon className="w-4 h-4 inline-block mr-1" />
@@ -429,8 +434,11 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
 
             {shareDialogOpen && (
                 <ShareListDialog
+                    token={token}
                     listId={shareDialogOpen}
+                    sharedWithUsers={sharedWithUsers}
                     onClose={() => setShareDialogOpen(null)}
+                    setSharedWithUsers={setSharedWithUsers}
                 />
             )}
         </main>

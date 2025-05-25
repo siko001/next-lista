@@ -259,11 +259,13 @@ export const removeListRelationship = async (
             }
         );
 
+        console.log(res);
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
         }
 
         const text = await res.text();
+        console.log(text);
         try {
             const data = JSON.parse(text);
             return data;

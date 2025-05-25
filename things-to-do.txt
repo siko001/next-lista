@@ -1,13 +1,12 @@
 ##shared list --- Main Focus ***
--Owner can revoke view.
--Inform user if list has been delete and he wasn't active.
-
-# Lists View --Second Main Focus  ***
 -View users which list is shared with
+-Owner can revoke view.
+-Inform user if list has been delete and he wasn't active or when share is revowked by owner.
+-notification fix
 
--Add Categories ---Third Main Focus  ***
--Sort By Categories
--Products Show up According to users Choice + most clicked.
+-Add Categories ---Second Main Focus  ***
+-Categories products 
+-Categories Tab
 
 #login ---Last**
 -Wordpress wrong password warning
@@ -18,15 +17,22 @@
 -Forgot password Emails
 Verify Emails
 
-#user ---Last**
--User settings -basic, change name, change password, 
+
 
 ### After Project ready ###
+After Launch Phase 1
+-User settings -basic, change name, change password, 
 email confimartions
-Quanitity + Pricing.
+Navigation bar
 User Themes
-Languages ??
-Dragg and drop products to arrange?
+Languages
+
+
+
+After Launch Phase 2
+Quanitity + Pricing.
 user specific ordering for Lists
 user specific ordering for products
+-lock list to not be shared by other users if list owner desides to
 -cam edit custom prouct name
+-Products Show up According to users Choice + most clicked.
