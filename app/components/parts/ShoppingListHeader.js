@@ -1,37 +1,74 @@
-'use client'
-import { useState, useEffect, useRef } from "react"
-import { gsap } from "gsap"
-import { decryptToken, WP_API_BASE } from "../../lib/helpers"
+"use client";
+import {useState, useEffect, useRef} from "react";
+import {gsap} from "gsap";
+import {decryptToken, WP_API_BASE} from "../../lib/helpers";
 
 // Contexts
-import { useOverlayContext } from "../../contexts/OverlayContext";
-import { useListContext } from "../../contexts/ListContext"
-import { useNotificationContext } from '../../contexts/NotificationContext';
+import {useOverlayContext} from "../../contexts/OverlayContext";
+import {useListContext} from "../../contexts/ListContext";
+import {useNotificationContext} from "../../contexts/NotificationContext";
 
 // Components
 import Overlay from "../../components/modals/Overlay";
-import Progressbar from "./Progressbar"
+import Progressbar from "./Progressbar";
 
 // Icons
-import ShareIcon from "../svgs/ShareIcon"
-import RenameIcon from "../svgs/RenameIcon"
-import TranshIcon from "../svgs/TranshIcon"
-import CloseIcon from "../svgs/CloseIcon"
-import ThrowIcon from "../svgs/ThrowIcon"
-import SettingsIcon from "../svgs/SettingsIcon"
-import SearchIcon from "../svgs/SearchIcon"
+import ShareIcon from "../svgs/ShareIcon";
+import RenameIcon from "../svgs/RenameIcon";
+import TranshIcon from "../svgs/TranshIcon";
+import CloseIcon from "../svgs/CloseIcon";
+import ThrowIcon from "../svgs/ThrowIcon";
+import SettingsIcon from "../svgs/SettingsIcon";
+import SearchIcon from "../svgs/SearchIcon";
 
-
-
-
-export default function ShoppingListHeader({ title, totalProductCount, handleSearchProducts, setBaggedProductCount, setTotalProductCount, setProgress, progress, list, token, setShareDialogOpen, setAllLinkedProducts, allLinkedProducts, setCheckedProducts, checkedProducts, setBaggedProducts, baggedProducts }) {
-    const { handleRenameInput, handleRenameClick, listRenameRef, handleRenameList, listRename, setListRename, innerListRef, listName, startingValue } = useListContext();
-    const [openSettings, setOpenSettings] = useState(false)
+export default function ShoppingListHeader({
+    title,
+    totalProductCount,
+    handleSearchProducts,
+    setBaggedProductCount,
+    setTotalProductCount,
+    setProgress,
+    progress,
+    list,
+    token,
+    setShareDialogOpen,
+    setAllLinkedProducts,
+    allLinkedProducts,
+    setCheckedProducts,
+    checkedProducts,
+    setBaggedProducts,
+    baggedProducts,
+}) {
+    const {
+        handleRenameInput,
+        handleRenameClick,
+        listRenameRef,
+        handleRenameList,
+        listRename,
+        setListRename,
+        innerListRef,
+        listName,
+        startingValue,
+    } = useListContext();
+    const [openSettings, setOpenSettings] = useState(false);
     const searchProductRef = useRef(null);
     const [searchValue, setSearchValue] = useState("");
-    const [searchIsOpen, setSearchIsOpen] = useState(false)
-    const { overlay, showVerbConfirmation } = useOverlayContext();
-    const { showNotification } = useNotificationContext();
+    const [searchIsOpen, setSearchIsOpen] = useState(false);
+    const {overlay, showVerbConfirmation} = useOverlayContext();
+    const {showNotification} = useNotificationContext();
+    const [originalCheckedLength, setOriginalCheckedLength] = useState(
+        checkedProducts?.length || 0
+    );
+    const [originalBaggedLength, setOriginalBaggedLength] = useState(
+        baggedProducts?.length || 0
+    );
+
+    useEffect(() => {
+        if (!searchIsOpen) {
+            setOriginalCheckedLength(checkedProducts?.length || 0);
+            setOriginalBaggedLength(baggedProducts?.length || 0);
+        }
+    }, [checkedProducts?.length, baggedProducts?.length, searchIsOpen]);
 
     const handleInputChange = (e) => {
         setSearchValue(e.target.value);
@@ -39,32 +76,29 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
     };
 
     const handleListSettings = () => {
-        setOpenSettings((prev) => !prev)
-    }
-
+        setOpenSettings((prev) => !prev);
+    };
 
     useEffect(() => {
         // handle click outside of the settings menu
         const handleClickOutside = (e) => {
             if (e.target.closest(".shopping-list-header-settings") === null) {
-                setOpenSettings(false)
+                setOpenSettings(false);
             }
-        }
+        };
         // esc key to close the settings menu
         const handleKeyDown = (e) => {
             if (openSettings && e.key === "Escape") {
-                setOpenSettings(false)
+                setOpenSettings(false);
             }
-        }
-        document.addEventListener("click", handleClickOutside)
-        document.addEventListener("keydown", handleKeyDown)
+        };
+        document.addEventListener("click", handleClickOutside);
+        document.addEventListener("keydown", handleKeyDown);
         return () => {
-            document.removeEventListener("click", handleClickOutside)
-            document.removeEventListener("keydown", handleKeyDown)
-        }
-
-    }, [])
-
+            document.removeEventListener("click", handleClickOutside);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, []);
 
     const handleSearchProduct = (e) => {
         e.stopPropagation();
@@ -72,7 +106,8 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
         let windowWidth = window.innerWidth;
         let width = windowWidth < 768 ? 100 : 200; // if mobile width is 100px else 200px
 
-        searchProductRef.current.parentElement.style.border = "1px solid #21ba9c";
+        searchProductRef.current.parentElement.style.border =
+            "1px solid #21ba9c";
         searchProductRef.current.focus();
         gsap.to(searchProductRef.current, {
             width: width,
@@ -93,7 +128,8 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
             duration: 0.3,
             ease: "power2.out",
             onComplete: () => {
-                searchProductRef.current.parentElement.style.border = "1px solid transparent";
+                searchProductRef.current.parentElement.style.border =
+                    "1px solid transparent";
                 setSearchIsOpen(false);
             },
         });
@@ -108,37 +144,41 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
             duration: 0.3,
             ease: "power2.out",
             onComplete: () => {
-                searchProductRef.current.parentElement.style.border = "1px solid transparent";
+                searchProductRef.current.parentElement.style.border =
+                    "1px solid transparent";
                 setSearchIsOpen(false);
             },
         });
     };
 
-
     const handleEmptyList = async (id, token) => {
         if (!id || !token) return;
         const updateStates = async () => {
-            setAllLinkedProducts([])
-            setCheckedProducts([])
-            setBaggedProducts([])
-            setBaggedProductCount(0)
-            setTotalProductCount(0)
-            setProgress(0)
-            showNotification("List emptied successfully", "success", 1000)
-        }
+            setAllLinkedProducts([]);
+            setCheckedProducts([]);
+            setBaggedProducts([]);
+            setBaggedProductCount(0);
+            setTotalProductCount(0);
+            setProgress(0);
+            showNotification("List emptied successfully", "success", 1000);
+        };
 
-        const baggedContainer = document.querySelector('.bagged-products-container');
-        const checkedContainer = document.querySelector('.checked-products-container');
+        const baggedContainer = document.querySelector(
+            ".bagged-products-container"
+        );
+        const checkedContainer = document.querySelector(
+            ".checked-products-container"
+        );
 
-        if ((checkedContainer || baggedContainer)) {
+        if (checkedContainer || baggedContainer) {
             if (checkedContainer) {
                 gsap.to(checkedContainer.children, {
                     opacity: 0,
                     y: 60,
                     duration: 0.3,
-                    backgroundColor: '#ff0000',
+                    backgroundColor: "#ff0000",
                     stagger: 0.05,
-                    onComplete: () => updateStates()
+                    onComplete: () => updateStates(),
                 });
             }
             if (baggedContainer) {
@@ -146,9 +186,9 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
                     opacity: 0,
                     y: 60,
                     duration: 0.3,
-                    backgroundColor: '#ff0000',
+                    backgroundColor: "#ff0000",
                     stagger: 0.05,
-                    onComplete: () => updateStates()
+                    onComplete: () => updateStates(),
                 });
             }
         } else {
@@ -163,134 +203,194 @@ export default function ShoppingListHeader({ title, totalProductCount, handleSea
                 Authorization: `Bearer ${decryptedToken}`,
             },
             shoppingListId: id,
-        })
-        const data = await res.json()
-        console.log("Empty list response", data.code)
+        });
+        const data = await res.json();
+        console.log("Empty list response", data.code);
         if (!data.success || data.code == "jwt_auth_invalid_token") {
-            setAllLinkedProducts(allLinkedProducts)
-            setCheckedProducts(checkedProducts)
-            setBaggedProducts(baggedProducts)
-            setProgress(progress)
+            setAllLinkedProducts(allLinkedProducts);
+            setCheckedProducts(checkedProducts);
+            setBaggedProducts(baggedProducts);
+            setProgress(progress);
         }
-    }
-
+    };
 
     const handleDeleteList = async (listId, token) => {
         // In deletion handler before redirect
-        sessionStorage.setItem('pendingDeletion', JSON.stringify({
-            listId,
-            token,
-            expires: Date.now() + 5000
-        }));
+        sessionStorage.setItem(
+            "pendingDeletion",
+            JSON.stringify({
+                listId,
+                token,
+                expires: Date.now() + 5000,
+            })
+        );
 
         // Redirect to clean URL
-        window.location.href = '/';
-    }
-
-
+        window.location.href = "/";
+    };
 
     return (
         <>
             <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px] border dark:border-transparent bg-gray-200 dark:bg-gray-900 min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40">
                 {/* list name */}
                 <div className="flex items-center justify-between  px-2">
-                    {listRename ?
-                        (
-                            <div className="relative w-full  flex gap-2 items-center">
-                                {/* Renaming */}
-                                <input
-                                    type="text"
-                                    ref={listRenameRef}
-                                    onChange={handleRenameInput}
-                                    defaultValue={innerListRef.current?.innerText}
-                                    onBlur={() => {
-                                        handleRenameList(listRenameRef.current.value, token, "in-list")
-                                        setListRename(false)
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            handleRenameList(listRenameRef.current.value, token, "in-list")
-                                            setListRename(false)
-                                        }
-                                    }}
-                                    className="w-full dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
-                                    placeholder="List-A Name"
-                                />
+                    {listRename ? (
+                        <div className="relative w-full  flex gap-2 items-center">
+                            {/* Renaming */}
+                            <input
+                                type="text"
+                                ref={listRenameRef}
+                                onChange={handleRenameInput}
+                                defaultValue={innerListRef.current?.innerText}
+                                onBlur={() => {
+                                    handleRenameList(
+                                        listRenameRef.current.value,
+                                        token,
+                                        "in-list"
+                                    );
+                                    setListRename(false);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        handleRenameList(
+                                            listRenameRef.current.value,
+                                            token,
+                                            "in-list"
+                                        );
+                                        setListRename(false);
+                                    }
+                                }}
+                                className="w-full dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
+                                placeholder="List-A Name"
+                            />
 
-                                <div>
-                                    {/* quanity of words */}
-                                    <span className=" text-xs font-bold">{startingValue}/32</span>
-                                </div>
+                            <div>
+                                {/* quanity of words */}
+                                <span className=" text-xs font-bold">
+                                    {startingValue}/32
+                                </span>
                             </div>
-                        )
-                        :
-                        (
-                            <h2 ref={innerListRef} onClick={() => handleRenameClick(list.id)} className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold">
-                                {listName || title || list?.title}
-                            </h2>
-                        )
-                    }
+                        </div>
+                    ) : (
+                        <h2
+                            ref={innerListRef}
+                            onClick={() => handleRenameClick(list.id)}
+                            className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold"
+                        >
+                            {listName || title || list?.title}
+                        </h2>
+                    )}
 
                     <div className="flex gap-6 items-center">
-                        <div
-                            onClick={handleSearchProduct}
-                            className="flex items-center gap-2 group relative"
-                        >
-                            <div className="flex items-center pr-1 relative overflow-hidden dark:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 bg-gray-200 max-w-[400px]">
-                                <input
-                                    ref={searchProductRef}
-                                    type="text"
-                                    placeholder="Search"
-                                    value={searchValue}
-                                    onChange={handleInputChange}
-                                    onBlur={handleBlurSearchProduct}
-                                    className="w-0 transition-all !outline-0 !border-0 peer duration-700 pl-2 outline-none text-lg font-bold"
-                                />
-                                {searchValue && (
-                                    <CloseIcon
-                                        onClick={handleCloseSearch}
-                                        className="w-6 h-6 dark:text-gray-600 text-gray-800 hover:text-red-500 duration-200 transition-colors cursor-pointer"
+                        {(originalCheckedLength > 0 ||
+                            originalBaggedLength > 0) && (
+                            <div
+                                onClick={handleSearchProduct}
+                                className="flex items-center gap-2 group relative"
+                            >
+                                <div className="flex items-center pr-1 relative overflow-hidden dark:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 bg-gray-200 max-w-[400px]">
+                                    <input
+                                        ref={searchProductRef}
+                                        type="text"
+                                        placeholder="Search"
+                                        value={searchValue}
+                                        onChange={handleInputChange}
+                                        onBlur={handleBlurSearchProduct}
+                                        className="w-0 transition-all !outline-0 !border-0 peer duration-700 pl-2 outline-none text-lg font-bold"
                                     />
-                                )}
+                                    {searchValue && (
+                                        <CloseIcon
+                                            onClick={handleCloseSearch}
+                                            className="w-6 h-6 dark:text-gray-600 text-gray-800 hover:text-red-500 duration-200 transition-colors cursor-pointer"
+                                        />
+                                    )}
+                                </div>
+                                <SearchIcon
+                                    className={`w-6 h-6 md:w-8 md:h-8 ${
+                                        searchIsOpen
+                                            ? "text-primary"
+                                            : "dark:text-gray-600 text-gray-800 hover:text-gray-400"
+                                    }  duration-200 transition-colors cursor-pointer`}
+                                />
                             </div>
-                            <SearchIcon className={`w-6 h-6 md:w-8 md:h-8 ${searchIsOpen ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors cursor-pointer`} />
-                        </div>
-                        <div onClick={handleListSettings} className="relative shopping-list-header-settings">
+                        )}
+                        <div
+                            onClick={handleListSettings}
+                            className="relative shopping-list-header-settings"
+                        >
                             {openSettings && (
                                 <div className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
                                     <div className="flex flex-col gap-0.5 font-quicksand font-[500]">
-                                        <button onClick={() => handleRenameClick(list.id)} className=" cursor-pointer px-2 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                        <button
+                                            onClick={() =>
+                                                handleRenameClick(list.id)
+                                            }
+                                            className=" cursor-pointer px-2 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                        >
                                             <RenameIcon className="w-4 h-4 inline-block mr-1" />
                                             Rename
                                         </button>
-                                        <button onClick={() => setShareDialogOpen(list.id)} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                        <button
+                                            onClick={() =>
+                                                setShareDialogOpen(list.id)
+                                            }
+                                            className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                        >
                                             <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                             Share
                                         </button>
-                                        {
-                                            totalProductCount > 0 &&
-                                            <button onClick={() => totalProductCount > 0 && showVerbConfirmation(list, token, "Empty")} className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm">
+                                        {totalProductCount > 0 && (
+                                            <button
+                                                onClick={() =>
+                                                    totalProductCount > 0 &&
+                                                    showVerbConfirmation(
+                                                        list,
+                                                        token,
+                                                        "Empty"
+                                                    )
+                                                }
+                                                className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                            >
                                                 <ThrowIcon className="w-4 h-4 inline-block mr-1" />
                                                 Empty
                                             </button>
-                                        }
+                                        )}
 
-                                        <button onClick={() => showVerbConfirmation(list, token, 'Delete')} className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm">
+                                        <button
+                                            onClick={() =>
+                                                showVerbConfirmation(
+                                                    list,
+                                                    token,
+                                                    "Delete"
+                                                )
+                                            }
+                                            className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                        >
                                             <TranshIcon className="w-4 h-4 inline-block mr-1" />
                                             Delete
                                         </button>
-
                                     </div>
                                 </div>
                             )}
-                            <SettingsIcon className={`w-6 h-6 md:w-8 md:h-8 ${openSettings ? "text-primary" : "dark:text-gray-600 text-gray-800 hover:text-gray-400"}  duration-200 transition-colors cursor-pointer`} />
+                            <SettingsIcon
+                                className={`w-6 h-6 md:w-8 md:h-8 ${
+                                    openSettings
+                                        ? "text-primary"
+                                        : "dark:text-gray-600 text-gray-800 hover:text-gray-400"
+                                }  duration-200 transition-colors cursor-pointer`}
+                            />
                         </div>
                     </div>
                 </div>
                 <Progressbar progress={progress} />
             </div>
 
-            {overlay && <Overlay handleEmptyList={handleEmptyList} handleDeleteList={handleDeleteList} />}
+            {overlay && (
+                <Overlay
+                    handleEmptyList={handleEmptyList}
+                    handleDeleteList={handleDeleteList}
+                />
+            )}
         </>
-    )
+    );
 }

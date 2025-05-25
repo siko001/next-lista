@@ -628,14 +628,22 @@ export default function ShoppingList({
                         {checkedProducts?.length === 0 &&
                         baggedProducts?.length === 0 ? (
                             <p className="w-full font-quicksand mt-28 flex items-center justify-center text-gray-900/60 dark:text-gray-400/60 text-lg md:text-2xl font-normal">
-                                Click
-                                <span
-                                    onClick={() => setProductOverlay(true)}
-                                    className="text-primary hover:text-primary/70  dark:text-primary/70 font-medium dark:hover:text-primary cursor-pointer duration-200 transition-colors ease"
-                                >
-                                    &nbsp;Add Products&nbsp;
-                                </span>
-                                to start building your list
+                                {isSearching ? (
+                                    "No results found"
+                                ) : (
+                                    <>
+                                        Click
+                                        <span
+                                            onClick={() =>
+                                                setProductOverlay(true)
+                                            }
+                                            className="text-primary hover:text-primary/70 dark:text-primary/70 font-medium dark:hover:text-primary cursor-pointer duration-200 transition-colors ease"
+                                        >
+                                            &nbsp;Add Products&nbsp;
+                                        </span>
+                                        to start building your list
+                                    </>
+                                )}
                             </p>
                         ) : (
                             checkedProducts?.map((product, index) =>
