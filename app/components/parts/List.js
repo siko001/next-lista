@@ -131,18 +131,6 @@ export default function List({
                             >
                                 {decodeHtmlEntities(list.title)}
                             </p>
-                            {list?.acf?.shared_with_users?.length > 0 &&
-                                isListOwner(list, userData?.id) && (
-                                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                                        <BinocularIcon className="w-4 h-4" />
-                                        <span>
-                                            {list.acf.shared_with_users.length}{" "}
-                                            user
-                                            {list.acf.shared_with_users
-                                                .length !== 1 && "s"}
-                                        </span>
-                                    </div>
-                                )}
                         </>
                     )}
                 </div>
