@@ -541,7 +541,7 @@ export default function ShoppingList({
         showNotification(data.message ? data.message : "List Updated");
     });
 
-    // Handle being removed from shared list
+    // Handle being removed from shared list and other share updates
     useEffect(() => {
         if (!userId) return;
         const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
@@ -553,6 +553,7 @@ export default function ShoppingList({
         channel.bind("share-update", (data) => {
             // If we're the one being removed
             if (
+                data.action === "remove" &&
                 parseInt(data.userId) === parseInt(userId) &&
                 parseInt(data.listId) === parseInt(listId)
             ) {
@@ -570,7 +571,10 @@ export default function ShoppingList({
                 window.location.href = "/";
             }
             // If someone else was removed from this list
-            else if (parseInt(data.listId) === parseInt(listId)) {
+            else if (
+                data.action === "remove" &&
+                parseInt(data.listId) === parseInt(listId)
+            ) {
                 // Update shared users state
                 const updatedUsers = (
                     currentList?.acf?.shared_with_users || []
@@ -599,6 +603,53 @@ export default function ShoppingList({
                               }
                             : l
                     )
+                );
+            }
+            // If someone was added to this list
+            else if (
+                data.action === "add" &&
+                parseInt(data.listId) === parseInt(listId)
+            ) {
+                const newUser = {
+                    ID: parseInt(data.userId),
+                    nickname: data.userName,
+                };
+
+                // Update shared users state
+                const updatedUsers = [
+                    ...(currentList?.acf?.shared_with_users || []),
+                    newUser,
+                ];
+
+                // Update both the list and shared users state
+                setCurrentList((prevList) => ({
+                    ...prevList,
+                    acf: {
+                        ...prevList.acf,
+                        shared_with_users: updatedUsers,
+                    },
+                }));
+                setSharedWithUsers(updatedUsers);
+
+                // Update the list context
+                setUserLists((prevLists) =>
+                    prevLists.map((l) =>
+                        parseInt(l.id) === parseInt(listId)
+                            ? {
+                                  ...l,
+                                  acf: {
+                                      ...l.acf,
+                                      shared_with_users: updatedUsers,
+                                  },
+                              }
+                            : l
+                    )
+                );
+
+                // Always show notification for new user, regardless of owner status
+                showNotification(
+                    `${data.userName} was added to the list`,
+                    "success"
                 );
             }
         });

@@ -172,56 +172,6 @@ const ShareListDialog = ({
         }
     };
 
-    // Listen for real-time updates when users are removed
-    useEffect(() => {
-        if (!userId) return;
-
-        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
-            cluster: "eu",
-        });
-
-        // Subscribe to the user's channel
-        const channel = pusher.subscribe("user-lists-" + userId);
-
-        channel.bind("share-update", (data) => {
-            if (parseInt(data.listId) === parseInt(listId)) {
-                // Update both local and parent state
-                const updatedUsers = (localSharedUsers || []).filter(
-                    (user) => user.ID !== parseInt(data.userId)
-                );
-                setLocalSharedUsers(updatedUsers);
-                setSharedWithUsers(updatedUsers);
-
-                // Update the userLists state
-                setUserLists((prevLists) => {
-                    return prevLists.map((prevList) => {
-                        if (parseInt(prevList.id) === parseInt(listId)) {
-                            return {
-                                ...prevList,
-                                acf: {
-                                    ...prevList.acf,
-                                    shared_with_users: updatedUsers,
-                                },
-                            };
-                        }
-                        return prevList;
-                    });
-                });
-
-                // Close overlay if no users left
-                if (updatedUsers.length === 0) {
-                    setUsersSharedWithOverlay(false);
-                    onClose();
-                }
-            }
-        });
-
-        return () => {
-            channel.unbind_all();
-            pusher.unsubscribe("user-lists-" + userId);
-        };
-    }, [userId, listId, localSharedUsers]);
-
     // Sync local state with parent state
     useEffect(() => {
         if (sharedWithUsers) {
