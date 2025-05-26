@@ -1,8 +1,13 @@
 ##shared list --- Main Focus ***
--View users which list is shared with
--Owner can revoke view.
+// send update via websocket to the user who has access to the list and remove the user from the shared_with_users array  - update the share-with-users
+// send websocket when user accepts share to have real time update of users - update the share-with-users
 -Inform user if list has been delete and he wasn't active or when share is revowked by owner.
 -notification fix
+-fix copy of list to show progress bar and quanityt straight away
+
+
+
+
 
 -Add Categories ---Second Main Focus  ***
 -Categories products 
@@ -19,6 +24,8 @@ Verify Emails
 
 
 
+
+
 ### After Project ready ###
 After Launch Phase 1
 -User settings -basic, change name, change password, 
@@ -26,8 +33,6 @@ email confimartions
 Navigation bar
 User Themes
 Languages
-
-
 
 After Launch Phase 2
 Quanitity + Pricing.

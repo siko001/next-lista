@@ -32,8 +32,6 @@ const ShareListDialog = ({
         `Sharing this list with you: ${listUrl}`
     )}`;
 
-    console.log(sharedWithUsers);
-
     // const messengerUrl = `fb-messenger://share?link=${encodeURIComponent(listUrl)}`;
     function shareOnMessenger(listUrl) {
         const encodedUrl = encodeURIComponent(listUrl);
@@ -93,6 +91,14 @@ const ShareListDialog = ({
         setUsersSharedWithOverlay(true);
     };
 
+    const [localSharedUsers, setLocalSharedUsers] = useState(
+        sharedWithUsers || []
+    );
+
+    useEffect(() => {
+        setLocalSharedUsers(sharedWithUsers || []);
+    }, [sharedWithUsers]);
+
     const handleRevokeShare = async (listId, userId, token) => {
         try {
             const res = await fetch(
@@ -110,9 +116,11 @@ const ShareListDialog = ({
             const data = await res.json();
             if (data.message === "User removed from shared list") {
                 // Update local shared users state
-                setSharedWithUsers((prev) =>
-                    prev.filter((user) => user.ID !== userId)
+                const updatedUsers = (localSharedUsers || []).filter(
+                    (user) => user.ID !== userId
                 );
+                setLocalSharedUsers(updatedUsers);
+                setSharedWithUsers(updatedUsers);
 
                 // Update the userLists state to reflect the change in shared_with_users
                 setUserLists((prevLists) =>
@@ -122,10 +130,12 @@ const ShareListDialog = ({
                                 ...list,
                                 acf: {
                                     ...list.acf,
-                                    shared_with_users:
-                                        list.acf.shared_with_users.filter(
-                                            (user) => user.ID !== userId
-                                        ),
+                                    shared_with_users: list.acf
+                                        .shared_with_users
+                                        ? list.acf.shared_with_users.filter(
+                                              (user) => user.ID !== userId
+                                          )
+                                        : [],
                                 },
                             };
                         }
@@ -134,7 +144,7 @@ const ShareListDialog = ({
                 );
 
                 showNotification("User removed from shared list", "success");
-                if (sharedWithUsers.length === 1) {
+                if (localSharedUsers.length === 1) {
                     setUsersSharedWithOverlay(false);
                 }
             }
@@ -224,11 +234,11 @@ const ShareListDialog = ({
                         </p>
                     )}
 
-                    <div className="space-y-3">
+                    <div className="">
                         {sharedWithUsers.map((user, index) => (
                             <div
                                 className={
-                                    "py-2 px-2 border-b first:border-t text-lg flex items-center gap-2 justify-between"
+                                    "py-2 px-2 border-b first:border-t border-gray-200 dark:border-gray-700 text-lg flex items-center gap-2 justify-between"
                                 }
                                 key={index}
                             >

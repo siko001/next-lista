@@ -66,6 +66,7 @@ export default function ShoppingList({
     const [allProducts, setAllProducts] = useState(AllProducts);
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const [checklistSettings, setChecklistSettings] = useState(false);
+    const [sharedWithUsers, setSharedWithUsers] = useState(null);
     const [baggedSettings, setBaggedSettings] = useState(false);
 
     const [totalProductCount, setTotalProductCount] = useState(
@@ -822,6 +823,11 @@ export default function ShoppingList({
                 <ShareListDialog
                     listId={shareDialogOpen}
                     onClose={() => setShareDialogOpen(null)}
+                    setSharedWithUsers={setSharedWithUsers}
+                    userId={userId}
+                    list={list}
+                    token={token}
+                    sharedWithUsers={list?.acf?.shared_with_users}
                 />
             )}
         </main>
