@@ -130,35 +130,34 @@ const ShareListDialog = ({
                 const updatedUsers = (localSharedUsers || []).filter(
                     (user) => user.ID !== removedUserId
                 );
+
                 setLocalSharedUsers(updatedUsers);
                 setSharedWithUsers(updatedUsers);
 
                 // Update the userLists state to reflect the change in shared_with_users
-                setUserLists((prevLists) =>
-                    prevLists.map((list) => {
+                setUserLists((prevLists) => {
+                    const newLists = prevLists.map((list) => {
                         if (list.id === listId) {
                             return {
                                 ...list,
                                 acf: {
                                     ...list.acf,
-                                    shared_with_users: list.acf
-                                        .shared_with_users
-                                        ? list.acf.shared_with_users.filter(
-                                              (user) =>
-                                                  user.ID !== removedUserId
-                                          )
-                                        : [],
+                                    shared_with_users: updatedUsers,
                                 },
                             };
                         }
                         return list;
-                    })
-                );
+                    });
+                    return newLists;
+                });
+
+                // Close the overlay if no users left
+                if (updatedUsers.length === 0) {
+                    setUsersSharedWithOverlay(false);
+                    onClose();
+                }
 
                 showNotification("User removed from shared list", "success");
-                if (localSharedUsers.length === 1) {
-                    setUsersSharedWithOverlay(false);
-                }
             }
         } catch (error) {
             console.error("Error removing user:", error);

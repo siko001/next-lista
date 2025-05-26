@@ -67,8 +67,13 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
         if (removeListData) {
             try {
                 const {listId, userId, token} = JSON.parse(removeListData);
-                console.log("Parsed data:", {listId, userId, token});
                 sessionStorage.removeItem("removeListData"); // Clear the data
+
+                // Show notification first
+                showNotification(
+                    "The list owner has removed you from this list",
+                    "info"
+                );
 
                 // Small delay to ensure the page is fully loaded
                 setTimeout(() => {
@@ -91,17 +96,12 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
                                         (list) => list.id !== listId
                                     )
                                 );
-                                showNotification(
-                                    "List Removed successfully",
-                                    "success"
-                                );
                             },
                         }
                     );
                 }, 100);
             } catch (error) {
                 console.error("Error parsing removeListData:", error);
-                console.log("Raw data:", removeListData);
                 sessionStorage.removeItem("removeListData");
             }
         }
@@ -223,11 +223,6 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
             sessionStorage.removeItem("pendingDeletion");
         }
     }, []);
-
-    // Debug userLists changes
-    useEffect(() => {
-        console.log("HomeClient userLists changed:", userLists);
-    }, [userLists]);
 
     useUserListsRealtime(userData?.id, setUserLists);
     useRealtimeAllListDelete(

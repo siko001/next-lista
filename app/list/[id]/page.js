@@ -38,7 +38,6 @@ export default async function Page() {
         redirect("/");
     }
 
-    console.log(list);
     return (
         <ShoppingList
             listId={listId}

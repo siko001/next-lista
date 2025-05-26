@@ -49,7 +49,7 @@ export default function Button(props) {
 
     const handleClick = async () => {
         if (errors.message) return;
-        console.log(props);
+
         const action = props.action.toLowerCase();
 
         // Open ALl Products Overlay

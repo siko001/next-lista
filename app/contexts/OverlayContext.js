@@ -52,7 +52,6 @@ export const OverlayProvider = ({children}) => {
     };
 
     const showVerbConfirmation = (list, token, verb, userId) => {
-        console.log(list, token, verb, userId);
         // Open a modal or dialog to confirm the action
         const titlesToCheck = [
             "list",

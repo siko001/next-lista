@@ -145,10 +145,8 @@ export default function AddProduct({
                     }),
                 }
             );
-            console.log(response);
 
             const data = await response.json();
-            console.log(data);
         } catch (error) {
             console.error("Error:", error);
         }
@@ -497,7 +495,6 @@ export default function AddProduct({
                 }
             );
             const data = await res.json();
-            console.log(data);
         } else {
             // add to favourites
             setFavouriteProducts((prev) => [
@@ -528,7 +525,6 @@ export default function AddProduct({
                 }
             );
             const data = await res.json();
-            console.log(data);
         }
     };
 

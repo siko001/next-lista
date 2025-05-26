@@ -207,7 +207,7 @@ export default function ShoppingListHeader({
             shoppingListId: id,
         });
         const data = await res.json();
-        console.log("Empty list response", data.code);
+
         if (!data.success || data.code == "jwt_auth_invalid_token") {
             setAllLinkedProducts(allLinkedProducts);
             setCheckedProducts(checkedProducts);

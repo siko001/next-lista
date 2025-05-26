@@ -16,33 +16,29 @@ export default function useSharedListsRealtime(
             cluster: "eu",
         });
 
-        // Subscribe to user-specific channel
         const channel = pusher.subscribe("user-lists-" + userId);
 
-        // Handle user removal
         channel.bind("share-update", (data) => {
-            console.log("Received share-update:", data);
-
             if (data.userId === userId) {
                 // If current user was removed from a list
                 setUserLists((prevLists) => {
-                    console.log("Previous lists:", prevLists);
-                    // Create a new array reference to ensure React detects the change
                     const filteredLists = prevLists.filter((list) => {
                         const shouldKeep = list.id !== parseInt(data.listId);
-                        if (!shouldKeep) {
-                            console.log("Removing list:", list.id);
-                        }
                         return shouldKeep;
                     });
-                    console.log("Updated lists:", filteredLists);
-                    return [...filteredLists]; // Create new array reference
+                    return [...filteredLists];
                 });
-                showNotification("You were removed from a shared list", "info");
+                // Only show notification if we're not in the inner list view
+                // (inner list view will handle its own notification)
+                if (!window.location.pathname.includes("/list/")) {
+                    showNotification(
+                        "The list owner has removed you from this list",
+                        "info"
+                    );
+                }
             } else {
                 // If another user was removed from a list the current user owns/has access to
                 setUserLists((prevLists) => {
-                    // Create a new array reference to ensure React detects the change
                     const updatedLists = prevLists.map((list) => {
                         if (list.id === parseInt(data.listId)) {
                             const updatedSharedUsers = list.acf
@@ -64,7 +60,7 @@ export default function useSharedListsRealtime(
                         return list;
                     });
 
-                    return [...updatedLists]; // Create new array reference
+                    return [...updatedLists];
                 });
             }
         });

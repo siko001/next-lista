@@ -66,7 +66,9 @@ export default function ShoppingList({
     const [allProducts, setAllProducts] = useState(AllProducts);
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const [checklistSettings, setChecklistSettings] = useState(false);
-    const [sharedWithUsers, setSharedWithUsers] = useState(null);
+    const [sharedWithUsers, setSharedWithUsers] = useState(
+        list?.acf?.shared_with_users || []
+    );
     const [baggedSettings, setBaggedSettings] = useState(false);
 
     const [totalProductCount, setTotalProductCount] = useState(
@@ -537,9 +539,66 @@ export default function ShoppingList({
         setBaggedProductCount(Number(data.fields.bagged_product_count) || 0);
         showNotification(data.message ? data.message : "List Updated");
     });
+
+    // Handle being removed from shared list
+    useEffect(() => {
+        if (!userId) return;
+        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
+            cluster: "eu",
+        });
+
+        const channel = pusher.subscribe("user-lists-" + userId);
+
+        channel.bind("share-update", (data) => {
+            // If we're the one being removed
+            if (
+                parseInt(data.userId) === parseInt(userId) &&
+                parseInt(data.listId) === parseInt(listId)
+            ) {
+                showNotification("You were removed from this list", "info");
+                // Store removal data for home page
+                const removeData = {
+                    listId: data.listId,
+                    userId: data.userId,
+                    token: token,
+                };
+                sessionStorage.setItem(
+                    "removeListData",
+                    JSON.stringify(removeData)
+                );
+                window.location.href = "/";
+            }
+            // If someone else was removed from this list
+            else if (parseInt(data.listId) === parseInt(listId)) {
+                setSharedWithUsers((prevUsers) => {
+                    // If prevUsers is null or empty, try to use the list's shared users
+                    const currentUsers =
+                        prevUsers || list?.acf?.shared_with_users || [];
+                    const updatedUsers = currentUsers.filter(
+                        (user) => user.ID !== parseInt(data.userId)
+                    );
+                    return updatedUsers;
+                });
+            }
+        });
+
+        return () => {
+            channel.unbind_all();
+            pusher.unsubscribe("user-lists-" + userId);
+        };
+    }, [userId, listId, token]);
+
     const [listTitle, setListTitle] = useState(list.title);
     useRealtimeRename(userId, setListTitle, isInInnerList);
     useRealtimeListDelete(listId, userId, showNotification);
+
+    // Update sharedWithUsers when list.acf.shared_with_users changes
+    useEffect(() => {
+        if (list?.acf?.shared_with_users) {
+            setSharedWithUsers(list.acf.shared_with_users);
+        }
+    }, [list?.acf?.shared_with_users]);
+
     return (
         <main>
             <Header isRegistered={isRegistered} userName={userName} />
