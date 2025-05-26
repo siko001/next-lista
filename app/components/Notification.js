@@ -71,14 +71,14 @@ export default function Notification() {
             ? "bg-red-500 text-white"
             : notification?.type === "info"
             ? "bg-blue-500 text-white"
-            : "bg-green-500 text-white";
+            : "bg-green-500 text-black";
 
     return (
         notification &&
         notification.message && (
             <div
                 ref={notificationRef}
-                className={`${notificationTypeError} fixed bottom-8 z-[9999] right-8 font-quicksand font-[600] p-4 rounded-md shadow-md transform`}
+                className={`${notificationTypeError} fixed bottom-8 z-[9999] mx-8 sm:mx-0  right-8 font-quicksand font-[600] p-4 rounded-md text-sm sm:text-base shadow-md transform`}
             >
                 {notification.message}
             </div>
