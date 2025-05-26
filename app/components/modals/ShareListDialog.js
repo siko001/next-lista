@@ -125,6 +125,7 @@ const ShareListDialog = ({
             );
 
             const data = await res.json();
+
             if (data.message === "User removed from shared list") {
                 // Update local shared users state
                 const updatedUsers = (localSharedUsers || []).filter(
@@ -136,30 +137,33 @@ const ShareListDialog = ({
 
                 // Update the userLists state to reflect the change in shared_with_users
                 setUserLists((prevLists) => {
-                    const newLists = prevLists.map((list) => {
-                        if (list.id === listId) {
+                    return prevLists.map((prevList) => {
+                        if (parseInt(prevList.id) === parseInt(listId)) {
                             return {
-                                ...list,
+                                ...prevList,
                                 acf: {
-                                    ...list.acf,
-                                    shared_with_users: list.acf
-                                        .shared_with_users
-                                        ? list.acf.shared_with_users.filter(
-                                              (user) =>
-                                                  user.ID !== removedUserId
-                                          )
-                                        : [],
+                                    ...prevList.acf,
+                                    shared_with_users: updatedUsers,
                                 },
                             };
                         }
-                        return list;
+                        return prevList;
                     });
-                    return newLists;
                 });
 
+                // Force a re-render of the parent list
+                const updatedList = {
+                    ...list,
+                    acf: {
+                        ...list.acf,
+                        shared_with_users: updatedUsers,
+                    },
+                };
+
                 showNotification("User removed from shared list", "success");
-                if (localSharedUsers.length === 1) {
+                if (updatedUsers.length === 0) {
                     setUsersSharedWithOverlay(false);
+                    onClose();
                 }
             }
         } catch (error) {
@@ -167,6 +171,63 @@ const ShareListDialog = ({
             showNotification("Failed to remove user", "error");
         }
     };
+
+    // Listen for real-time updates when users are removed
+    useEffect(() => {
+        if (!userId) return;
+
+        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
+            cluster: "eu",
+        });
+
+        // Subscribe to the user's channel
+        const channel = pusher.subscribe("user-lists-" + userId);
+
+        channel.bind("share-update", (data) => {
+            if (parseInt(data.listId) === parseInt(listId)) {
+                // Update both local and parent state
+                const updatedUsers = (localSharedUsers || []).filter(
+                    (user) => user.ID !== parseInt(data.userId)
+                );
+                setLocalSharedUsers(updatedUsers);
+                setSharedWithUsers(updatedUsers);
+
+                // Update the userLists state
+                setUserLists((prevLists) => {
+                    return prevLists.map((prevList) => {
+                        if (parseInt(prevList.id) === parseInt(listId)) {
+                            return {
+                                ...prevList,
+                                acf: {
+                                    ...prevList.acf,
+                                    shared_with_users: updatedUsers,
+                                },
+                            };
+                        }
+                        return prevList;
+                    });
+                });
+
+                // Close overlay if no users left
+                if (updatedUsers.length === 0) {
+                    setUsersSharedWithOverlay(false);
+                    onClose();
+                }
+            }
+        });
+
+        return () => {
+            channel.unbind_all();
+            pusher.unsubscribe("user-lists-" + userId);
+        };
+    }, [userId, listId, localSharedUsers]);
+
+    // Sync local state with parent state
+    useEffect(() => {
+        if (sharedWithUsers) {
+            setLocalSharedUsers(sharedWithUsers);
+        }
+    }, [sharedWithUsers]);
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

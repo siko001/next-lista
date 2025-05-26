@@ -6,6 +6,7 @@ import {calculateProgress, WP_API_BASE, decryptToken} from "../../lib/helpers";
 
 // Contexts
 import {useNotificationContext} from "../../contexts/NotificationContext";
+import {useListContext} from "../../contexts/ListContext";
 
 // Websockets
 import useListaRealtimeUpdates from "../../lib/RealTimeUpdates";
@@ -26,14 +27,13 @@ import SettingsIcon from "../../components/svgs/SettingsIcon";
 import BagIcon from "../../components/svgs/BagIcon";
 import XBagIcon from "../../components/svgs/XBagIcon";
 import EmptyBagIcon from "../../components/svgs/EmptyBagIcon";
-import {useListContext} from "../../contexts/ListContext";
 
 export default function ShoppingList({
     listId,
     userId,
     isRegistered,
     userName,
-    list,
+    list: initialList,
     token,
     baggedItems,
     checkedProductList,
@@ -43,10 +43,11 @@ export default function ShoppingList({
     ownerName,
 }) {
     const [productOverlay, setProductOverlay] = useState(false);
+    const [currentList, setCurrentList] = useState(initialList);
 
     // general products
     const [allLinkedProducts, setAllLinkedProducts] = useState(
-        list?.acf?.linked_products
+        currentList?.acf?.linked_products
     );
     const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
     const [baggedProducts, setBaggedProducts] = useState(
@@ -67,20 +68,20 @@ export default function ShoppingList({
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const [checklistSettings, setChecklistSettings] = useState(false);
     const [sharedWithUsers, setSharedWithUsers] = useState(
-        list?.acf?.shared_with_users || []
+        currentList?.acf?.shared_with_users || []
     );
     const [baggedSettings, setBaggedSettings] = useState(false);
 
     const [totalProductCount, setTotalProductCount] = useState(
-        Number(list?.acf?.product_count) || 0
+        Number(currentList?.acf?.product_count) || 0
     );
     const [baggedProductCount, setBaggedProductCount] = useState(
-        Number(list?.acf?.bagged_product_count) || 0
+        Number(currentList?.acf?.bagged_product_count) || 0
     );
     const [progress, setProgress] = useState(
         calculateProgress(totalProductCount, baggedProductCount) || 0
     );
-    const {setIsInnerList, isInInnerList} = useListContext();
+    const {setIsInnerList, isInInnerList, setUserLists} = useListContext();
 
     // Close the corresposing settings if scrolling and open
     const checkedListSettings = useRef();
@@ -570,15 +571,35 @@ export default function ShoppingList({
             }
             // If someone else was removed from this list
             else if (parseInt(data.listId) === parseInt(listId)) {
-                setSharedWithUsers((prevUsers) => {
-                    // If prevUsers is null or empty, try to use the list's shared users
-                    const currentUsers =
-                        prevUsers || list?.acf?.shared_with_users || [];
-                    const updatedUsers = currentUsers.filter(
-                        (user) => user.ID !== parseInt(data.userId)
-                    );
-                    return updatedUsers;
-                });
+                // Update shared users state
+                const updatedUsers = (
+                    currentList?.acf?.shared_with_users || []
+                ).filter((user) => user.ID !== parseInt(data.userId));
+
+                // Update both the list and shared users state
+                setCurrentList((prevList) => ({
+                    ...prevList,
+                    acf: {
+                        ...prevList.acf,
+                        shared_with_users: updatedUsers,
+                    },
+                }));
+                setSharedWithUsers(updatedUsers);
+
+                // Update the list context
+                setUserLists((prevLists) =>
+                    prevLists.map((l) =>
+                        parseInt(l.id) === parseInt(listId)
+                            ? {
+                                  ...l,
+                                  acf: {
+                                      ...l.acf,
+                                      shared_with_users: updatedUsers,
+                                  },
+                              }
+                            : l
+                    )
+                );
             }
         });
 
@@ -586,18 +607,18 @@ export default function ShoppingList({
             channel.unbind_all();
             pusher.unsubscribe("user-lists-" + userId);
         };
-    }, [userId, listId, token]);
+    }, [userId, listId, token, currentList]);
 
-    const [listTitle, setListTitle] = useState(list.title);
+    // Update sharedWithUsers when list changes
+    useEffect(() => {
+        if (currentList?.acf?.shared_with_users) {
+            setSharedWithUsers(currentList.acf.shared_with_users);
+        }
+    }, [currentList?.acf?.shared_with_users]);
+
+    const [listTitle, setListTitle] = useState(currentList.title);
     useRealtimeRename(userId, setListTitle, isInInnerList);
     useRealtimeListDelete(listId, userId, showNotification);
-
-    // Update sharedWithUsers when list.acf.shared_with_users changes
-    useEffect(() => {
-        if (list?.acf?.shared_with_users) {
-            setSharedWithUsers(list.acf.shared_with_users);
-        }
-    }, [list?.acf?.shared_with_users]);
 
     return (
         <main>
@@ -617,7 +638,7 @@ export default function ShoppingList({
                     setShareDialogOpen={setShareDialogOpen}
                     token={token}
                     userId={userId}
-                    list={list}
+                    list={currentList}
                     title={listTitle}
                     handleSearchProducts={handleSearchProducts}
                     checkedProducts={checkedProducts}
@@ -884,9 +905,9 @@ export default function ShoppingList({
                     onClose={() => setShareDialogOpen(null)}
                     setSharedWithUsers={setSharedWithUsers}
                     userId={userId}
-                    list={list}
+                    list={currentList}
                     token={token}
-                    sharedWithUsers={list?.acf?.shared_with_users}
+                    sharedWithUsers={currentList?.acf?.shared_with_users}
                 />
             )}
         </main>
