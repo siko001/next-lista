@@ -142,7 +142,13 @@ const ShareListDialog = ({
                                 ...list,
                                 acf: {
                                     ...list.acf,
-                                    shared_with_users: updatedUsers,
+                                    shared_with_users: list.acf
+                                        .shared_with_users
+                                        ? list.acf.shared_with_users.filter(
+                                              (user) =>
+                                                  user.ID !== removedUserId
+                                          )
+                                        : [],
                                 },
                             };
                         }
@@ -151,13 +157,10 @@ const ShareListDialog = ({
                     return newLists;
                 });
 
-                // Close the overlay if no users left
-                if (updatedUsers.length === 0) {
-                    setUsersSharedWithOverlay(false);
-                    onClose();
-                }
-
                 showNotification("User removed from shared list", "success");
+                if (localSharedUsers.length === 1) {
+                    setUsersSharedWithOverlay(false);
+                }
             }
         } catch (error) {
             console.error("Error removing user:", error);
