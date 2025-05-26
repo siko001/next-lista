@@ -14,6 +14,7 @@ import {
     WP_API_BASE,
     isListOwner,
 } from "../../lib/helpers";
+import Pusher from "pusher-js";
 
 const ShareListDialog = ({
     listId,
@@ -99,7 +100,7 @@ const ShareListDialog = ({
         setLocalSharedUsers(sharedWithUsers || []);
     }, [sharedWithUsers]);
 
-    const handleRevokeShare = async (listId, userId, token) => {
+    const handleRevokeShare = async (listId, removedUserId, token) => {
         try {
             const res = await fetch(
                 `${WP_API_BASE}/custom/v1/remove-user-from-shared`,
@@ -109,7 +110,17 @@ const ShareListDialog = ({
                         "Content-Type": "application/json",
                         Authorization: `Bearer ${token}`,
                     },
-                    body: JSON.stringify({listId, userId}),
+                    body: JSON.stringify({
+                        listId,
+                        userId: removedUserId,
+                        notifyUsers: {
+                            removedUserId,
+                            ownerId: list?.acf?.owner_id,
+                            sharedUserIds: localSharedUsers
+                                .filter((user) => user.ID !== removedUserId)
+                                .map((user) => user.ID),
+                        },
+                    }),
                 }
             );
 
@@ -117,7 +128,7 @@ const ShareListDialog = ({
             if (data.message === "User removed from shared list") {
                 // Update local shared users state
                 const updatedUsers = (localSharedUsers || []).filter(
-                    (user) => user.ID !== userId
+                    (user) => user.ID !== removedUserId
                 );
                 setLocalSharedUsers(updatedUsers);
                 setSharedWithUsers(updatedUsers);
@@ -133,7 +144,8 @@ const ShareListDialog = ({
                                     shared_with_users: list.acf
                                         .shared_with_users
                                         ? list.acf.shared_with_users.filter(
-                                              (user) => user.ID !== userId
+                                              (user) =>
+                                                  user.ID !== removedUserId
                                           )
                                         : [],
                                 },

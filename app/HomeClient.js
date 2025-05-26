@@ -7,6 +7,7 @@ import gsap from "gsap";
 // Websockets
 import useUserListsRealtime from "./lib/UserListsRealTime";
 import useRealtimeAllListDelete from "./lib/DeleteAllListRealtime";
+import useSharedListsRealtime from "./lib/useSharedListsRealtime";
 
 // Contexts
 import {useUserContext} from "./contexts/UserContext";
@@ -33,6 +34,7 @@ import List from "./components/parts/List";
 const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
     const [sharedWithUsers, setSharedWithUsers] = useState(null);
+    const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const {loading} = useLoadingContext();
     const {userData, token, error} = useUserContext();
     const {
@@ -54,7 +56,9 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
     useEffect(() => {
         setIsInnerList(false);
         if (userData && userData.id && token) {
-            getShoppingList(userData.id, token);
+            getShoppingList(userData.id, token).then(() => {
+                setInitialLoadComplete(true);
+            });
         }
     }, [userData, token]);
 
@@ -220,6 +224,11 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
         }
     }, []);
 
+    // Debug userLists changes
+    useEffect(() => {
+        console.log("HomeClient userLists changed:", userLists);
+    }, [userLists]);
+
     useUserListsRealtime(userData?.id, setUserLists);
     useRealtimeAllListDelete(
         userLists,
@@ -227,6 +236,7 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
         userData?.id,
         showNotification
     );
+    useSharedListsRealtime(userData?.id, setUserLists, showNotification);
 
     if (error) return <div>Error: {error}</div>;
     return (
@@ -390,9 +400,11 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
                                 )}
                             </Droppable>
                         </DragDropContext>
-                    ) : // Lists Loaded from the server (if any pre-rendered)
-                    !hasDeletedLists && lists && lists.length > 0 ? (
-                        <div className="mt-8 flex flex-col gap-6 w-full  ">
+                    ) : !initialLoadComplete &&
+                      !hasDeletedLists &&
+                      lists &&
+                      lists.length > 0 ? (
+                        <div className="mt-8 flex flex-col gap-6 w-full">
                             {lists.map((list) => (
                                 <List
                                     token={token}

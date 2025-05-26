@@ -41,3 +41,4 @@ user specific ordering for products
 -lock list to not be shared by other users if list owner desides to
 -cam edit custom prouct name
 -Products Show up According to users Choice + most clicked.
+-Shared list link must include a token while sharing to aviod any other users randomly popping up in lists
