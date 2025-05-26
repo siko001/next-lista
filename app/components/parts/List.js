@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import Link from "next/link";
 import SettingsIcon from "../svgs/SettingsIcon";
 import Progressbar from "./Progressbar";
+import BinocularIcon from "../svgs/BinocularIcon";
 import {
     decodeHtmlEntities,
     calculateProgress,
@@ -35,6 +36,7 @@ export default function List({
     } = useListContext();
     const {userData} = useUserContext();
     const [listMetadata, setListMetadata] = useState(null);
+
     useEffect(() => {
         if (list && userData?.id) {
             getListMetadata(list, userData.id).then((metadata) => {
@@ -81,54 +83,69 @@ export default function List({
             }}
         >
             <div className="flex justify-between w-full gap-3 shopping-list">
-                {listRename && listRename === list.id ? (
-                    <div className="relative w-full  flex gap-2 items-center relative">
-                        {/* Renaming */}
-                        <input
-                            type="text"
-                            ref={listRenameRef}
-                            className="w-full dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
-                            defaultValue={list.title}
-                            onBlur={(e) => {
-                                e.stopPropagation();
-                                setListRename(false);
-                                handleRenameList(e.target.value, token);
-                            }}
-                            onKeyDown={(e) => {
-                                e.stopPropagation();
-                                if (e.key === "Enter") {
+                <div className="flex flex-col gap-1">
+                    {listRename && listRename === list.id ? (
+                        <div className="relative w-full flex gap-2 items-center relative">
+                            {/* Renaming */}
+                            <input
+                                type="text"
+                                ref={listRenameRef}
+                                className="w-full dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
+                                defaultValue={list.title}
+                                onBlur={(e) => {
+                                    e.stopPropagation();
                                     setListRename(false);
                                     handleRenameList(e.target.value, token);
-                                }
-                            }}
-                            onChange={handleRenameInput}
-                        />
-                        <div>
-                            {/* quanity of words */}
-                            <span className=" text-xs font-bold">
-                                {startingValue}/32
-                            </span>
+                                }}
+                                onKeyDown={(e) => {
+                                    e.stopPropagation();
+                                    if (e.key === "Enter") {
+                                        setListRename(false);
+                                        handleRenameList(e.target.value, token);
+                                    }
+                                }}
+                                onChange={handleRenameInput}
+                            />
+                            <div>
+                                {/* quanity of words */}
+                                <span className=" text-xs font-bold">
+                                    {startingValue}/32
+                                </span>
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    // No Renaming
-                    <p
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleRenameList(list.id);
-                            setListRename(list.id);
-                            setTimeout(() => {
-                                listRenameRef.current.focus();
-                                setStartingValue(
-                                    listRenameRef.current.value.length
-                                );
-                            }, 0);
-                        }}
-                        className="font-bold text-sm md:text-lg whitespace-normal break-all"
-                    >
-                        {decodeHtmlEntities(list.title)}
-                    </p>
-                )}
+                    ) : (
+                        <>
+                            <p
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRenameList(list.id);
+                                    setListRename(list.id);
+                                    setTimeout(() => {
+                                        listRenameRef.current.focus();
+                                        setStartingValue(
+                                            listRenameRef.current.value.length
+                                        );
+                                    }, 0);
+                                }}
+                                className="font-bold text-sm md:text-lg whitespace-normal break-all"
+                            >
+                                {decodeHtmlEntities(list.title)}
+                            </p>
+                            {list?.acf?.shared_with_users?.length > 0 &&
+                                isListOwner(list, userData?.id) && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                        <BinocularIcon className="w-4 h-4" />
+                                        <span>
+                                            {list.acf.shared_with_users.length}{" "}
+                                            user
+                                            {list.acf.shared_with_users
+                                                .length !== 1 && "s"}
+                                        </span>
+                                    </div>
+                                )}
+                        </>
+                    )}
+                </div>
 
                 {listMetadata &&
                     !listMetadata.isOwner &&

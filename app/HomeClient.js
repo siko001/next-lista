@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import {DragDropContext, Droppable, Draggable} from "@hello-pangea/dnd";
 import {WP_API_BASE, isListOwner, removeListRelationship} from "./lib/helpers";
 import gsap from "gsap";
+import Pusher from "pusher-js";
 
 // Websockets
 import useUserListsRealtime from "./lib/UserListsRealTime";
@@ -232,6 +233,105 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
         showNotification
     );
     useSharedListsRealtime(userData?.id, setUserLists, showNotification);
+
+    useEffect(() => {
+        if (!userData?.id) return;
+        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
+            cluster: "eu",
+        });
+
+        const channel = pusher.subscribe("user-lists-" + userData.id);
+
+        channel.bind("share-update", (data) => {
+            if (data.action === "add") {
+                const newUser = {
+                    ID: parseInt(data.userId),
+                    nickname: data.userName,
+                };
+
+                // First update userLists
+                setUserLists((prevLists) =>
+                    prevLists.map((list) => {
+                        if (parseInt(list.id) === parseInt(data.listId)) {
+                            const updatedUsers = [
+                                ...(list.acf.shared_with_users || []),
+                                newUser,
+                            ];
+
+                            return {
+                                ...list,
+                                acf: {
+                                    ...list.acf,
+                                    shared_with_users: updatedUsers,
+                                },
+                            };
+                        }
+                        return list;
+                    })
+                );
+
+                // Then separately update sharedWithUsers if dialog is open
+                if (shareDialogOpen === parseInt(data.listId)) {
+                    const currentList = userLists.find(
+                        (list) => parseInt(list.id) === parseInt(data.listId)
+                    );
+                    if (currentList) {
+                        const updatedUsers = [
+                            ...(currentList.acf.shared_with_users || []),
+                            newUser,
+                        ];
+                        setSharedWithUsers(updatedUsers);
+                    }
+                }
+
+                // Show notification
+                showNotification(
+                    `${data.userName} was added to the list`,
+                    "success"
+                );
+            } else if (data.action === "remove") {
+                // First update userLists
+                setUserLists((prevLists) =>
+                    prevLists.map((list) => {
+                        if (parseInt(list.id) === parseInt(data.listId)) {
+                            const updatedUsers = (
+                                list.acf.shared_with_users || []
+                            ).filter(
+                                (user) => user.ID !== parseInt(data.userId)
+                            );
+
+                            return {
+                                ...list,
+                                acf: {
+                                    ...list.acf,
+                                    shared_with_users: updatedUsers,
+                                },
+                            };
+                        }
+                        return list;
+                    })
+                );
+
+                // Then separately update sharedWithUsers if dialog is open
+                if (shareDialogOpen === parseInt(data.listId)) {
+                    const currentList = userLists.find(
+                        (list) => parseInt(list.id) === parseInt(data.listId)
+                    );
+                    if (currentList) {
+                        const updatedUsers = (
+                            currentList.acf.shared_with_users || []
+                        ).filter((user) => user.ID !== parseInt(data.userId));
+                        setSharedWithUsers(updatedUsers);
+                    }
+                }
+            }
+        });
+
+        return () => {
+            channel.unbind_all();
+            pusher.unsubscribe("user-lists-" + userData.id);
+        };
+    }, [userData?.id, shareDialogOpen, userLists]);
 
     if (error) return <div>Error: {error}</div>;
     return (
