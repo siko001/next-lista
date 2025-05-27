@@ -72,14 +72,28 @@ function copy_shopping_list(WP_REST_Request $request) {
     // Explicitly set shared_with_users to empty
     update_field('shared_with_users', [], $new_list_id);
     
-    $product_count = is_array($linked_products) ? count($linked_products) : null;
+    // Get the complete new list data
+    $new_list = get_post($new_list_id);
+    $new_list_acf = get_fields($new_list_id);
+    $product_count = is_array($linked_products) ? count($linked_products) : 0;
+    
+    // Format the complete list data
+    $complete_list = array(
+        'id' => $new_list_id,
+        'title' => $new_list->post_title,
+        'content' => $new_list->post_content,
+        'menu_order' => $new_list->menu_order,
+        'acf' => array_merge($new_list_acf ?: [], [
+            'owner_id' => $current_user->ID,
+            'owner_name' => $current_user->display_name,
+            'shared_with_users' => [],
+            'product_count' => $product_count,
+            'bagged_product_count' => 0
+        ])
+    );
     
     return new WP_REST_Response([
         'success' => true,
-        'new_list_id' => $new_list_id,
-        'new_list_title' => $new_list_data['post_title'],
-        'product_count' => $product_count,
-        'owner_id' => $current_user->ID,
-        'owner_name' => $current_user->display_name
+        'list' => $complete_list
     ], 200);
 }

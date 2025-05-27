@@ -1,14 +1,20 @@
-'use client';
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { useNotificationContext } from './NotificationContext';
-import { decryptToken, WP_API_BASE } from '../lib/helpers';
-import gsap from 'gsap';
+"use client";
+import {
+    createContext,
+    useContext,
+    useState,
+    useCallback,
+    useRef,
+    useEffect,
+} from "react";
+import {useNotificationContext} from "./NotificationContext";
+import {decryptToken, WP_API_BASE} from "../lib/helpers";
+import gsap from "gsap";
 const ListContext = createContext();
-import Lenis from 'lenis'
-import 'lenis/dist/lenis.css'
+import Lenis from "lenis";
+import "lenis/dist/lenis.css";
 
-
-export const ListProvider = ({ children }) => {
+export const ListProvider = ({children}) => {
     const lenis = useRef(null);
     useEffect(() => {
         lenis.current = new Lenis({
@@ -26,7 +32,7 @@ export const ListProvider = ({ children }) => {
         };
     }, []);
 
-    const { showNotification } = useNotificationContext();
+    const {showNotification} = useNotificationContext();
     const [isInInnerList, setIsInnerList] = useState(false);
     const [listRename, setListRename] = useState(false);
     const [hasDeletedLists, setHasDeletedLists] = useState(false);
@@ -63,7 +69,7 @@ export const ListProvider = ({ children }) => {
             acf: {
                 owner_id: listData.userId,
                 owner_token: listData.token,
-            }
+            },
         };
 
         const res = await sendApiRequest(url, method, listData.token, body);
@@ -79,18 +85,22 @@ export const ListProvider = ({ children }) => {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
 
             const data = await response.json();
             // Filter lists where user is either owner or shared with
             const filteredLists = Array.isArray(data)
-                ? data.filter(list => {
-                    const isOwner = list?.acf?.owner_id == userId;
-                    const isShared = list?.acf?.shared_with_users != false && list?.acf?.shared_with_users?.some(user => user.ID == userId);
-                    return isOwner || isShared;
-                })
+                ? data.filter((list) => {
+                      const isOwner = list?.acf?.owner_id == userId;
+                      const isShared =
+                          list?.acf?.shared_with_users != false &&
+                          list?.acf?.shared_with_users?.some(
+                              (user) => user.ID == userId
+                          );
+                      return isOwner || isShared;
+                  })
                 : [];
 
             // Sort by menu_order
@@ -111,9 +121,9 @@ export const ListProvider = ({ children }) => {
                 method: method,
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(body)
+                body: JSON.stringify(body),
             });
 
             const data = await response.json();
@@ -123,18 +133,18 @@ export const ListProvider = ({ children }) => {
         }
     }, []);
 
-
     const deleteList = async (listId, token, state) => {
         if (!listId || !token) return null;
         const url = `${WP_API_BASE}/wp/v2/shopping-list/${listId}`;
         const method = "DELETE";
 
-        let decryptedToken
+        let decryptedToken;
         if (state && state === "autoDelete") {
             decryptedToken = decryptToken(token);
         }
 
-        gsap.fromTo(`#list-${listId}`,
+        gsap.fromTo(
+            `#list-${listId}`,
             {
                 opacity: 1,
                 border: "1px solid #ff0000",
@@ -146,18 +156,27 @@ export const ListProvider = ({ children }) => {
                 ease: "power2.out",
                 duration: 0.8,
                 onComplete: () => {
-                    setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
+                    setUserLists((prevLists) =>
+                        prevLists.filter((list) => list.id !== listId)
+                    );
                     showNotification("List deleted successfully", "success");
-                }
-            });
+                },
+            }
+        );
 
         try {
             const response = await fetch(url, {
                 method: method,
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${decryptedToken && (decryptedToken !== null || decryptedToken !== undefined) ? decryptedToken : token}`
-                }
+                    Authorization: `Bearer ${
+                        decryptedToken &&
+                        (decryptedToken !== null ||
+                            decryptedToken !== undefined)
+                            ? decryptedToken
+                            : token
+                    }`,
+                },
             });
             if (!response.ok) {
                 throw new Error("Failed to delete list");
@@ -168,67 +187,95 @@ export const ListProvider = ({ children }) => {
         } catch (error) {
             console.error("Delete List Failed:", error);
             showNotification("Failed to delete list", "error");
-            setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
+            setUserLists((prevLists) =>
+                prevLists.filter((list) => list.id !== listId)
+            );
             gsap.to(`#list-${listId}`, {
                 opacity: 1,
                 border: "1px solid #000",
                 duration: 0.5,
                 onComplete: () => {
-                    setUserLists(prevLists => prevLists.filter(list => list.id !== listId));
+                    setUserLists((prevLists) =>
+                        prevLists.filter((list) => list.id !== listId)
+                    );
                     showNotification("List deleted successfully", "success");
-                }
+                },
             });
             return null;
         }
     };
 
-
     const copyShoppingList = async (listId, token) => {
         if (!listId || !token) return null;
 
         try {
-            // Get current minimum menu_order from existing lists
-            const minMenuOrder = userLists.reduce((min, list) => {
-                return Math.min(min, list.menu_order || 0);
-            }, 0);
+            // Use the exact same menu order as the original list
+            const originalList = userLists.find((list) => list.id === listId);
+            if (!originalList) return null;
 
-            const newMenuOrder = minMenuOrder - 1;
-
-            const response = await fetch(`${WP_API_BASE}/custom/v1/copy-shopping-list`, {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    source_list_id: listId,
-                    new_menu_order: newMenuOrder  // Pass the calculated order to backend
-                }),
-            });
+            const response = await fetch(
+                `${WP_API_BASE}/custom/v1/copy-shopping-list`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        source_list_id: listId,
+                        new_menu_order: originalList.menu_order,
+                    }),
+                }
+            );
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
+            if (!data.success) {
+                throw new Error("Failed to copy list");
+            }
 
-            // Ensure the response includes our new menu_order
+            // Fetch the fresh list data
+            const freshListResponse = await fetch(
+                `${WP_API_BASE}/wp/v2/shopping-list/${data.list.id}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!freshListResponse.ok) {
+                throw new Error("Failed to fetch fresh list data");
+            }
+
+            const freshList = await freshListResponse.json();
+
+            // Return the fresh list data with properly formatted title and same menu order
             return {
-                ...data,
-                menu_order: newMenuOrder
+                success: true,
+                list: {
+                    ...freshList,
+                    title: freshList.title.rendered || data.list.title,
+                    menu_order: originalList.menu_order,
+                    acf: {
+                        ...freshList.acf,
+                        product_count: data.list.acf.product_count || 0,
+                        bagged_product_count: 0,
+                    },
+                },
             };
-
         } catch (error) {
-            console.error('Error copying shopping list:', error);
+            console.error("Error copying shopping list:", error);
             return null;
         }
     };
 
-
-
     // REMANE LIST STUFF
     const handleRenameInput = (e) => {
-        let input = e.target.value
+        let input = e.target.value;
         if (input.length > 32) {
             input = input.slice(0, 32);
         }
@@ -249,9 +296,7 @@ export const ListProvider = ({ children }) => {
             }, 0);
         }
         setListSettings(false);
-    }
-
-
+    };
 
     const handleRenameList = async (value, token, view) => {
         if (!value) return;
@@ -275,14 +320,12 @@ export const ListProvider = ({ children }) => {
             return;
         }
 
-
         if (view === "in-list") {
             // Optimistic UI update
             setListName(value);
         }
 
         if (view === "in-list" && value) {
-
         }
 
         // Optimistic UI update
@@ -290,9 +333,9 @@ export const ListProvider = ({ children }) => {
             const updatedLists = userLists.map((list) =>
                 list.id === listId
                     ? {
-                        ...list,
-                        title: value,
-                    }
+                          ...list,
+                          title: value,
+                      }
                     : list
             );
             setUserLists(updatedLists);
@@ -302,22 +345,23 @@ export const ListProvider = ({ children }) => {
             setStartingValue(null);
         }
 
-
         // decrypt the token
         const decryptedToken = decryptToken(token);
 
-
         try {
-            const response = await fetch(`${WP_API_BASE}/wp/v2/shopping-list/${listId}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${decryptedToken}`
-                },
-                body: JSON.stringify(updateData)
-            });
+            const response = await fetch(
+                `${WP_API_BASE}/wp/v2/shopping-list/${listId}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${decryptedToken}`,
+                    },
+                    body: JSON.stringify(updateData),
+                }
+            );
 
-            if (!response.ok) throw new Error('Failed to update');
+            if (!response.ok) throw new Error("Failed to update");
 
             const data = await response.json();
             if (!data) {
@@ -327,50 +371,48 @@ export const ListProvider = ({ children }) => {
             }
 
             showNotification("List Renamed", "success", 1000);
-            return
+            return;
         } catch (error) {
             console.error("Error updating list:", error);
             showNotification("Failed to update list", "error");
             setUserLists(userLists);
         }
-    }
-
-
+    };
 
     return (
-        <ListContext.Provider value={{
-            startingValue,
-            setStartingValue,
-            listRename,
-            setListRename,
-            shoppingList,
-            setShoppingList,
-            sendApiRequest,
-            hasDeletedLists,
-            createShoppingList,
-            userLists,
-            getShoppingList,
-            setUserLists,
-            deleteList,
-            copyShoppingList,
-            listSettings,
-            setListSettings,
-            listRenameRef,
-            innerListRef,
-            handleRenameInput,
-            handleRenameClick,
-            handleRenameList,
-            listName,
-            setListName,
-            lenis,
-            isInInnerList,
-            setIsInnerList
-        }}>
+        <ListContext.Provider
+            value={{
+                startingValue,
+                setStartingValue,
+                listRename,
+                setListRename,
+                shoppingList,
+                setShoppingList,
+                sendApiRequest,
+                hasDeletedLists,
+                createShoppingList,
+                userLists,
+                getShoppingList,
+                setUserLists,
+                deleteList,
+                copyShoppingList,
+                listSettings,
+                setListSettings,
+                listRenameRef,
+                innerListRef,
+                handleRenameInput,
+                handleRenameClick,
+                handleRenameList,
+                listName,
+                setListName,
+                lenis,
+                isInInnerList,
+                setIsInnerList,
+            }}
+        >
             {children}
         </ListContext.Provider>
     );
 };
-
-
 
 export const useListContext = () => useContext(ListContext);

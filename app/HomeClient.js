@@ -174,28 +174,31 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
 
     const handleCopyList = async (id) => {
         const copiedList = await copyShoppingList(id, token);
-        if (!copiedList) {
+        if (!copiedList || !copiedList.success) {
             showNotification("Failed to copy list", "error");
             return;
         }
-        showNotification("List Copied", "success", 1000);
-        setUserLists((prev) => [
-            {
-                ...copiedList,
-                id: copiedList.new_list_id,
-                key: `list-${copiedList.new_list_id}`,
-                title: copiedList.new_list_title,
-                acf: {
-                    product_count: copiedList.product_count,
-                    owner_id: userData?.id,
-                    products: [],
-                },
-                isNew: true,
-            },
-            ...prev,
-        ]);
-        // set
 
+        // Get the fresh list data
+        const newList = {
+            ...copiedList.list,
+            isNew: true,
+        };
+
+        // Find the index of the original list
+        const originalIndex = userLists.findIndex((list) => list.id === id);
+
+        // Force a refresh of the lists
+        setUserLists((prev) => {
+            const updatedLists = [...prev]; // Create new array
+            // Insert the new list at the same position as the original
+            updatedLists.splice(originalIndex + 1, 0, newList);
+            return updatedLists;
+        });
+
+        showNotification("List Copied", "success", 1000);
+
+        // Remove the "new" status after animation
         setTimeout(() => {
             setUserLists((prev) =>
                 prev.map((list) => ({
@@ -206,6 +209,13 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
         }, 3000);
 
         setListSettings(false);
+
+        // Fetch all lists again to ensure everything is in sync
+        if (userData?.id) {
+            setTimeout(() => {
+                getShoppingList(userData.id, token);
+            }, 500);
+        }
     };
 
     const showDeletionConfirmation = (listId, token) => {
