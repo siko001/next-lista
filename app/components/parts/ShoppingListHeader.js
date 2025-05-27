@@ -233,7 +233,11 @@ export default function ShoppingListHeader({
 
     return (
         <>
-            <div className="w-full  flex flex-col gap-6  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px] border dark:border-transparent bg-gray-200 dark:bg-gray-900 min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40">
+            <div
+                className={`w-full  flex flex-col ${
+                    isListOwner(list, userId) ? "gap-6" : "gap-2"
+                }  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px] border dark:border-transparent bg-gray-200 dark:bg-gray-900 min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40`}
+            >
                 {/* list name */}
                 <div className="flex items-center justify-between  px-2">
                     {listRename ? (
@@ -274,23 +278,21 @@ export default function ShoppingListHeader({
                             </div>
                         </div>
                     ) : (
-                        <>
+                        <div className="flex flex-col top-2 -left-2 relative">
                             <h2
                                 ref={innerListRef}
                                 onClick={() => handleRenameClick(list.id)}
-                                className="text-xl -left-2  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold relative"
+                                className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold "
                             >
                                 {listName || title || list?.title}
                             </h2>
 
                             {!isListOwner(list, userId) && (
-                                <div>
-                                    <div className="absolute top-12 sm:top-13 left-6 w-full h-full text-[10px] whitespace-nowrap">
-                                        Owned by: {ownerName}
-                                    </div>
+                                <div className="relative -top-1 w-full h-full h-0 text-[10px] whitespace-nowrap">
+                                    Owned by: {ownerName}
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
 
                     <div className="flex gap-6 items-center">

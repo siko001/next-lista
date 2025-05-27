@@ -32,7 +32,14 @@ import RenameIcon from "./components/svgs/RenameIcon";
 import ListLoader from "./components/loaders/ListLoader";
 import List from "./components/parts/List";
 
-const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
+const HomeClient = ({
+    isRegistered,
+    userName,
+    lists,
+    serverToken,
+    userId,
+    metadata,
+}) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
     const [sharedWithUsers, setSharedWithUsers] = useState(null);
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
@@ -53,8 +60,10 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
     } = useListContext();
     const {overlay, showVerbConfirmation} = useOverlayContext();
     const {showNotification} = useNotificationContext();
+    const [listsMetadata, setListsMetadata] = useState({});
 
     useEffect(() => {
+        setListsMetadata(metadata);
         setIsInnerList(false);
         if (userData && userData.id && token) {
             getShoppingList(userData.id, token).then(() => {
@@ -410,6 +419,15 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
                                                             handleRenameList={
                                                                 handleRenameList
                                                             }
+                                                            listsMetadata={
+                                                                listsMetadata
+                                                            }
+                                                            userId={userId}
+                                                            ownerMetadata={
+                                                                listsMetadata[
+                                                                    list.id
+                                                                ]
+                                                            }
                                                         />
                                                     )}
                                                 </Draggable>
@@ -518,6 +536,8 @@ const HomeClient = ({isRegistered, userName, lists, serverToken}) => {
                                     list={list}
                                     handleListSettings={handleListSettings}
                                     handleRenameList={handleRenameList}
+                                    userId={userId}
+                                    listsMetadata={listsMetadata}
                                 />
                             ))}
                         </div>

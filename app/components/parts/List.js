@@ -25,6 +25,8 @@ export default function List({
     handleRenameList,
     token,
     decoy,
+    userId,
+    listsMetadata,
 }) {
     const {
         listRenameRef,
@@ -35,15 +37,22 @@ export default function List({
         startingValue,
     } = useListContext();
     const {userData} = useUserContext();
-    const [listMetadata, setListMetadata] = useState(null);
 
-    useEffect(() => {
-        if (list && userData?.id) {
-            getListMetadata(list, userData.id).then((metadata) => {
-                setListMetadata(metadata);
-            });
-        }
-    }, [list?.id, list?.acf?.owner_id, list?.acf?.owner_name, userData?.id]);
+    // First check if we're the owner based on the userId prop
+    const isOwnerBasedOnId = list?.acf?.owner_id === userId?.toString();
+
+    // Only use metadata for non-owners
+    const metadata = !isOwnerBasedOnId
+        ? listsMetadata[list.id] || {
+              isOwner: false,
+              ownerName: list?.acf?.owner_name || "",
+              listId: list.id,
+          }
+        : {
+              isOwner: true,
+              ownerName: "",
+              listId: list.id,
+          };
 
     const handleGoToList = (e) => {
         e.stopPropagation();
@@ -114,7 +123,7 @@ export default function List({
                             </div>
                         </div>
                     ) : (
-                        <>
+                        <div className="flex flex-col">
                             <p
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -131,21 +140,20 @@ export default function List({
                             >
                                 {decodeHtmlEntities(list.title)}
                             </p>
-                        </>
-                    )}
-                </div>
 
-                {listMetadata &&
-                    !listMetadata.isOwner &&
-                    listMetadata.ownerName && (
-                        <div
-                            className={`absolute z-0 left-6 top-8 sm:top-9 w-full h-full text-[8px] whitespace-nowrap ${
-                                listRename === list.id ? "hidden" : ""
-                            }`}
-                        >
-                            Owned by: {listMetadata.ownerName}
+                            {/* Only show owner name if we're definitely not the owner */}
+                            {!isOwnerBasedOnId && metadata.ownerName && (
+                                <div
+                                    className={`w-full h-full text-[8px] whitespace-nowrap ${
+                                        listRename === list.id ? "hidden" : ""
+                                    }`}
+                                >
+                                    Owned by: {metadata.ownerName}
+                                </div>
+                            )}
                         </div>
                     )}
+                </div>
 
                 <div className="flex items-center gap-2 justify-between ">
                     <div className="text-xs md:text-base 2xl:text-lg font-bold whitespace-pre text-gray-600 dark:text-gray-400 relative top-[1px]">

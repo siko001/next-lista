@@ -732,7 +732,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() =>
                                                             handleBagAllItems(
-                                                                list.id
+                                                                listId
                                                             )
                                                         }
                                                         className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
@@ -743,7 +743,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() => {
                                                             handleRemoveCheckedItems(
-                                                                list.id
+                                                                listId
                                                             );
                                                         }}
                                                         className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm"
@@ -857,7 +857,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() => {
                                                             handleUnbagAllProducts(
-                                                                list.id
+                                                                listId
                                                             );
                                                         }}
                                                         className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
@@ -868,7 +868,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() => {
                                                             handleRemoveBaggedItems(
-                                                                list.id
+                                                                listId
                                                             );
                                                         }}
                                                         className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm"
