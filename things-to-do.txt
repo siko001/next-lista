@@ -1,22 +1,20 @@
-##shared list --- Main Focus ***
--Inform user if list has been delete and he wasn't active or when share is revowked by owner.
--notification fix
--fix copy of list to show progress bar and quanityt straight away
 
-
-
--Add Categories ---Second Main Focus  ***
+-Add Categories --- Main Focus  ***
 -Categories products 
 -Categories Tab
+-fix list owner overflow
+
 
 #login ---Last**
 -Wordpress wrong password warning
 -forgot Password stuff
 
 #Emails ---Last**
--Fix Registering Emails
--Forgot password Emails
-Verify Emails
+-Fix Registering Emails -sent to user
+-Forgot password Emails -sent to user
+
+email confimartions
+Verify Emails -sent to user to verify his email
 
 
 
@@ -25,10 +23,14 @@ Verify Emails
 ### After Project ready ###
 After Launch Phase 1
 -User settings -basic, change name, change password, 
-email confimartions
 Navigation bar
 User Themes
-Languages
+--prdefinded theme colors
+--user generated theme colors via color picker
+
+Translations
+
+
 
 After Launch Phase 2
 Quanitity + Pricing.
@@ -38,3 +40,4 @@ user specific ordering for products
 -cam edit custom prouct name
 -Products Show up According to users Choice + most clicked.
 -Shared list link must include a token while sharing to aviod any other users randomly popping up in lists
+-Inform user if list has been delete and he wasn't active or when share is revowked by owner.
