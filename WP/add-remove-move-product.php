@@ -97,18 +97,19 @@ $linked_products = array_unique(array_merge($checked_products, $bagged_products)
     ];
 
     $current_user_id = get_current_user_id();
+    $product_name = get_the_title($product_id);
     switch($action){
         case "add":
-            $message = 'Other user added a product';
+            $message = 'Other user added ' . $product_name;
             break;
         case "remove":
-            $message = 'Other user removed a product';
+            $message = 'Other user removed ' . $product_name;
             break;
         case "bag":
-            $message = 'Other user bagged a product';
+            $message = 'Other user bagged ' . $product_name;
             break;
         case "unbag":
-            $message = 'Other user unbagged a product';
+            $message = 'Other user unbagged ' . $product_name;
             break;
         default:
             $message = 'Other user updated the list';

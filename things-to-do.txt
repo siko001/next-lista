@@ -2,8 +2,6 @@
 -Add Categories --- Main Focus  ***
 -Categories products 
 -Categories Tab
-Intead of bagged a product and so on, do the product name to the other user for clarity
-
 
 
 #login ---Last**

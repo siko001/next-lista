@@ -533,12 +533,53 @@ export default function ShoppingList({
     // Real time updating
     useListaRealtimeUpdates(listId, (data) => {
         if (!data || !data.fields || userId == data.sender_id) return;
-        setAllLinkedProducts(data.fields.linked_products || []);
-        setCheckedProducts(data.fields.checked_products || []);
-        setBaggedProducts(data.fields.bagged_linked_products || []);
-        setTotalProductCount(Number(data.fields.product_count) || 0);
-        setBaggedProductCount(Number(data.fields.bagged_product_count) || 0);
-        showNotification(data.message ? data.message : "List Updated");
+
+        // Normalize the linked products to ensure consistent ID field
+        if (Array.isArray(data.fields.linked_products)) {
+            const normalizedLinkedProducts = data.fields.linked_products.map(
+                (product) => ({
+                    ...product,
+                    id: product.ID || product.id, // Ensure both ID and id exist
+                    ID: product.ID || product.id,
+                })
+            );
+            setAllLinkedProducts(normalizedLinkedProducts);
+        }
+
+        // Update other products
+        if (Array.isArray(data.fields.checked_products)) {
+            const normalizedCheckedProducts = data.fields.checked_products.map(
+                (product) => ({
+                    ...product,
+                    id: product.ID || product.id,
+                    ID: product.ID || product.id,
+                })
+            );
+            setCheckedProducts(normalizedCheckedProducts);
+        }
+
+        if (Array.isArray(data.fields.bagged_linked_products)) {
+            const normalizedBaggedProducts =
+                data.fields.bagged_linked_products.map((product) => ({
+                    ...product,
+                    id: product.ID || product.id,
+                    ID: product.ID || product.id,
+                }));
+            setBaggedProducts(normalizedBaggedProducts);
+        }
+
+        // Update counts
+        if (data.fields.product_count !== undefined) {
+            setTotalProductCount(Number(data.fields.product_count));
+        }
+        if (data.fields.bagged_product_count !== undefined) {
+            setBaggedProductCount(Number(data.fields.bagged_product_count));
+        }
+
+        // Show notification
+        if (data.message) {
+            showNotification(data.message);
+        }
     });
 
     // Handle being removed from shared list and other share updates
