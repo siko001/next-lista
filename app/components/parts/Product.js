@@ -1,6 +1,6 @@
 'use client'
 import { useParams } from 'next/navigation'
-import { decryptToken, WP_API_BASE } from "../../lib/helpers";
+import { decryptToken, WP_API_BASE, decodeHtmlEntities } from "../../lib/helpers";
 import { useRef, useEffect } from 'react';
 import gsap from 'gsap';
 import { set } from 'react-hook-form';
@@ -330,7 +330,7 @@ export default function Product({
                             </symbol>
                         </svg>
                     </div>
-                    {product.title}
+                    {decodeHtmlEntities(product.title)}
                 </h3>
             </div>
             {

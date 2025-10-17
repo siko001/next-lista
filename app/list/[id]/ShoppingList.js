@@ -3,6 +3,10 @@ import gsap from "gsap";
 import {useEffect, useState, useMemo, useRef} from "react";
 import Fuse from "fuse.js";
 import {calculateProgress, WP_API_BASE, decryptToken} from "../../lib/helpers";
+import {
+    getUniqueCategories,
+    groupProductsByCategory,
+} from "../../lib/categoryHelpers";
 
 // Contexts
 import {useNotificationContext} from "../../contexts/NotificationContext";
@@ -82,6 +86,14 @@ export default function ShoppingList({
         calculateProgress(totalProductCount, baggedProductCount) || 0
     );
     const {setIsInnerList, isInInnerList, setUserLists} = useListContext();
+
+    // Get Categories
+    const [categories, setCategories] = useState([]);
+
+    useEffect(() => {
+        const uniqueCategories = getUniqueCategories(allProducts);
+        setCategories(uniqueCategories);
+    }, [allProducts]);
 
     // Close the corresposing settings if scrolling and open
     const checkedListSettings = useRef();
@@ -970,6 +982,7 @@ export default function ShoppingList({
                     setCheckedProducts={setCheckedProducts}
                     token={token}
                     setProductOverlay={setProductOverlay}
+                    categories={categories}
                 />
             )}
 

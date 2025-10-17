@@ -8,6 +8,7 @@ import {
     decryptToken,
     WP_API_BASE,
     getAllCustomProducts,
+    decodeHtmlEntities,
 } from "../../lib/helpers";
 import "../../css/checkbox.css";
 import CloseIcon from "../svgs/CloseIcon";
@@ -17,6 +18,7 @@ import {useListContext} from "../../contexts/ListContext";
 import ErrorIcon from "../svgs/ErrorIcon";
 import TrashIcon from "../svgs/TranshIcon";
 import StarIcon from "../svgs/StarIcon";
+import CategoryFilter from "../CategoryFilter";
 
 // Contexts
 import {useNotificationContext} from "../../contexts/NotificationContext";
@@ -39,8 +41,11 @@ export default function AddProduct({
     setBaggedProducts,
     customProducts,
     setCustomProducts,
+    categories,
 }) {
     const [products, setProducts] = useState(allProducts);
+    const [selectedCategories, setSelectedCategories] = useState([]);
+    const [filteredProducts, setFilteredProducts] = useState(allProducts);
     const [favouriteProducts, setFavouriteProducts] = useState(favourites);
     const [initialCustomProducts, setInitialCustomProducts] =
         useState(customProducts);
@@ -230,23 +235,24 @@ export default function AddProduct({
         favouriteProducts,
     ]);
 
-    // Animate search results with simple fade-in
+    // Animate search results with simple fade-in (immediate, only on search input changes)
     useEffect(() => {
-        if (productListRef.current) {
-            const productItems = productListRef.current.querySelectorAll(
-                ".product-list-content > div:not(.bg-gray-800):not(:first-child):not(.mb-4)"
-            );
-            gsap.fromTo(
-                productItems,
-                {opacity: 0},
-                {
-                    opacity: 1,
-                    duration: 0.3,
-                    ease: "power2.out",
-                }
-            );
-        }
-    }, [displayedProducts]);
+        if (!searchValue?.trim()) return; // only when searching
+        if (!productListRef.current) return;
+
+        const productItems = productListRef.current.querySelectorAll(
+            ".product-list-content .product-card"
+        );
+        gsap.fromTo(
+            productItems,
+            {opacity: 0},
+            {
+                opacity: 1,
+                duration: 0.3,
+                ease: "power2.out",
+            }
+        );
+    }, [searchValue]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -339,29 +345,39 @@ export default function AddProduct({
 
             const animatedProduct = {...newCustomProduct, id: Date.now()};
 
-            setTimeout(() => {
+            // Animate only the newly added item once it is rendered
+            requestAnimationFrame(() => {
                 if (productListRef.current) {
-                    const firstProduct = productListRef.current.querySelector(
-                        ".product-list-content > div:nth-child(3)"
+                    const el = productListRef.current.querySelector(
+                        `.product-list-content [data-product-id='${animatedProduct.id}']`
                     );
-                    if (firstProduct) {
+                    if (el) {
                         gsap.fromTo(
-                            firstProduct,
-                            {opacity: 0.4, y: -100},
+                            el,
+                            {opacity: 0, y: -20},
                             {
                                 opacity: 1,
                                 y: 0,
-                                duration: 1.2,
+                                duration: 0.4,
                                 ease: "power2.out",
                             }
                         );
                     }
                 }
-            }, 1);
+            });
 
             customProductInputRef.current.value = "";
             setCustomProductLength(0);
+            // Optimistically update UI lists
             setCustomProducts((prev) => [animatedProduct, ...prev]);
+            const nextCustom = [animatedProduct, ...customProducts];
+
+            // If searching, update the custom search results immediately
+            if (searchValue) {
+                const customFuse = new Fuse(nextCustom, fuseOptions);
+                const customResults = customFuse.search(searchValue);
+                setSearchResults(customResults.map((r) => r.item));
+            }
         }
 
         const decryptedToken = decryptToken(token);
@@ -379,8 +395,8 @@ export default function AddProduct({
             }
         );
         const data = await res.json();
-        const customProducts = await getAllCustomProducts(token);
-        setCustomProducts(customProducts);
+        const fetchedCustomProducts = await getAllCustomProducts(token);
+        setCustomProducts(fetchedCustomProducts);
     };
 
     // Delete custom product
@@ -393,9 +409,7 @@ export default function AddProduct({
         // Animate the products getting deleted
         if (productListRef.current) {
             const productDiv = productListRef.current.querySelector(
-                `.product-list-content > div:nth-child(${
-                    customProductss.findIndex((p) => p.id === productId) + 3
-                })`
+                `.product-list-content [data-product-id='${productId}']`
             );
             if (productDiv) {
                 await new Promise((resolve) => {
@@ -412,6 +426,18 @@ export default function AddProduct({
         }
         // Update the list locally
         setCustomProducts((prev) => prev.filter((p) => p.id !== productId));
+
+        // Also remove from favourites immediately if present
+        setFavouriteProducts((prev) => {
+            const nextFavs = prev?.filter((p) => p.id !== productId) || [];
+            // If searching, update favourite search results immediately
+            if (searchValue) {
+                const favFuse = new Fuse(nextFavs, fuseOptions);
+                const favResults = favFuse.search(searchValue);
+                setFavouriteSearchResults(favResults.map((r) => r.item));
+            }
+            return nextFavs;
+        });
 
         // Delete the actual product in the server
         const decryptedToken = decryptToken(token);
@@ -539,11 +565,138 @@ export default function AddProduct({
         );
     }
 
+    // Handle category toggle
+    const handleCategoryToggle = (category) => {
+        if (category === "all") {
+            setSelectedCategories([]);
+            return;
+        }
+
+        setSelectedCategories((prev) => {
+            if (prev.includes(category)) {
+                return prev.filter((c) => c !== category);
+            } else {
+                return [...prev, category];
+            }
+        });
+    };
+
+    // Filter products based on selected categories and search term
+    useEffect(() => {
+        let filtered = allProducts;
+
+        // Apply category filter
+        if (selectedCategories.length > 0) {
+            filtered = allProducts.filter((product) =>
+                product.categories?.some((category) =>
+                    selectedCategories.includes(category)
+                )
+            );
+        }
+
+        // Apply search filter if there's a search term
+        if (searchValue) {
+            const fuse = new Fuse(filtered, fuseOptions);
+            const results = fuse.search(searchValue);
+            filtered = results.map((result) => result.item);
+        }
+
+        setFilteredProducts(filtered);
+        setProducts(filtered);
+    }, [selectedCategories, allProducts, searchValue]);
+
+    const renderProductItem = (product, index) => (
+        <div
+            onClick={(e) => {
+                e.stopPropagation();
+                handleCheckboxChange(product.id, token);
+            }}
+            key={product.id || index}
+            data-product-id={product.id}
+            className={`product-card border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
+                allLinkedProducts?.some((p) => p.ID === product.id)
+                    ? "border-primary"
+                    : ""
+            }`}
+        >
+            <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
+                <div className="checkbox-wrapper-28">
+                    <input
+                        id={`checkbox-${product.id}`}
+                        type="checkbox"
+                        className="promoted-input-checkbox peer"
+                        checked={
+                            !!allLinkedProducts?.some(
+                                (p) => p.ID === product.id
+                            )
+                        }
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            handleCheckboxChange(product.id, token);
+                        }}
+                    />
+                    <label
+                        htmlFor={`checkbox-${product.id}`}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleCheckboxChange(product.id, token);
+                        }}
+                    ></label>
+                    <svg viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12" fill="none" />
+                    </svg>
+                </div>
+                {decodeHtmlEntities(product.title)}
+            </div>
+            <div className="flex items-center gap-2 md:gap-6">
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddToFavourites(product.id, token);
+                    }}
+                    className={`text-sm font-bold text-gray-400 block ${
+                        favouriteProducts?.some((p) => p.id === product.id)
+                            ? "opacity-100"
+                            : "sm:opacity-0 group-hover:opacity-100"
+                    } transition-opacity duration-200`}
+                >
+                    <StarIcon
+                        className={`w-6 h-6 hover:text-white transition-colors duration-200 cursor-pointer ${
+                            favouriteProducts?.some((p) => p.id === product.id)
+                                ? "fill-yellow-500 text-yellow-500"
+                                : ""
+                        }`}
+                    />
+                </div>
+
+                {selectedProductsSection === "custom" && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCustomProduct(
+                                product.id,
+                                token,
+                                shoppingListId,
+                                customProducts
+                            );
+                        }}
+                        className="text-red-500 hover:text-red-400 transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
+                        style={{WebkitTapHighlightColor: "transparent"}}
+                        aria-label="Delete custom product"
+                        title="Delete custom product"
+                    >
+                        <TrashIcon className="w-6 h-6" />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className="w-full absolute top-0">
             <div className="fixed top-4 right-6 w-10 h-10 z-[100]">
                 <CloseIcon
-                    className="absolute top-4 right-4 w-8 h-8 text-white cursor-pointer"
+                    className="sticky top-4 right-4 w-8 h-8 text-white cursor-pointer"
                     onClick={() => {
                         setProductOverlay(false);
                     }}
@@ -575,44 +728,76 @@ export default function AddProduct({
                             overscrollBehavior: "contain",
                         }}
                     >
-                        <div className="product-list-content flex flex-col gap-3 px-4 pb-4">
-                            {/* Navigation buttons */}
-                            <div className="flex w-min whitespace-pre relative font-bold  overflow-hidden rounded-br-xl -left-4 mb-4">
-                                <div
-                                    onClick={() =>
-                                        setSelectedProductsSection("popular")
-                                    }
-                                    className={`py-2 pl-5 pr-4 ${
-                                        selectedProductsSection === "popular"
-                                            ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                            : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"
-                                    }`}
-                                >
-                                    Popular
-                                </div>
-                                <div
-                                    onClick={() =>
-                                        setSelectedProductsSection("custom")
-                                    }
-                                    className={`py-2 px-4  ${
-                                        selectedProductsSection === "custom"
-                                            ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                            : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"
-                                    }`}
-                                >
-                                    Custom
-                                </div>
-                                <div
-                                    onClick={() =>
-                                        setSelectedProductsSection("favourite")
-                                    }
-                                    className={`py-2 px-4  ${
-                                        selectedProductsSection === "favourite"
-                                            ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                            : "hover:opacity-70 bg-gray-400 dark:bg-gray-800 cursor-pointer"
-                                    }`}
-                                >
-                                    Favourites
+                        <div className="product-list-content flex flex-col gap-3 px-4 pb-4 relative">
+                            <div
+                                className={`absolute  left-0 top-0 w-4 h-10 ${
+                                    selectedProductsSection !== "popular"
+                                        ? "dark:bg-gray-800 bg-gray-400"
+                                        : null
+                                }`}
+                            ></div>
+                            {/* Navigation tabs (scrollable only on this row) */}
+                            <div className=" w-full overflow-x-auto scrollbar-hide mb-4 sticky -left-4 top-0 z-20">
+                                <div className="inline-flex whitespace-nowrap font-bold relative -left-4  ">
+                                    <div
+                                        onClick={() =>
+                                            setSelectedProductsSection(
+                                                "popular"
+                                            )
+                                        }
+                                        className={`py-2 pl-5 pr-4 ${
+                                            selectedProductsSection ===
+                                            "popular"
+                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
+                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                        }`}
+                                    >
+                                        Popular
+                                    </div>
+
+                                    <div
+                                        onClick={() =>
+                                            setSelectedProductsSection(
+                                                "categories"
+                                            )
+                                        }
+                                        className={`py-2 pl-5 pr-4 ${
+                                            selectedProductsSection ===
+                                            "categories"
+                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
+                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                        }`}
+                                    >
+                                        Categories
+                                    </div>
+
+                                    <div
+                                        onClick={() =>
+                                            setSelectedProductsSection("custom")
+                                        }
+                                        className={`py-2 px-4  ${
+                                            selectedProductsSection === "custom"
+                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
+                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                        }`}
+                                    >
+                                        Custom
+                                    </div>
+                                    <div
+                                        onClick={() =>
+                                            setSelectedProductsSection(
+                                                "favourite"
+                                            )
+                                        }
+                                        className={`py-2 px-4  ${
+                                            selectedProductsSection ===
+                                            "favourite"
+                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700 rounded-br-xl"
+                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer rounded-br-xl"
+                                        }`}
+                                    >
+                                        Favourites
+                                    </div>
                                 </div>
                             </div>
 
@@ -662,163 +847,59 @@ export default function AddProduct({
                                 </div>
                             )}
 
-                            {displayedProducts?.length > 0 ? (
-                                displayedProducts.map((product, index) => (
-                                    <div
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleCheckboxChange(
-                                                product.id,
-                                                token
-                                            );
-                                        }}
-                                        key={product.id || index}
-                                        className={`border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
-                                            allLinkedProducts?.some(
-                                                (p) => p.ID === product.id
-                                            )
-                                                ? "border-primary"
-                                                : ""
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
-                                            <div className="checkbox-wrapper-28">
-                                                <input
-                                                    id={`checkbox-${product.id}`}
-                                                    type="checkbox"
-                                                    className="promoted-input-checkbox peer"
-                                                    checked={
-                                                        !!allLinkedProducts?.some(
-                                                            (p) =>
-                                                                p.ID ===
-                                                                product.id
-                                                        )
-                                                    }
-                                                    onChange={(e) => {
-                                                        e.stopPropagation();
-                                                        handleCheckboxChange(
-                                                            product.id,
-                                                            token
-                                                        );
-                                                    }}
-                                                />
-                                                <label
-                                                    htmlFor={`checkbox-${product.id}`}
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        handleCheckboxChange(
-                                                            product.id,
-                                                            token
-                                                        );
-                                                    }}
-                                                ></label>
-                                                <svg className="absolute -z-0">
-                                                    <use href="#checkmark-28" />
-                                                </svg>
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    style={{display: "none"}}
-                                                >
-                                                    <symbol
-                                                        id="checkmark-28"
-                                                        viewBox="0 0 24 24"
-                                                    >
-                                                        <path
-                                                            strokeLinecap="round"
-                                                            strokeMiterlimit="10"
-                                                            fill="none"
-                                                            d="M22.9 3.7l-15.2 16.6-6.6-7.1"
-                                                        />
-                                                    </symbol>
-                                                </svg>
-                                            </div>
-                                            {product.title}
+                            {selectedProductsSection === "categories" && (
+                                <>
+                                    <CategoryFilter
+                                        categories={categories}
+                                        selectedCategories={selectedCategories}
+                                        onCategoryToggle={handleCategoryToggle}
+                                    />
+                                    {filteredProducts.length === 0 ? (
+                                        <div className="w-full font-quicksand uppercase mt-6 flex items-center justify-center text-gray-400 text-2xl font-bold">
+                                            {selectedCategories.length > 0
+                                                ? "No products matched these filters"
+                                                : "No products found"}
                                         </div>
-                                        <div className="flex items-center gap-2 md:gap-6">
-                                            {selectedProductsSection !==
-                                                "custom" && (
-                                                <div
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleAddToFavourites(
-                                                            product.id,
-                                                            token
-                                                        );
-                                                    }}
-                                                    className={`text-sm font-bold text-gray-400 block ${
-                                                        favouriteProducts?.some(
-                                                            (p) =>
-                                                                p.id ===
-                                                                product.id
-                                                        )
-                                                            ? "opacity-100"
-                                                            : "sm:opacity-0 group-hover:opacity-100"
-                                                    } transition-opacity duration-200`}
-                                                >
-                                                    <StarIcon
-                                                        className={`w-6 h-6 hover:text-white transition-colors duration-200 cursor-pointer ${
-                                                            favouriteProducts?.some(
-                                                                (p) =>
-                                                                    p.id ===
-                                                                    product.id
-                                                            )
-                                                                ? "fill-yellow-500 text-yellow-500"
-                                                                : ""
-                                                        }`}
-                                                    />
-                                                </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                            {filteredProducts.map(
+                                                renderProductItem
                                             )}
-
-                                            {selectedProductsSection ===
-                                                "custom" && (
-                                                <div
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteCustomProduct(
-                                                            product.id,
-                                                            token,
-                                                            shoppingListId,
-                                                            customProducts
-                                                        );
-                                                    }}
-                                                    className="text-sm font-bold text-gray-400"
-                                                >
-                                                    <TrashIcon className="w-6 h-6 text-yellow-500 hover:text-white transition-colors duration-200 cursor-pointer" />
-                                                </div>
-                                            )}
-                                            <div
-                                                className={`flex items-center transition-opacity duration-300 gap-2 ${
-                                                    allLinkedProducts?.some(
-                                                        (p) =>
-                                                            p.ID === product.id
-                                                    )
-                                                        ? "opacity-100"
-                                                        : "opacity-0"
-                                                }`}
-                                            >
-                                                <CloseIcon className="w-6 h-6 text-red-500 hover:text-white transition-colors duration-200 cursor-pointer" />
-                                            </div>
                                         </div>
-                                    </div>
-                                ))
-                            ) : searchValue ? (
-                                <div className="w-full font-quicksand uppercase mt-28 flex items-center justify-center text-gray-400 text-2xl font-bold">
-                                    No products found
-                                </div>
-                            ) : null}
+                                    )}
+                                </>
+                            )}
 
                             {selectedProductsSection === "popular" &&
-                                products.length === 0 && <NoProductsFound />}
+                                (displayedProducts?.length > 0 ? (
+                                    displayedProducts.map((product, index) =>
+                                        renderProductItem(product, index)
+                                    )
+                                ) : (
+                                    <NoProductsFound />
+                                ))}
 
                             {selectedProductsSection === "custom" &&
-                                customProducts.length === 0 && (
-                                    <NoProductsFound mtClass="mt-14" />
-                                )}
+                                (displayedProducts?.length > 0 ? (
+                                    displayedProducts.map((product, index) =>
+                                        renderProductItem(product, index)
+                                    )
+                                ) : (
+                                    <NoProductsFound
+                                        mtClass={
+                                            searchValue ? "mt-28" : "mt-14"
+                                        }
+                                    />
+                                ))}
 
                             {selectedProductsSection === "favourite" &&
-                                favouriteProducts.length === 0 && (
+                                (displayedProducts?.length > 0 ? (
+                                    displayedProducts.map((product, index) =>
+                                        renderProductItem(product, index)
+                                    )
+                                ) : (
                                     <NoProductsFound />
-                                )}
+                                ))}
                         </div>
                     </div>
                 </div>

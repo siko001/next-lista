@@ -1,7 +1,11 @@
-
--Add Categories --- Main Focus  ***
+-Add Categories   --- Main Focus ***
 -Categories products 
 -Categories Tab
+-fix up shopping list title (when to long cauisng overflow make is scrollable with max width)
+
+
+
+
 
 
 #login ---Last**
