@@ -767,8 +767,8 @@ export default function AddProduct({
                         }}
                     >
                         <div className="product-list-content flex flex-col gap-3 pr-4 pb-4 relative">
-                            <div className=" w-full overflow-x-auto scrollbar-hide mb-4 sticky -left-4 top-0 z-20">
-                                <div className="inline-flex whitespace-nowrap font-bold relative   ">
+                            <div className=" w-full overflow-x-auto !scrollbar-hide scrollbar-w-0 scrollbar-h-0 mb-4 sticky -left-4 top-0 z-20">
+                                <div className="inline-flex whitespace-nowrap font-bold relative  font-quicksand ">
                                     <div
                                         onClick={() =>
                                             setSelectedProductsSection(
@@ -835,7 +835,7 @@ export default function AddProduct({
                             {/* Custom Products Input */}
                             {selectedProductsSection === "custom" && (
                                 <div className="mb-4 ml-4">
-                                    <div className="w-full flex items-center text-gray-400 text-lg font-bold group relative">
+                                    <div className="w-full flex items-center text-gray-400 text-lg font-bold group relative ">
                                         <div className="w-full relative">
                                             <input
                                                 ref={customProductInputRef}
@@ -886,7 +886,7 @@ export default function AddProduct({
                                         onCategoryToggle={handleCategoryToggle}
                                     />
                                     {filteredProducts.length === 0 ? (
-                                        <div className=" w-full font-quicksand uppercase mt-6 flex items-center justify-center text-gray-400 text-2xl font-bold">
+                                        <div className=" w-full font-quicksand text-center uppercase mt-6 flex items-center justify-center text-gray-400 text-2xl font-bold">
                                             {selectedCategories.length > 0
                                                 ? "No products matched these filters"
                                                 : "No products found"}

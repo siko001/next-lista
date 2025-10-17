@@ -770,7 +770,7 @@ export default function ShoppingList({
                                         <span className="text-2xl font-bold">
                                             Checklist{" "}
                                         </span>
-                                        <span className="text-sm text-gray-500 font-quicksand ml-2">
+                                        <span className="text-sm text-primary font-quicksand ml-2">
                                             {checkedProducts?.length} products
                                         </span>
                                     </div>
@@ -815,24 +815,25 @@ export default function ShoppingList({
                     <div className="checked-products-container flex flex-col gap-4">
                         {checkedProducts?.length === 0 &&
                         baggedProducts?.length === 0 ? (
-                            <p className="w-full font-quicksand mt-28 flex items-center justify-center text-gray-900/60 dark:text-gray-400/60 text-lg md:text-2xl font-normal">
+                            <div className="w-full font-quicksand mt-28 flex items-center justify-center text-gray-900/60 dark:text-gray-400/60 text-lg md:text-2xl font-normal relative z-30 pointer-events-auto">
                                 {isSearching ? (
                                     "No results found"
                                 ) : (
-                                    <>
+                                    <div className="inline text-center">
                                         Click
-                                        <span
+                                        <button
+                                            type="button"
                                             onClick={() =>
                                                 setProductOverlay(true)
                                             }
-                                            className="text-primary hover:text-primary/70 dark:text-primary/70 font-medium dark:hover:text-primary cursor-pointer duration-200 transition-colors ease"
+                                            className="text-primary hover:text-primary/70 font-bold dark:text-primary/70  dark:hover:text-primary cursor-pointer duration-200 transition-colors ease inline px-1"
                                         >
-                                            &nbsp;Add Products&nbsp;
-                                        </span>
+                                            Add Products
+                                        </button>
                                         to start building your list
-                                    </>
+                                    </div>
                                 )}
-                            </p>
+                            </div>
                         ) : (
                             checkedProducts?.map((product, index) =>
                                 product === 0 ? null : (
@@ -890,7 +891,7 @@ export default function ShoppingList({
                                         <span className="text-2xl font-bold">
                                             Bagged
                                         </span>
-                                        <span className="text-sm text-gray-500 font-quicksand ml-2">
+                                        <span className="text-sm text-primary font-quicksand ml-2">
                                             {baggedProducts?.length !== 0
                                                 ? baggedProducts?.length
                                                 : baggedItems.baggedCount !==

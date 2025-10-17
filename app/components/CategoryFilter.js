@@ -138,7 +138,7 @@ const CategoryFilter = ({
     };
 
     return (
-        <div className="relative bg-white dark:bg-gray-900 shadow-xl rounded-sm ml-4">
+        <div className="relative font-quicksand bg-white dark:bg-gray-900 shadow-xl rounded-sm ml-4">
             {/* Left scroll button */}
             <button
                 onClick={scrollLeft}
