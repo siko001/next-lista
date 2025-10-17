@@ -11,6 +11,9 @@ add_action('rest_api_init', function () {
 });
 
 function lista_send_reset_link_rest(WP_REST_Request $request) {
+	global $lista_sending_reset;
+	$lista_sending_reset = true;
+	
     $params = $request->get_json_params();
     $email  = sanitize_email($params['email'] ?? '');
 
@@ -40,7 +43,7 @@ function lista_send_reset_link_rest(WP_REST_Request $request) {
         ], 500);
     }
 
-    // Build your custom frontend reset link
+    
     $reset_link = 'https://next-lista.vercel.app/reset-password?key=' . rawurlencode($key) . '&login=' . rawurlencode($user->user_login);
 
     // Custom email subject and message
@@ -54,6 +57,9 @@ function lista_send_reset_link_rest(WP_REST_Request $request) {
 
     // Send email
     $sent = wp_mail($user->user_email, $subject, $message);
+	
+	// ✅ Unset flag after done
+    $lista_sending_reset = false;
 
     if (!$sent) {
         return new WP_REST_Response([

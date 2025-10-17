@@ -66,10 +66,17 @@ add_action('password_reset', function($user) {
  * ----------------------------------------------------------------
  */
 function handle_custom_user_update($user_id) {
+	global $lista_sending_reset;
     $user = get_userdata($user_id);
     if (!$user) {
         return;
     }
+	
+	 // 🚫 Skip welcome email if we're in a reset process
+    if (!empty($lista_sending_reset)) {
+        return;
+    }
+
 
     // 🚫 Skip email if flagged (e.g. from password reset)
     if (get_user_meta($user_id, 'skip_custom_user_update_email', true)) {
