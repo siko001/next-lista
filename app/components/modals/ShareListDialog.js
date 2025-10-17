@@ -267,7 +267,7 @@ const ShareListDialog = ({
                                 }
                                 key={index}
                             >
-                                <h4 className="text-lg">{user.nickname}</h4>
+                                <h4 className="text-lg">{user.display_name}</h4>
                                 <button
                                     onClick={() =>
                                         handleRevokeShare(
