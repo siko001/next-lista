@@ -14,21 +14,30 @@ function Toast({toast, onDone, index}) {
             animRef.current.kill();
             animRef.current = null;
         }
-        animRef.current = gsap.fromTo(
-            ref.current,
-            {y: 20, opacity: 0, scale: 0.98},
-            {y: 0, opacity: 1, scale: 1, duration: 0.25, ease: "power2.out"}
-        );
+        if (ref.current) {
+            gsap.set(ref.current, {y: 8, opacity: 0, scale: 0.985});
+            animRef.current = gsap.to(ref.current, {
+                y: 0,
+                opacity: 1,
+                scale: 1,
+                duration: 0.18,
+                ease: "power2.out",
+            });
+        }
 
         timeoutRef.current = setTimeout(() => {
-            animRef.current = gsap.to(ref.current, {
-                y: 20,
-                opacity: 0,
-                scale: 0.98,
-                duration: 0.2,
-                ease: "power2.in",
-                onComplete: () => onDone(toast.id),
-            });
+            if (ref.current) {
+                animRef.current = gsap.to(ref.current, {
+                    y: 12,
+                    opacity: 0,
+                    scale: 0.985,
+                    duration: 0.18,
+                    ease: "power2.in",
+                    onComplete: () => onDone(toast.id),
+                });
+            } else {
+                onDone(toast.id);
+            }
         }, toast.timeout);
 
         return () => {

@@ -120,23 +120,18 @@ export default function Product({
         return new Promise((resolve) => {
             killAnimation();
             animationRef.current = gsap.to(itemRef.current, {
-                scale: 1.1,
-                duration: 0.2,
+                scale: 1.06,
+                duration: 0.15,
                 onComplete: () => {
                     animationRef.current = gsap.to(itemRef.current, {
-                        backgroundColor: '#14532d', // Green background
-                        duration: 0.2,
+                        y: 20,
+                        opacity: 0,
+                        zIndex: 1,
+                        duration: 0.22,
                         onComplete: () => {
-                            animationRef.current = gsap.to(itemRef.current, {
-                                y: 20,
-                                opacity: 0,
-                                duration: 0.3,
-                                onComplete: () => {
-                                    animationRef.current = null;
-                                    gsap.set(itemRef.current, { clearProps: 'all' });
-                                    resolve();
-                                },
-                            });
+                            animationRef.current = null;
+                            gsap.set(itemRef.current, { clearProps: 'all' });
+                            resolve();
                         },
                     });
                 },
@@ -148,23 +143,18 @@ export default function Product({
         return new Promise((resolve) => {
             killAnimation();
             animationRef.current = gsap.to(itemRef.current, {
-                scale: 1.1,
-                duration: 0.2,
+                scale: 1.06,
+                duration: 0.15,
                 onComplete: () => {
                     animationRef.current = gsap.to(itemRef.current, {
-                        backgroundColor: '#1f2937', // Gray background
-                        duration: 0.2,
+                        y: -20,
+                        opacity: 0,
+                        zIndex: 1,
+                        duration: 0.22,
                         onComplete: () => {
-                            animationRef.current = gsap.to(itemRef.current, {
-                                y: -20,
-                                opacity: 0,
-                                duration: 0.3,
-                                onComplete: () => {
-                                    animationRef.current = null;
-                                    gsap.set(itemRef.current, { clearProps: 'all' });
-                                    resolve();
-                                },
-                            });
+                            animationRef.current = null;
+                            gsap.set(itemRef.current, { clearProps: 'all' });
+                            resolve();
                         },
                     });
                 },
@@ -211,43 +201,35 @@ export default function Product({
     const animateToRemove = async (productId) => {
         return new Promise((resolve) => {
             killAnimation();
-            animationRef.current = gsap.to(itemRef.current, {
-                scale: 1.1,
-                duration: 0.2,
-                onComplete: () => {
-                    animationRef.current = gsap.to(itemRef.current, {
-                        backgroundColor: '#dc2626', // Red background
-                        duration: 0.2,
-                        onComplete: () => {
-                            showNotification('Product removed', 'success', 1200);
-                            animationRef.current = gsap.to(itemRef.current, {
-                                y: 40,
-                                opacity: 0,
-                                duration: 0.3,
-                                onUpdate: function () {
-                                    // Execute logic mid-animation (e.g., at 50% progress)
-                                    const progress = this.progress(); // Get animation progress (0 to 1)
-                                    if (progress >= 0.5 && !this.midActionExecuted) {
-                                        this.midActionExecuted = true; // Ensure this logic runs only once
-                                        // Perform mid-animation logic here
-                                        // do somehting half way in the animation
-                                        setBaggedProducts(prev => prev.filter(p => p.id !== productId));
-                                        setAllLinkedProducts(prev => prev.filter(p => p.ID !== productId));
-                                        setBaggedProductCount(prev => prev - 1);
-                                        setTotalProductCount(prev => prev - 1);
-                                        setProgress((prev) => {
-                                            const newProgress = prev - (1 / totalProductCount) * 100;
-                                            return newProgress < 0 ? 0 : newProgress;
-                                        });
-                                    }
-                                },
-                                onComplete: () => {
+            const el = itemRef.current;
+            if (!el) return resolve();
 
-                                    animationRef.current = null;
-                                    gsap.set(itemRef.current, { clearProps: 'all' });
-                                    resolve();
-                                },
+            gsap.set(el, { zIndex: 2, willChange: 'opacity,transform' });
+            animationRef.current = gsap.to(el, {
+                scale: 1.06,
+                duration: 0.15,
+                ease: 'power1.out',
+                onComplete: () => {
+                    animationRef.current = gsap.to(el, {
+                        y: 20,
+                        opacity: 0,
+                        duration: 0.22,
+                        ease: 'power1.inOut',
+                        onComplete: () => {
+                            // After visually gone, update state
+                            showNotification('Product removed', 'success', 1200);
+                            setBaggedProducts((prev) => prev.filter((p) => p.id !== productId));
+                            setAllLinkedProducts((prev) => prev.filter((p) => p.ID !== productId));
+                            setBaggedProductCount((prev) => prev - 1);
+                            setTotalProductCount((prev) => prev - 1);
+                            setProgress((prev) => {
+                                const newProgress = prev - (1 / totalProductCount) * 100;
+                                return newProgress < 0 ? 0 : newProgress;
                             });
+
+                            animationRef.current = null;
+                            gsap.set(el, { clearProps: 'all' });
+                            resolve();
                         },
                     });
                 },
