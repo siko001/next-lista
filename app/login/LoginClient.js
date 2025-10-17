@@ -330,6 +330,13 @@ const LoginClient = () => {
                         </button>
                     </div>
 
+                    <a
+                        href="/password-reset"
+                        className="text-blue-600 self-start font-quicksand text-sm font-medium inline-block dark:text-blue-500 cursor-pointer hover:text-primary transition-colors duration-200"
+                    >
+                        Forgot Password
+                    </a>
+
                     <button
                         ref={buttonRef}
                         type="submit"

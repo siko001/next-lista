@@ -39,19 +39,17 @@ body {
     }
     input:not(.overlay input):not(#login-form input):not(
             #register-form input
-        ):not(#reset-password-form input),
+        ):not(#reset-password-form input):not(#password-reset-form input),
     textarea:not(.overlay textarea),
     select {
         @apply border-2  transition-colors duration-200  border-transparent focus:border-primary outline-0;
     }
     button:not(.overlay button):not(#site-logo a):not(
             .shopping-list button
-        ):not(#reset-password-form button):not(#login-form button):not(
-            #register-form button
-        ),
+        ):not(#reset-password-form button):not(#login-form button),
     a:not(.overlay a):not(a#site-logo):not(#reset-password-form a):not(
             #login-form a
-        ):not(#register-form a) {
+        ) {
         @apply border-2  transition-colors duration-200 hover:border-current  border-transparent focus:border-primary outline-0;
     }
 }
