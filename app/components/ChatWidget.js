@@ -31,6 +31,8 @@ export default function ChatWidget({
     const [loading, setLoading] = useState(false);
     const [editedIngredients, setEditedIngredients] = useState([]);
     const [editingRecipe, setEditingRecipe] = useState(false);
+    const ingredientInputRefs = useRef([]);
+    const [focusIndex, setFocusIndex] = useState(null);
     const lenisRef = useRef(null);
     const globalLenis =
         typeof window !== "undefined" && window.globalLenis
@@ -64,6 +66,19 @@ export default function ChatWidget({
             setEditingRecipe(false);
         }
     }, [pendingRecipe]);
+
+    // After ingredients array changes, focus a specific input if requested
+    useEffect(() => {
+        if (focusIndex === null) return;
+        requestAnimationFrame(() => {
+            try {
+                ingredientInputRefs.current[focusIndex]?.focus?.();
+            } catch {}
+            setFocusIndex(null);
+        });
+    }, [editedIngredients, focusIndex]);
+
+    // Focus is only triggered when clicking '+ Add item' via focusIndex
 
     // Only show Re-add after user empties the list (list context)
     useEffect(() => {
@@ -450,6 +465,54 @@ export default function ChatWidget({
         }
     };
 
+    const handleCreateNewListAndAdd = async () => {
+        if (!pendingRecipe) return;
+        setLoading(true);
+        try {
+            if (!userData?.id || !token) {
+                showNotification("Sign in to create a list", "error");
+                return;
+            }
+            // Always create a fresh list for this action
+            const targetListId = await ensureListForHome();
+            if (!targetListId) {
+                showNotification("Failed to create list", "error");
+                return;
+            }
+
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
+            } catch {}
+
+            const toAdd = editedIngredients?.length
+                ? editedIngredients.filter((s) => !!s && s.trim() !== "")
+                : pendingRecipe.ingredients;
+            for (const ing of toAdd) {
+                await addItemToList(targetListId, ing);
+            }
+
+            showNotification(
+                "New list created and ingredients added",
+                "success",
+                1200
+            );
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: "Created a new list and added the ingredients.",
+                },
+            ]);
+            setLastRecipe({title: pendingRecipe.title, ingredients: toAdd});
+            setPendingRecipe(null);
+        } finally {
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
+            } catch {}
+            setLoading(false);
+        }
+    };
+
     const handleCancel = () => {
         setPendingRecipe(null);
         setMessages((prev) => [
@@ -587,7 +650,12 @@ export default function ChatWidget({
                                                         }
                                                     );
                                                 }}
-                                                className="flex-1 rounded cursor-pointer-md border dark:border-gray-700 px-2 py-1 bg-white dark:bg-black text-sm"
+                                                ref={(el) =>
+                                                    (ingredientInputRefs.current[
+                                                        idx
+                                                    ] = el)
+                                                }
+                                                className="flex-1 rounded-md border dark:border-gray-700 px-2 py-1 bg-white dark:bg-black text-sm"
                                             />
                                             <button
                                                 type="button"
@@ -612,10 +680,11 @@ export default function ChatWidget({
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            setEditedIngredients((prev) => [
-                                                ...prev,
-                                                "",
-                                            ])
+                                            setEditedIngredients((prev) => {
+                                                const next = [...prev, ""];
+                                                setFocusIndex(next.length - 1);
+                                                return next;
+                                            })
                                         }
                                         className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
                                     >
