@@ -220,17 +220,33 @@ export default function ChatWidget({
             }
         }
 
-        const title = parseRecipeRequest(text);
-        const ingredients = findIngredients(title);
+        // Prefer AI endpoint, fallback to local map
+        let aiTitle = null;
+        let aiIngredients = null;
+        try {
+            const resp = await fetch("/api/ai/recipes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: text }),
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                aiTitle = (data?.title || "").trim();
+                aiIngredients = Array.isArray(data?.ingredients)
+                    ? data.ingredients.map((s) => String(s || "").trim()).filter(Boolean)
+                    : null;
+            }
+        } catch {}
+
+        const title = aiTitle || parseRecipeRequest(text);
+        const ingredients = aiIngredients || findIngredients(title);
         const normalizedTitle = title
             ? title.charAt(0).toUpperCase() + title.slice(1)
             : "Recipe";
 
-        const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join(
-            "\n- "
-        )}\n\nEdit the list below and confirm when ready.`;
-        setMessages((prev) => [...prev, {role: "assistant", text: reply}]);
-        setPendingRecipe({title: normalizedTitle, ingredients});
+        const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join("\n- ")}\n\nEdit the list below and confirm when ready.`;
+        setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+        setPendingRecipe({ title: normalizedTitle, ingredients });
     };
 
     const ensureListForHome = useCallback(async () => {
