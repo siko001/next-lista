@@ -29,20 +29,38 @@ export default function ChatWidget({
     const [canReadd, setCanReadd] = useState(false);
     const [listEmptied, setListEmptied] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [editedIngredients, setEditedIngredients] = useState([]);
+    const lenisRef = useRef(null);
+    const globalLenis =
+        typeof window !== "undefined" && window.globalLenis
+            ? window.globalLenis
+            : null;
 
     const token = propToken || ctxToken;
 
-    // Auto-scroll to bottom on new messages/open
+    // Auto-scroll to bottom on new messages/open/editor changes
     useEffect(() => {
         if (!open) return;
         const el = messagesContainerRef.current;
         if (el) {
-            // scroll after layout
+            // scroll after layout with smooth behavior
             requestAnimationFrame(() => {
-                el.scrollTop = el.scrollHeight;
+                try {
+                    el.scrollTo({top: el.scrollHeight, behavior: "smooth"});
+                } catch {
+                    el.scrollTop = el.scrollHeight;
+                }
             });
         }
-    }, [messages, open]);
+    }, [messages, open, editedIngredients, pendingRecipe]);
+
+    useEffect(() => {
+        if (pendingRecipe?.ingredients) {
+            setEditedIngredients([...pendingRecipe.ingredients]);
+        } else {
+            setEditedIngredients([]);
+        }
+    }, [pendingRecipe]);
 
     // Only show Re-add after user empties the list (list context)
     useEffect(() => {
@@ -152,6 +170,53 @@ export default function ChatWidget({
         setMessages((prev) => [...prev, {role: "user", text}]);
         setInput("");
 
+        if (pendingRecipe) {
+            const lower = text.toLowerCase();
+            const removeMatch = lower.match(/^remove\s+(.+)$/);
+            const addMatch = lower.match(/^add\s+(\d+x\s+)?(.+)$/);
+            const replaceMatch = lower.match(/^replace\s+(.+)\s+with\s+(.+)$/);
+
+            if (removeMatch) {
+                const item = removeMatch[1].trim();
+                setEditedIngredients((prev) =>
+                    prev.filter((x) => x.toLowerCase() !== item)
+                );
+                setMessages((prev) => [
+                    ...prev,
+                    {role: "assistant", text: `Removed: ${item}`},
+                ]);
+                return;
+            }
+            if (addMatch) {
+                const qtyPrefix = addMatch[1] || "";
+                const item = (qtyPrefix + addMatch[2]).trim();
+                setEditedIngredients((prev) => [...prev, item]);
+                setMessages((prev) => [
+                    ...prev,
+                    {role: "assistant", text: `Added: ${item}`},
+                ]);
+                return;
+            }
+            if (replaceMatch) {
+                const from = replaceMatch[1].trim();
+                const to = replaceMatch[2].trim();
+                setEditedIngredients((prev) => {
+                    const idx = prev.findIndex(
+                        (x) => x.toLowerCase() === from.toLowerCase()
+                    );
+                    if (idx === -1) return prev;
+                    const copy = [...prev];
+                    copy[idx] = to;
+                    return copy;
+                });
+                setMessages((prev) => [
+                    ...prev,
+                    {role: "assistant", text: `Replaced ${from} with ${to}`},
+                ]);
+                return;
+            }
+        }
+
         const title = parseRecipeRequest(text);
         const ingredients = findIngredients(title);
         const normalizedTitle = title
@@ -160,7 +225,7 @@ export default function ChatWidget({
 
         const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join(
             "\n- "
-        )}\n\nAdd these to your list?`;
+        )}\n\nEdit the list below and confirm when ready.`;
         setMessages((prev) => [...prev, {role: "assistant", text: reply}]);
         setPendingRecipe({title: normalizedTitle, ingredients});
     };
@@ -339,8 +404,10 @@ export default function ChatWidget({
                 window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
             } catch {}
 
-            // Add each ingredient
-            for (const ing of pendingRecipe.ingredients) {
+            const toAdd = editedIngredients?.length
+                ? editedIngredients.filter((s) => !!s && s.trim() !== "")
+                : pendingRecipe.ingredients;
+            for (const ing of toAdd) {
                 await addItemToList(targetListId, ing);
             }
 
@@ -349,7 +416,7 @@ export default function ChatWidget({
                 ...prev,
                 {role: "assistant", text: "Done! Ingredients added."},
             ]);
-            setLastRecipe(pendingRecipe);
+            setLastRecipe({title: pendingRecipe.title, ingredients: toAdd});
             setPendingRecipe(null);
         } finally {
             // Announce AI bulk adding end
@@ -387,8 +454,8 @@ export default function ChatWidget({
             )}
 
             {open && (
-                <div className="fixed right-4 sm:right-6 bottom-24 sm:bottom-6 z-[9999] w-[320px] sm:w-[380px] max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col">
-                    <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700">
+                <div className="fixed right-4 sm:right-6 bottom-24 sm:bottom-6 z-[9999] w-[320px] sm:w-[380px] h-[75vh] sm:h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col min-h-0">
+                    <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
                         <div className="font-bold">Recipe Assistant (Mock)</div>
                         <button
                             className="no-border cursor-pointer text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
@@ -400,7 +467,22 @@ export default function ChatWidget({
 
                     <div
                         ref={messagesContainerRef}
-                        className="flex-1 overflow-y-auto p-3 space-y-2 text-sm"
+                        id="lista-chat-scroll"
+                        data-lenis-prevent
+                        data-scroll-lock-scrollable
+                        className="flex-1 basis-0 overflow-y-auto overscroll-contain p-3 pb-12 space-y-2 text-sm min-h-0"
+                        style={{
+                            WebkitOverflowScrolling: "touch",
+                            touchAction: "pan-y",
+                            overscrollBehavior: "contain",
+                            scrollBehavior: "smooth",
+                        }}
+                        onWheelCapture={(e) => {
+                            e.stopPropagation();
+                        }}
+                        onTouchMoveCapture={(e) => {
+                            e.stopPropagation();
+                        }}
                     >
                         {messages.map((m, i) => (
                             <div
@@ -424,67 +506,153 @@ export default function ChatWidget({
                         ))}
 
                         {pendingRecipe && (
-                            <div className="mt-2 flex gap-2">
-                                <button
-                                    disabled={loading}
-                                    onClick={handleConfirmAdd}
-                                    className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
-                                >
-                                    {loading ? "Adding..." : "Add to list"}
-                                </button>
-                                <button
-                                    disabled={loading}
-                                    onClick={handleCancel}
-                                    className="px-3 py-1 rounded border dark:border-gray-700"
-                                >
-                                    Cancel
-                                </button>
+                            <div className="mt-3 space-y-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Editing ingredients for:{" "}
+                                    {pendingRecipe.title}
+                                </div>
+
+                                <div className="space-y-2">
+                                    {editedIngredients.map((ing, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="flex items-center gap-2"
+                                        >
+                                            <input
+                                                value={ing}
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    setEditedIngredients(
+                                                        (prev) => {
+                                                            const copy = [
+                                                                ...prev,
+                                                            ];
+                                                            copy[idx] = v;
+                                                            return copy;
+                                                        }
+                                                    );
+                                                }}
+                                                className="flex-1 rounded-md border dark:border-gray-700 px-2 py-1 bg-white dark:bg-black text-sm"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setEditedIngredients(
+                                                        (prev) =>
+                                                            prev.filter(
+                                                                (_, i) =>
+                                                                    i !== idx
+                                                            )
+                                                    )
+                                                }
+                                                className="px-2 py-1 rounded border dark:border-gray-700 text-sm"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setEditedIngredients((prev) => [
+                                                ...prev,
+                                                "",
+                                            ])
+                                        }
+                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        + Add item
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setEditedIngredients([
+                                                ...(pendingRecipe?.ingredients ||
+                                                    []),
+                                            ])
+                                        }
+                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Reset
+                                    </button>
+                                </div>
+
+                                <div className="flex gap-2 pt-1">
+                                    <button
+                                        disabled={loading}
+                                        onClick={handleConfirmAdd}
+                                        className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
+                                    >
+                                        {loading ? "Adding..." : "Add to list"}
+                                    </button>
+                                    <button
+                                        disabled={loading}
+                                        onClick={handleCancel}
+                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                         )}
 
-                        {!pendingRecipe && context === "list" && lastRecipe && canReadd && (
-                            <div className="mt-2">
-                                <button
-                                    disabled={loading}
-                                    onClick={async () => {
-                                        setLoading(true);
-                                        try {
-                                            // Suppress realtime toasts during re-add
+                        {!pendingRecipe &&
+                            context === "list" &&
+                            lastRecipe &&
+                            canReadd && (
+                                <div className="mt-2">
+                                    <button
+                                        disabled={loading}
+                                        onClick={async () => {
+                                            setLoading(true);
                                             try {
-                                                window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
-                                            } catch {}
-                                            let targetListId = propListId;
-                                            for (const ing of lastRecipe.ingredients) {
-                                                await addItemToList(
-                                                    targetListId,
-                                                    ing
+                                                // Suppress realtime toasts during re-add
+                                                try {
+                                                    window.dispatchEvent(
+                                                        new CustomEvent(
+                                                            "lista:ai-adding-start"
+                                                        )
+                                                    );
+                                                } catch {}
+                                                let targetListId = propListId;
+                                                for (const ing of lastRecipe.ingredients) {
+                                                    await addItemToList(
+                                                        targetListId,
+                                                        ing
+                                                    );
+                                                }
+                                                showNotification(
+                                                    "Re-added ingredients",
+                                                    "success",
+                                                    1200
                                                 );
+                                                setCanReadd(false);
+                                                setListEmptied(false);
+                                            } finally {
+                                                try {
+                                                    window.dispatchEvent(
+                                                        new CustomEvent(
+                                                            "lista:ai-adding-end"
+                                                        )
+                                                    );
+                                                } catch {}
+                                                setLoading(false);
                                             }
-                                            showNotification(
-                                                "Re-added ingredients",
-                                                "success",
-                                                1200
-                                            );
-                                            setCanReadd(false);
-                                            setListEmptied(false);
-                                        } finally {
-                                            try {
-                                                window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
-                                            } catch {}
-                                            setLoading(false);
-                                        }
-                                    }}
-                                    className="px-3 py-1 rounded border dark:border-gray-700"
-                                >
-                                    Re-add {lastRecipe.title}
-                                </button>
-                            </div>
-                        )}
+                                        }}
+                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Re-add {lastRecipe.title}
+                                    </button>
+                                </div>
+                            )}
                     </div>
 
                     <form
                         onSubmit={handleSubmit}
-                        className="flex items-center gap-2 p-3 border-t dark:border-gray-700"
+                        className="flex items-center gap-2 p-3 border-t dark:border-gray-700 shrink-0"
                     >
                         <input
                             ref={inputRef}
