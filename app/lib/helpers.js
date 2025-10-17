@@ -6,6 +6,13 @@ export const WP_API_BASE =
 export const decryptToken = (encryptedToken) => {
     try {
         if (!encryptedToken) return null;
+        // If it already looks like a JWT, return as-is (avoid double decryption)
+        if (
+            typeof encryptedToken === "string" &&
+            encryptedToken.split(".").length === 3
+        ) {
+            return encryptedToken;
+        }
         // Decrypt (AES decryption expects a Base64-encoded string)
         const bytes = CryptoJS.AES.decrypt(encryptedToken, SECRET_KEY);
         const decryptedToken = bytes.toString(CryptoJS.enc.Utf8);

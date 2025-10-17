@@ -25,6 +25,7 @@ import AddProduct from "../../components/modals/AddProduct";
 import ShoppingListHeader from "../../components/parts/ShoppingListHeader";
 import Product from "../../components/parts/Product";
 import ShareListDialog from "../../components/modals/ShareListDialog";
+import ChatWidget from "../../components/ChatWidget";
 
 // Icons
 import SettingsIcon from "../../components/svgs/SettingsIcon";
@@ -170,6 +171,43 @@ export default function ShoppingList({
 
     // Track if we're currently searching
     const [isSearching, setIsSearching] = useState(false);
+
+    // Optimistic items added from ChatWidget
+    useEffect(() => {
+        const handleItemsAdded = (e) => {
+            const detail = e?.detail;
+            if (!detail) return;
+            const {listId: evtListId, items} = detail;
+            if (parseInt(evtListId) !== parseInt(listId) || !Array.isArray(items)) return;
+
+            // Add to checkedProducts and allLinkedProducts if not present
+            setCheckedProducts((prev) => {
+                const existingIds = new Set(prev?.map((p) => p.id));
+                const toAdd = items.filter((it) => !existingIds.has(it.id));
+                return [...(prev || []), ...toAdd];
+            });
+
+            setAllLinkedProducts((prev) => {
+                const existingIds = new Set(prev?.map((p) => p.ID));
+                const toAdd = items
+                    .filter((it) => !existingIds.has(it.id))
+                    .map((it) => ({ID: it.id, title: it.title}));
+                return [...(prev || []), ...toAdd];
+            });
+
+            setTotalProductCount((prev) => prev + items.length);
+            showNotification("Ingredients added", "success", 1000);
+        };
+
+        if (typeof window !== "undefined") {
+            window.addEventListener("lista:items-added", handleItemsAdded);
+        }
+        return () => {
+            if (typeof window !== "undefined") {
+                window.removeEventListener("lista:items-added", handleItemsAdded);
+            }
+        };
+    }, [listId, showNotification]);
 
     // Handle search functionality with fuzzy matching
     const handleSearchProducts = (searchTerm) => {
@@ -989,6 +1027,8 @@ export default function ShoppingList({
             )}
 
             <Notification />
+
+            <ChatWidget context="list" listId={listId} token={token} />
 
             <div className="open-product-overlay opacity-0 fixed bottom-8 left-[50%] translate-x-[-50%] z-50">
                 <Button
