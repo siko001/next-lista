@@ -164,10 +164,10 @@ const LoginClient = () => {
                     window.location.href = "/";
                 }, 2000);
             } else {
-                showNotification(`Error: ${result.message}`, "error");
+                showNotification(`Error: Wrong crediantials`, "error");
             }
         } catch (error) {
-            showNotification("Something went wrong. Please try again.");
+            showNotification("Something went wrong.");
         }
     };
 

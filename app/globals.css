@@ -2,92 +2,114 @@
 
 @import "tailwindcss";
 @theme {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-quicksand: "Quicksand", sans-serif;
-  --font-saira: "Saira", sans-serif;
-  --color-primary: #21ba9c;
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
+    --font-quicksand: "Quicksand", sans-serif;
+    --font-saira: "Saira", sans-serif;
+    --color-primary: #21ba9c;
 }
 
 :root {
-  --background: #f8f8ff;
-  --foreground: #171717;
+    --background: #f8f8ff;
+    --foreground: #171717;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+    :root {
+        --background: #0a0a0a;
+        --foreground: #ededed;
+    }
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+    color: var(--foreground);
+    background: var(--background);
+    font-family: Arial, Helvetica, sans-serif;
 
-  input[type="text"],
-  label {
-    @apply placeholder:font-saira font-saira font-[500];
-  }
+    input[type="text"],
+    label {
+        @apply placeholder:font-saira font-saira font-[500];
+    }
 
-  ::selection {
-    background-color: #00000000;
-  }
-  input::selection {
-    @apply bg-[#21ba97aa] text-[#000000];
-  }
-  input:not(.overlay input):not(#login-form input):not(#register-form input),
-  textarea:not(.overlay textarea),
-  select {
-    @apply border-2  transition-colors duration-200  border-transparent focus:border-primary outline-0;
-  }
-  button:not(.overlay button):not(#site-logo a):not(.shopping-list button),
-  a:not(.overlay a):not(a#site-logo) {
-    @apply border-2  transition-colors duration-200 hover:border-current  border-transparent focus:border-primary outline-0;
-  }
+    ::selection {
+        background-color: #00000000;
+    }
+    input::selection {
+        @apply bg-[#21ba97aa] text-[#000000];
+    }
+    input:not(.overlay input):not(#login-form input):not(#register-form input),
+    textarea:not(.overlay textarea),
+    select {
+        @apply border-2  transition-colors duration-200  border-transparent focus:border-primary outline-0;
+    }
+    button:not(.overlay button):not(#site-logo a):not(.shopping-list button),
+    a:not(.overlay a):not(a#site-logo) {
+        @apply border-2  transition-colors duration-200 hover:border-current  border-transparent focus:border-primary outline-0;
+    }
 }
 
 /* Add keyframes for the waving animation */
 @keyframes wave {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(15deg);
-  }
-  75% {
-    transform: rotate(-15deg);
-  }
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(15deg);
+    }
+    75% {
+        transform: rotate(-15deg);
+    }
 }
 
 .wave-emoji {
-  display: inline-block;
-  animation: wave 3s infinite;
-  transform-origin: 70% 70%;
+    display: inline-block;
+    animation: wave 3s infinite;
+    transform-origin: 70% 70%;
 }
 
 @keyframes slideDown {
-  from {
-    transform: translateY(-80px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+    from {
+        transform: translateY(-80px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .new-list {
-  @apply duration-200 ease-in-out border-2 border-green-500;
-  animation: slideDown 0.5s ease-out;
+    @apply duration-200 ease-in-out border-2 border-green-500;
+    animation: slideDown 0.5s ease-out;
 }
 
 input {
-  transition: width 1s ease-in-out; /* Smooth transition for width */
+    transition: width 1s ease-in-out; /* Smooth transition for width */
 }
 
 input.expanded {
-  width: 100%; /* Expand to full width */
+    width: 100%; /* Expand to full width */
+}
+
+/* Chrome, Safari, Edge */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+    /* Prevent flicker on load */
+    transition: background-color 9999s ease-out 0s;
+    /* Text and caret color */
+    -webkit-text-fill-color: #fff !important;
+    caret-color: #fff;
+}
+
+/* Firefox */
+input:-moz-autofill,
+textarea:-moz-autofill,
+select:-moz-autofill {
+    box-shadow: 0 0 0px 1000px transparent inset !important;
+    -moz-text-fill-color: #fff !important;
+    caret-color: #fff;
 }

@@ -1,24 +1,10 @@
--Add Categories   --- Main Focus ***
--Categories products 
--Categories Tab
--fix up shopping list title (when to long cauisng overflow make is scrollable with max width)
-
-
-
-
-
-
-#login ---Last**
--Wordpress wrong password warning
--forgot Password stuff
-
 #Emails ---Last**
--Fix Registering Emails -sent to user
 -Forgot password Emails -sent to user
+-Forgot password Page -
+-Reset Password Page - 
 
 email confimartions
 Verify Emails -sent to user to verify his email
-
 
 
 
