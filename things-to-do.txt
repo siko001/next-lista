@@ -1,16 +1,13 @@
-#Emails ---Last**
--Forgot password Emails -sent to user
--Forgot password Page -
--Reset Password Page - 
 
-email confimartions
-Verify Emails -sent to user to verify his email
+
 
 
 
 
 ### After Project ready ###
 After Launch Phase 1
+email confimartions
+Verify Emails -sent to user to verify his email
 -User settings -basic, change name, change password, 
 Navigation bar
 User Themes
@@ -30,3 +27,12 @@ user specific ordering for products
 -Products Show up According to users Choice + most clicked.
 -Shared list link must include a token while sharing to aviod any other users randomly popping up in lists
 -Inform user if list has been delete and he wasn't active or when share is revowked by owner.
+
+
+Phase 3
+prices & quantity functionalaity
+divide by quantity of people / or number of people shared with.
+Send price to user via push notification.
+
+--COOL to have
+Connect with OpenAI and connect to a receipy data and prompt ai to choose the products from the list and return the receipy. 
