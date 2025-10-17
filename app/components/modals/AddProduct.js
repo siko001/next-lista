@@ -633,7 +633,7 @@ export default function AddProduct({
             }}
             key={product.id || index}
             data-product-id={product.id}
-            className={`product-card  border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
+            className={`product-card  border cursor-pointer ml-4 px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
                 allLinkedProducts?.some((p) => p.ID === product.id)
                     ? "border-primary"
                     : ""
@@ -766,17 +766,9 @@ export default function AddProduct({
                             overscrollBehavior: "contain",
                         }}
                     >
-                        <div className="product-list-content flex flex-col gap-3 px-4 pb-4 relative">
-                            <div
-                                className={`absolute  left-0 top-0 w-4 h-10 ${
-                                    selectedProductsSection !== "popular"
-                                        ? "dark:bg-gray-800 bg-gray-400"
-                                        : null
-                                }`}
-                            ></div>
-                            {/* Navigation tabs (scrollable only on this row) */}
+                        <div className="product-list-content flex flex-col gap-3 pr-4 pb-4 relative">
                             <div className=" w-full overflow-x-auto scrollbar-hide mb-4 sticky -left-4 top-0 z-20">
-                                <div className="inline-flex whitespace-nowrap font-bold relative -left-4  ">
+                                <div className="inline-flex whitespace-nowrap font-bold relative   ">
                                     <div
                                         onClick={() =>
                                             setSelectedProductsSection(
@@ -838,10 +830,11 @@ export default function AddProduct({
                                     </div>
                                 </div>
                             </div>
+                            {/* Navigation tabs (scrollable only on this row) */}
 
                             {/* Custom Products Input */}
                             {selectedProductsSection === "custom" && (
-                                <div className="mb-4">
+                                <div className="mb-4 ml-4">
                                     <div className="w-full flex items-center text-gray-400 text-lg font-bold group relative">
                                         <div className="w-full relative">
                                             <input
@@ -893,7 +886,7 @@ export default function AddProduct({
                                         onCategoryToggle={handleCategoryToggle}
                                     />
                                     {filteredProducts.length === 0 ? (
-                                        <div className="w-full font-quicksand uppercase mt-6 flex items-center justify-center text-gray-400 text-2xl font-bold">
+                                        <div className=" w-full font-quicksand uppercase mt-6 flex items-center justify-center text-gray-400 text-2xl font-bold">
                                             {selectedCategories.length > 0
                                                 ? "No products matched these filters"
                                                 : "No products found"}

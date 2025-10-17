@@ -138,11 +138,11 @@ const CategoryFilter = ({
     };
 
     return (
-        <div className="relative bg-white dark:bg-gray-900 shadow-sm">
+        <div className="relative bg-white dark:bg-gray-900 shadow-xl rounded-sm ml-4">
             {/* Left scroll button */}
             <button
                 onClick={scrollLeft}
-                className={`absolute cursor-pointer -left-3 top-1/2 -translate-y-1/2 z-10 p-1 h-8 w-8  bg-blue-600 text-white dark:bg-blue-700 shadow-lg rounded-full hover:bg-blue-700 transition-colors ${
+                className={`absolute cursor-pointer hidden md:block -left-3 top-1/2 -translate-y-1/2 z-10 p-1 h-8 w-8  bg-blue-600 text-white dark:bg-blue-700 shadow-lg rounded-full hover:bg-blue-700 transition-colors ${
                     canScrollLeft
                         ? "opacity-100"
                         : "opacity-0 pointer-events-none"
@@ -161,7 +161,7 @@ const CategoryFilter = ({
                 onTouchCancel={stopHoldScroll}
                 aria-label="Scroll left"
             >
-                <span className="relative -top-[2px]">←</span>
+                <span className="relative -top-[3px]">←</span>
             </button>
 
             {/* Category list */}
@@ -218,7 +218,7 @@ const CategoryFilter = ({
             {/* Right scroll button */}
             <button
                 onClick={scrollRight}
-                className={`absolute cursor-pointer -right-3 top-1/2 -translate-y-1/2 z-10 p-1 h-8 w-8 bg-blue-600 text-white dark:bg-blue-700 shadow-lg rounded-full hover:bg-blue-700 transition-colors ${
+                className={`absolute cursor-pointer hidden md:block -right-3 top-1/2 -translate-y-1/2 z-10 p-1 h-8 w-8 bg-blue-600 text-white dark:bg-blue-700 shadow-lg rounded-full hover:bg-blue-700 transition-colors ${
                     canScrollRight
                         ? "opacity-100"
                         : "opacity-0 pointer-events-none"
@@ -237,7 +237,7 @@ const CategoryFilter = ({
                 onTouchCancel={stopHoldScroll}
                 aria-label="Scroll right"
             >
-                <span className="relative -top-[2px]"> → </span>
+                <span className="relative -top-[3px]"> → </span>
             </button>
         </div>
     );
