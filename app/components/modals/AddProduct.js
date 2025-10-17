@@ -669,6 +669,24 @@ export default function AddProduct({
                     />
                 </div>
 
+                {allLinkedProducts?.some((p) => p.ID === product.id) && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            updateProductInShoppingList(
+                                product.id,
+                                false,
+                                token
+                            );
+                        }}
+                        className="rounded-full text-red-500 !border-transparent cursor-pointer hover:border-transparent transition-colors duration-200"
+                        aria-label="Remove from list"
+                        title="Remove from list"
+                    >
+                        <CloseIcon className="w-6 h-6" />
+                    </button>
+                )}
+
                 {selectedProductsSection === "custom" && (
                     <button
                         onClick={(e) => {
