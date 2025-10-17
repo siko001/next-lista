@@ -822,6 +822,7 @@ export default function ShoppingList({
                                     <div className="inline text-center">
                                         Click
                                         <button
+                                            id="empty-list-add-btn"
                                             type="button"
                                             onClick={() =>
                                                 setProductOverlay(true)
