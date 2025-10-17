@@ -30,6 +30,7 @@ export default function ChatWidget({
     const [listEmptied, setListEmptied] = useState(false);
     const [loading, setLoading] = useState(false);
     const [editedIngredients, setEditedIngredients] = useState([]);
+    const [editingRecipe, setEditingRecipe] = useState(false);
     const lenisRef = useRef(null);
     const globalLenis =
         typeof window !== "undefined" && window.globalLenis
@@ -57,8 +58,10 @@ export default function ChatWidget({
     useEffect(() => {
         if (pendingRecipe?.ingredients) {
             setEditedIngredients([...pendingRecipe.ingredients]);
+            setEditingRecipe(false);
         } else {
             setEditedIngredients([]);
+            setEditingRecipe(false);
         }
     }, [pendingRecipe]);
 
@@ -454,7 +457,7 @@ export default function ChatWidget({
             )}
 
             {open && (
-                <div className="fixed right-4 sm:right-6 bottom-24 sm:bottom-6 z-[9999] w-[320px] sm:w-[380px] h-[75vh] sm:h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col min-h-0">
+                <div className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
                         <div className="font-bold">Recipe Assistant (Mock)</div>
                         <button
@@ -470,7 +473,7 @@ export default function ChatWidget({
                         id="lista-chat-scroll"
                         data-lenis-prevent
                         data-scroll-lock-scrollable
-                        className="flex-1 basis-0 overflow-y-auto overscroll-contain p-3 pb-12 space-y-2 text-sm min-h-0"
+                        className="overflow-y-auto overscroll-contain p-3 pb-12 space-y-2 text-sm"
                         style={{
                             WebkitOverflowScrolling: "touch",
                             touchAction: "pan-y",
@@ -505,7 +508,39 @@ export default function ChatWidget({
                             </div>
                         ))}
 
-                        {pendingRecipe && (
+                        {pendingRecipe && !editingRecipe && (
+                            <div className="mt-3 space-y-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Ready to add ingredients for:{" "}
+                                    {pendingRecipe.title}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        disabled={loading}
+                                        onClick={handleConfirmAdd}
+                                        className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
+                                    >
+                                        {loading ? "Adding..." : "Add"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingRecipe(true)}
+                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        disabled={loading}
+                                        onClick={handleCancel}
+                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {pendingRecipe && editingRecipe && (
                             <div className="mt-3 space-y-2">
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
                                     Editing ingredients for:{" "}
@@ -587,6 +622,13 @@ export default function ChatWidget({
                                         className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
                                     >
                                         {loading ? "Adding..." : "Add to list"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditingRecipe(false)}
+                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Back
                                     </button>
                                     <button
                                         disabled={loading}
