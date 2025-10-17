@@ -1,33 +1,41 @@
-import { useEffect } from "react";
-import Pusher from "pusher-js";
-import { useRouter } from "next/navigation";
+import {useEffect, useRef} from "react";
+import {getPusher} from "./pusherClient";
+import {useRouter} from "next/navigation";
 
 export default function useRealtimeListDelete(
-  listId,
-  userId,
-  showNotification
+    listId,
+    userId,
+    showNotification
 ) {
-  const router = useRouter();
+    const router = useRouter();
+    const pusherRef = useRef(null);
+    const channelRef = useRef(null);
 
-  useEffect(() => {
-    if (!listId) return;
-    const pusher = new Pusher("a9f747a06cd5ec1d8c62", { cluster: "eu" });
-    const channel = pusher.subscribe("shopping-list-" + listId);
+    useEffect(() => {
+        if (!listId) return;
+        if (!pusherRef.current) {
+            pusherRef.current = getPusher();
+        }
+        const channel = pusherRef.current.subscribe("shopping-list-" + listId);
+        channelRef.current = channel;
 
-    channel.bind("list-deleted", (data) => {
-      if (showNotification && data.sender_id !== userId) {
-        showNotification(
-          data.message || "This list was deleted by another user",
-          "info"
-        );
-      }
-      router.push("/"); 
-    });
+        channel.bind("list-deleted", (data) => {
+            if (showNotification && data.sender_id !== userId) {
+                showNotification(
+                    data.message || "This list was deleted by another user",
+                    "info"
+                );
+            }
+            router.push("/");
+        });
 
-    return () => {
-      channel.unbind_all();
-      channel.unsubscribe();
-      pusher.disconnect();
-    };
-  }, [listId, userId, showNotification, router]);
+        return () => {
+            if (channelRef.current) {
+                channelRef.current.unbind_all();
+                channelRef.current.unsubscribe();
+                channelRef.current = null;
+            }
+            // keep socket open
+        };
+    }, [listId, userId, showNotification, router]);
 }

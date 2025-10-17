@@ -11,6 +11,8 @@ export default function useUserListsRealtime(
     const {showNotification} = useNotificationContext();
     const pusherRef = useRef(null);
     const channelRef = useRef(null);
+    const channelNameRef = useRef(null);
+    const cleanedRef = useRef(false);
 
     useEffect(() => {
         if (!userId) return;
@@ -23,8 +25,10 @@ export default function useUserListsRealtime(
             });
         }
 
-        const channel = pusherRef.current.subscribe("user-lists-" + userId);
+        const name = "user-lists-" + userId;
+        const channel = pusherRef.current.subscribe(name);
         channelRef.current = channel;
+        channelNameRef.current = name;
 
         channel.bind("list-summary-updated", (data) => {
             setUserLists((prev) =>
@@ -61,12 +65,22 @@ export default function useUserListsRealtime(
         });
 
         return () => {
-            if (channelRef.current) {
-                channelRef.current.unbind_all();
-                channelRef.current.unsubscribe();
-                channelRef.current = null;
+            if (cleanedRef.current) return;
+            cleanedRef.current = true;
+            const ch = channelRef.current;
+            const p = pusherRef.current;
+            if (ch) {
+                ch.unbind_all();
+                // Only attempt network unsubscribe if connection is active
+                if (p && p.connection && p.connection.state === "connected") {
+                    try {
+                        p.unsubscribe(channelNameRef.current);
+                    } catch (_) {}
+                }
             }
-            // keep socket open to avoid closing while connecting
+            channelRef.current = null;
+            channelNameRef.current = null;
+            // keep socket open
         };
     }, [userId, setUserLists, isInInnerList, showNotification]);
 }

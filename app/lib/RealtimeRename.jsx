@@ -1,5 +1,5 @@
 import {useEffect, useRef} from "react";
-import Pusher from "pusher-js";
+import {getPusher} from "./pusherClient";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import {useListContext} from "../contexts/ListContext";
 
@@ -13,11 +13,7 @@ export default function useRealtimeRename(userId, setListTitle, isInInnerList) {
 
         // Create Pusher client once per hook instance
         if (!pusherRef.current) {
-            pusherRef.current = new Pusher("a9f747a06cd5ec1d8c62", {
-                cluster: "eu",
-                forceTLS: true,
-                enableStats: false,
-            });
+            pusherRef.current = getPusher();
         }
 
         // Subscribe to the user channel
