@@ -213,7 +213,7 @@ const ShareListDialog = ({
                         <button
                             type="button"
                             onClick={() => shareOnMessenger(listUrl)}
-                            className="flex cursor-pointer items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            className="flex cursor-pointer w-full items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                         >
                             <MessengerIcon className={"w-8 h-8 mr-2"} />
                             Share via Messenger
