@@ -25,7 +25,7 @@ async function prepareMetadata(lists, userId) {
 }
 
 export default async function Home() {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
     const reg = cookieStore.get("registered")?.value;
     const userName = cookieStore.get("username")?.value;

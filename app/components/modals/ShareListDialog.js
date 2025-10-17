@@ -33,27 +33,39 @@ const ShareListDialog = ({
         `Sharing this list with you: ${listUrl}`
     )}`;
 
-    // const messengerUrl = `fb-messenger://share?link=${encodeURIComponent(listUrl)}`;
-    function shareOnMessenger(listUrl) {
-        const encodedUrl = encodeURIComponent(listUrl);
-
-        if (
+    const FB_APP_ID = process.env.NEXT_PUBLIC_FB_APP_ID;
+    function shareOnMessenger(urlToShare) {
+        const encodedUrl = encodeURIComponent(urlToShare);
+        const isMobile =
             /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
                 navigator.userAgent
-            )
-        ) {
+            );
+
+        // Desktop with App ID: use Facebook Send Dialog
+        if (!isMobile && FB_APP_ID) {
+            const redirect = encodeURIComponent(
+                `${window.location.origin}/share-complete`
+            );
+            const dialogUrl = `https://www.facebook.com/dialog/send?app_id=${FB_APP_ID}&link=${encodedUrl}&redirect_uri=${redirect}&display=popup`;
+            window.open(dialogUrl, "_blank", "noopener,noreferrer");
+            return;
+        }
+
+        // Mobile: try native Messenger, then web fallback
+        if (isMobile) {
             window.location.href = `fb-messenger://share?link=${encodedUrl}`;
             setTimeout(() => {
-                window.location.href = `https://m.me/share?u=${encodedUrl}`;
+                window.location.href = `https://m.me/?link=${encodedUrl}`;
             }, 500);
-        } else {
-            window.open(
-                `https://www.facebook.com/dialog/send?link=${encodedUrl}&redirect_uri=${encodeURIComponent(
-                    window.location.href
-                )}`,
-                "_blank"
-            );
+            return;
         }
+
+        // Desktop fallback without app id: open Facebook sharer
+        window.open(
+            `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+            "_blank",
+            "noopener,noreferrer"
+        );
     }
 
     const copyToClipboard = () => {
@@ -198,15 +210,14 @@ const ShareListDialog = ({
                             Share via WhatsApp
                         </a>
 
-                        <a
-                            onClick={shareOnMessenger}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <button
+                            type="button"
+                            onClick={() => shareOnMessenger(listUrl)}
                             className="flex cursor-pointer items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                         >
                             <MessengerIcon className={"w-8 h-8 mr-2"} />
                             Share via Messenger
-                        </a>
+                        </button>
 
                         <button
                             onClick={copyToClipboard}
