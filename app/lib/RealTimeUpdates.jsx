@@ -9,11 +9,23 @@ import Pusher from "pusher-js";
 export default function useListaRealtimeUpdates(listId, callback) {
     const callbackRef = useRef(callback);
     callbackRef.current = callback;
+    const pusherRef = useRef(null);
+    const channelRef = useRef(null);
 
     useEffect(() => {
-        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {cluster: "eu"});
+        if (!listId) return;
+
+        if (!pusherRef.current) {
+            pusherRef.current = new Pusher("a9f747a06cd5ec1d8c62", {
+                cluster: "eu",
+                forceTLS: true,
+                enableStats: false,
+            });
+        }
+
         const channelName = "shopping-list-" + listId;
-        const channel = pusher.subscribe(channelName);
+        const channel = pusherRef.current.subscribe(channelName);
+        channelRef.current = channel;
 
         const handler = (data) => {
             callbackRef.current(data);
@@ -22,9 +34,12 @@ export default function useListaRealtimeUpdates(listId, callback) {
         channel.bind("list-updated", handler);
 
         return () => {
-            channel.unbind("list-updated", handler);
-            pusher.unsubscribe(channelName);
-            pusher.disconnect();
+            if (channelRef.current) {
+                channelRef.current.unbind("list-updated", handler);
+                channelRef.current.unsubscribe();
+                channelRef.current = null;
+            }
+            // keep socket open to avoid closing while connecting
         };
     }, [listId]);
 }
