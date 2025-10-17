@@ -496,9 +496,19 @@ export default function AddProduct({
 
         // if already in favourites, remove it
         if (favouriteProducts?.some((p) => p.id === productId)) {
-            setFavouriteProducts((prev) =>
-                prev?.filter((p) => p.id !== productId)
-            );
+            setFavouriteProducts((prev) => {
+                const nextFavs = prev?.filter((p) => p.id !== productId) || [];
+                // keep Favourites tab results in sync when searching
+                if (searchValue) {
+                    const favFuse = new Fuse(nextFavs, fuseOptions);
+                    const favResults = favFuse.search(searchValue);
+                    setFavouriteSearchResults(favResults.map((r) => r.item));
+                } else if (selectedProductsSection === "favourite") {
+                    // reflect immediately in the Favourites tab even without search
+                    setFavouriteSearchResults(nextFavs);
+                }
+                return nextFavs;
+            });
             showNotification(
                 `Removed ${productTitle} from favourites`,
                 "success",
@@ -523,10 +533,20 @@ export default function AddProduct({
             const data = await res.json();
         } else {
             // add to favourites
-            setFavouriteProducts((prev) => [
-                ...prev,
-                {id: productId, title: productTitle},
-            ]);
+            setFavouriteProducts((prev) => {
+                const nextFavs = [
+                    ...(prev || []),
+                    {id: productId, title: productTitle},
+                ];
+                if (searchValue) {
+                    const favFuse = new Fuse(nextFavs, fuseOptions);
+                    const favResults = favFuse.search(searchValue);
+                    setFavouriteSearchResults(favResults.map((r) => r.item));
+                } else if (selectedProductsSection === "favourite") {
+                    setFavouriteSearchResults(nextFavs);
+                }
+                return nextFavs;
+            });
 
             showNotification(
                 `Added ${productTitle} to favourites`,
@@ -613,7 +633,7 @@ export default function AddProduct({
             }}
             key={product.id || index}
             data-product-id={product.id}
-            className={`product-card border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
+            className={`product-card  border cursor-pointer px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
                 allLinkedProducts?.some((p) => p.ID === product.id)
                     ? "border-primary"
                     : ""
@@ -712,7 +732,7 @@ export default function AddProduct({
 
     return (
         <div className="w-full absolute top-0">
-            <div className="fixed top-4 right-6 w-10 h-10 z-[100]">
+            <div className="fixed lg:block hidden top-4 right-6 w-10 h-10 z-[100]">
                 <CloseIcon
                     className="sticky top-4 right-4 w-8 h-8 text-white cursor-pointer"
                     onClick={() => {
@@ -722,7 +742,7 @@ export default function AddProduct({
             </div>
             <div className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#fefefeef] dark:bg-[#000000ef] blur-sm close-product-overlay"></div>
             <div className="relative top-0 ">
-                <div className="absolute top-0 z-[100]  inset-x-0 bg-white dark:bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 md:min-w-[550px] max-w-[750px] flex flex-col items-center mt-3 mb-8 md:my-6">
+                <div className="absolute top-0 z-[100]  inset-x-0 bg-white dark:bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6">
                     <div className="w-full bg-gray-300 dark:bg-gray-700 sticky top-0 z-20 rounded-md">
                         <div className="relative flex items-center">
                             <input
@@ -921,7 +941,7 @@ export default function AddProduct({
                         </div>
                     </div>
                 </div>
-                <div className="fixed bottom-4 sm:hidden w-full mx-auto justify-center flex gap-2 opacity-0 z-[100] close-product-overlay-btn">
+                <div className="fixed bottom-4 lg:hidden w-full mx-auto justify-center flex gap-2 opacity-0 z-[100] close-product-overlay-btn">
                     <Button
                         cta="Close Products List"
                         color="#82181a"
