@@ -226,14 +226,16 @@ export default function ChatWidget({
         try {
             const resp = await fetch("/api/ai/recipes", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: text }),
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({query: text}),
             });
             if (resp.ok) {
                 const data = await resp.json();
                 aiTitle = (data?.title || "").trim();
                 aiIngredients = Array.isArray(data?.ingredients)
-                    ? data.ingredients.map((s) => String(s || "").trim()).filter(Boolean)
+                    ? data.ingredients
+                          .map((s) => String(s || "").trim())
+                          .filter(Boolean)
                     : null;
             }
         } catch {}
@@ -244,9 +246,11 @@ export default function ChatWidget({
             ? title.charAt(0).toUpperCase() + title.slice(1)
             : "Recipe";
 
-        const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join("\n- ")}\n\nEdit the list below and confirm when ready.`;
-        setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-        setPendingRecipe({ title: normalizedTitle, ingredients });
+        const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join(
+            "\n- "
+        )}\n\nEdit the list below and confirm when ready.`;
+        setMessages((prev) => [...prev, {role: "assistant", text: reply}]);
+        setPendingRecipe({title: normalizedTitle, ingredients});
     };
 
     const ensureListForHome = useCallback(async () => {
@@ -475,7 +479,7 @@ export default function ChatWidget({
             {open && (
                 <div className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
-                        <div className="font-bold">Recipe Assistant (Mock)</div>
+                        <div className="font-bold">Recipe Assistant</div>
                         <button
                             className="no-border cursor-pointer text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                             onClick={() => setOpen(false)}
@@ -534,21 +538,21 @@ export default function ChatWidget({
                                     <button
                                         disabled={loading}
                                         onClick={handleConfirmAdd}
-                                        className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
+                                        className="px-3 py-1 rounded cursor-pointer bg-blue-600 text-white disabled:opacity-50"
                                     >
                                         {loading ? "Adding..." : "Add"}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setEditingRecipe(true)}
-                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Edit
                                     </button>
                                     <button
                                         disabled={loading}
                                         onClick={handleCancel}
-                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Cancel
                                     </button>
@@ -583,7 +587,7 @@ export default function ChatWidget({
                                                         }
                                                     );
                                                 }}
-                                                className="flex-1 rounded-md border dark:border-gray-700 px-2 py-1 bg-white dark:bg-black text-sm"
+                                                className="flex-1 rounded cursor-pointer-md border dark:border-gray-700 px-2 py-1 bg-white dark:bg-black text-sm"
                                             />
                                             <button
                                                 type="button"
@@ -596,7 +600,7 @@ export default function ChatWidget({
                                                             )
                                                     )
                                                 }
-                                                className="px-2 py-1 rounded border dark:border-gray-700 text-sm"
+                                                className="px-2 py-1 rounded cursor-pointer border dark:border-gray-700 text-sm"
                                             >
                                                 Remove
                                             </button>
@@ -613,7 +617,7 @@ export default function ChatWidget({
                                                 "",
                                             ])
                                         }
-                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         + Add item
                                     </button>
@@ -625,7 +629,7 @@ export default function ChatWidget({
                                                     []),
                                             ])
                                         }
-                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Reset
                                     </button>
@@ -635,21 +639,21 @@ export default function ChatWidget({
                                     <button
                                         disabled={loading}
                                         onClick={handleConfirmAdd}
-                                        className="px-3 py-1 rounded bg-blue-600 text-white disabled:opacity-50"
+                                        className="px-3 py-1 rounded cursor-pointer bg-blue-600 text-white disabled:opacity-50"
                                     >
                                         {loading ? "Adding..." : "Add to list"}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setEditingRecipe(false)}
-                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Back
                                     </button>
                                     <button
                                         disabled={loading}
                                         onClick={handleCancel}
-                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Cancel
                                     </button>
