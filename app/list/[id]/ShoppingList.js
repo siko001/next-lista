@@ -172,13 +172,39 @@ export default function ShoppingList({
     // Track if we're currently searching
     const [isSearching, setIsSearching] = useState(false);
 
+    // Suppress realtime toasts while AI bulk-adding
+    const suppressAiToastsRef = useRef(false);
+    useEffect(() => {
+        const start = () => {
+            suppressAiToastsRef.current = true;
+        };
+        const end = () => {
+            // Small delay to let final state settle
+            setTimeout(() => (suppressAiToastsRef.current = false), 300);
+        };
+        if (typeof window !== "undefined") {
+            window.addEventListener("lista:ai-adding-start", start);
+            window.addEventListener("lista:ai-adding-end", end);
+        }
+        return () => {
+            if (typeof window !== "undefined") {
+                window.removeEventListener("lista:ai-adding-start", start);
+                window.removeEventListener("lista:ai-adding-end", end);
+            }
+        };
+    }, []);
+
     // Optimistic items added from ChatWidget
     useEffect(() => {
         const handleItemsAdded = (e) => {
             const detail = e?.detail;
             if (!detail) return;
             const {listId: evtListId, items} = detail;
-            if (parseInt(evtListId) !== parseInt(listId) || !Array.isArray(items)) return;
+            if (
+                parseInt(evtListId) !== parseInt(listId) ||
+                !Array.isArray(items)
+            )
+                return;
 
             // Add to checkedProducts and allLinkedProducts if not present
             setCheckedProducts((prev) => {
@@ -196,7 +222,6 @@ export default function ShoppingList({
             });
 
             setTotalProductCount((prev) => prev + items.length);
-            showNotification("Ingredients added", "success", 1000);
         };
 
         if (typeof window !== "undefined") {
@@ -204,7 +229,10 @@ export default function ShoppingList({
         }
         return () => {
             if (typeof window !== "undefined") {
-                window.removeEventListener("lista:items-added", handleItemsAdded);
+                window.removeEventListener(
+                    "lista:items-added",
+                    handleItemsAdded
+                );
             }
         };
     }, [listId, showNotification]);
@@ -481,6 +509,17 @@ export default function ShoppingList({
 
             // Send API request
             sendApiRequest(listId, productsToRemove);
+
+            // Notify other components (e.g., ChatWidget) that list was emptied
+            try {
+                if (productsToRemove.length > 0) {
+                    window.dispatchEvent(
+                        new CustomEvent("lista:list-emptied", {
+                            detail: {listId},
+                        })
+                    );
+                }
+            } catch {}
         }
 
         async function sendApiRequest(listId, productsToRemove) {
@@ -548,6 +587,17 @@ export default function ShoppingList({
 
             // Send API request
             sendApiRequest(listId, productsToRemove);
+
+            // Notify that list content was emptied (bagged cleared)
+            try {
+                if (productsToRemove.length > 0) {
+                    window.dispatchEvent(
+                        new CustomEvent("lista:list-emptied", {
+                            detail: {listId},
+                        })
+                    );
+                }
+            } catch {}
         }
 
         async function sendApiRequest(listId, productsToRemove) {
@@ -626,8 +676,8 @@ export default function ShoppingList({
             setBaggedProductCount(Number(data.fields.bagged_product_count));
         }
 
-        // Show notification
-        if (data.message) {
+        // Show notification unless suppressed by AI bulk add
+        if (data.message && !suppressAiToastsRef.current) {
             showNotification(data.message);
         }
     });

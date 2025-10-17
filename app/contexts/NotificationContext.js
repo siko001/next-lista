@@ -13,12 +13,23 @@ const NotificationContext = createContext();
 
 export const NotificationProvider = ({children}) => {
     const [toasts, setToasts] = useState([]);
+    const lastToastRef = useRef({message: null, time: 0});
 
     // Show notification: add to queue
     const showNotification = useCallback((message, type, timeout = 3000) => {
+        const now = Date.now();
+        // Drop duplicate notifications within 1500ms
+        if (
+            lastToastRef.current.message === message &&
+            now - lastToastRef.current.time < 1500
+        ) {
+            return;
+        }
+        lastToastRef.current = {message, time: now};
+
         setToasts((prev) => [
             ...prev,
-            {id: Date.now() + Math.random(), message, type, timeout},
+            {id: now + Math.random(), message, type, timeout},
         ]);
     }, []);
 
@@ -46,4 +57,3 @@ export const NotificationProvider = ({children}) => {
 };
 
 export const useNotificationContext = () => useContext(NotificationContext);
-

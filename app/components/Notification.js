@@ -15,9 +15,9 @@ function Toast({toast, onDone, index}) {
             animRef.current = null;
         }
         if (ref.current) {
-            gsap.set(ref.current, {y: 8, opacity: 0, scale: 0.985});
+            gsap.set(ref.current, {x: -24, opacity: 0, scale: 0.995});
             animRef.current = gsap.to(ref.current, {
-                y: 0,
+                x: 0,
                 opacity: 1,
                 scale: 1,
                 duration: 0.18,
@@ -28,9 +28,9 @@ function Toast({toast, onDone, index}) {
         timeoutRef.current = setTimeout(() => {
             if (ref.current) {
                 animRef.current = gsap.to(ref.current, {
-                    y: 12,
+                    x: -24,
                     opacity: 0,
-                    scale: 0.985,
+                    scale: 0.995,
                     duration: 0.18,
                     ease: "power2.in",
                     onComplete: () => onDone(toast.id),
@@ -74,7 +74,7 @@ export default function Notification() {
     const {toasts, removeToast} = useNotificationContext();
     return (
         toasts?.length > 0 && (
-            <div className="fixed bottom-8 right-8 z-[9999] flex flex-col items-end gap-2 mx-8 sm:mx-0">
+            <div className="fixed top-4 left-4 z-[9999] flex flex-col items-start gap-2 mx-0">
                 {toasts.map((t, i) => (
                     <Toast key={t.id} toast={t} index={i} onDone={removeToast} />
                 ))}

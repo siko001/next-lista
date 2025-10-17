@@ -16,6 +16,7 @@ export default function ChatWidget({
 
     const [open, setOpen] = useState(false);
     const inputRef = useRef(null);
+    const messagesContainerRef = useRef(null);
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState([
         {
@@ -24,9 +25,52 @@ export default function ChatWidget({
         },
     ]);
     const [pendingRecipe, setPendingRecipe] = useState(null);
+    const [lastRecipe, setLastRecipe] = useState(null);
+    const [canReadd, setCanReadd] = useState(false);
+    const [listEmptied, setListEmptied] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const token = propToken || ctxToken;
+
+    // Auto-scroll to bottom on new messages/open
+    useEffect(() => {
+        if (!open) return;
+        const el = messagesContainerRef.current;
+        if (el) {
+            // scroll after layout
+            requestAnimationFrame(() => {
+                el.scrollTop = el.scrollHeight;
+            });
+        }
+    }, [messages, open]);
+
+    // Only show Re-add after user empties the list (list context)
+    useEffect(() => {
+        if (context !== "list") return;
+        const handler = (e) => {
+            const {listId: evtListId} = e?.detail || {};
+            if (parseInt(evtListId) === parseInt(propListId)) {
+                // Mark that the current list was emptied; re-add becomes possible when lastRecipe exists
+                setListEmptied(true);
+                setCanReadd(!!lastRecipe);
+            }
+        };
+        if (typeof window !== "undefined") {
+            window.addEventListener("lista:list-emptied", handler);
+        }
+        return () => {
+            if (typeof window !== "undefined") {
+                window.removeEventListener("lista:list-emptied", handler);
+            }
+        };
+    }, [context, propListId, lastRecipe]);
+
+    // If lastRecipe gets set after the list was emptied, allow re-add
+    useEffect(() => {
+        if (context === "list" && listEmptied && lastRecipe) {
+            setCanReadd(true);
+        }
+    }, [context, listEmptied, lastRecipe]);
 
     // Simple caches to avoid repeated fetching during a session
     const productsCacheRef = useRef({all: null, custom: null});
@@ -290,6 +334,11 @@ export default function ChatWidget({
                 );
             }
 
+            // Announce AI bulk adding start
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
+            } catch {}
+
             // Add each ingredient
             for (const ing of pendingRecipe.ingredients) {
                 await addItemToList(targetListId, ing);
@@ -300,8 +349,13 @@ export default function ChatWidget({
                 ...prev,
                 {role: "assistant", text: "Done! Ingredients added."},
             ]);
+            setLastRecipe(pendingRecipe);
             setPendingRecipe(null);
         } finally {
+            // Announce AI bulk adding end
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
+            } catch {}
             setLoading(false);
         }
     };
@@ -333,7 +387,7 @@ export default function ChatWidget({
             )}
 
             {open && (
-                <div className="fixed bottom-6 right-6 z-[9999] w-[320px] sm:w-[380px] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden">
+                <div className="fixed right-4 sm:right-6 bottom-24 sm:bottom-6 z-[9999] w-[320px] sm:w-[380px] max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700">
                         <div className="font-bold">Recipe Assistant (Mock)</div>
                         <button
@@ -344,7 +398,10 @@ export default function ChatWidget({
                         </button>
                     </div>
 
-                    <div className="max-h-[50vh] overflow-y-auto p-3 space-y-2 text-sm">
+                    <div
+                        ref={messagesContainerRef}
+                        className="flex-1 overflow-y-auto p-3 space-y-2 text-sm"
+                    >
                         {messages.map((m, i) => (
                             <div
                                 key={i}
@@ -381,6 +438,45 @@ export default function ChatWidget({
                                     className="px-3 py-1 rounded border dark:border-gray-700"
                                 >
                                     Cancel
+                                </button>
+                            </div>
+                        )}
+
+                        {!pendingRecipe && context === "list" && lastRecipe && canReadd && (
+                            <div className="mt-2">
+                                <button
+                                    disabled={loading}
+                                    onClick={async () => {
+                                        setLoading(true);
+                                        try {
+                                            // Suppress realtime toasts during re-add
+                                            try {
+                                                window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
+                                            } catch {}
+                                            let targetListId = propListId;
+                                            for (const ing of lastRecipe.ingredients) {
+                                                await addItemToList(
+                                                    targetListId,
+                                                    ing
+                                                );
+                                            }
+                                            showNotification(
+                                                "Re-added ingredients",
+                                                "success",
+                                                1200
+                                            );
+                                            setCanReadd(false);
+                                            setListEmptied(false);
+                                        } finally {
+                                            try {
+                                                window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
+                                            } catch {}
+                                            setLoading(false);
+                                        }
+                                    }}
+                                    className="px-3 py-1 rounded border dark:border-gray-700"
+                                >
+                                    Re-add {lastRecipe.title}
                                 </button>
                             </div>
                         )}
