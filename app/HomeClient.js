@@ -31,6 +31,7 @@ import TrashIcon from "./components/svgs/TranshIcon";
 import RenameIcon from "./components/svgs/RenameIcon";
 import ListLoader from "./components/loaders/ListLoader";
 import List from "./components/parts/List";
+import ChatWidget from "./components/ChatWidget";
 
 const HomeClient = ({
     isRegistered,
@@ -568,6 +569,8 @@ const HomeClient = ({
             )}
 
             <Notification />
+
+            <ChatWidget context="home" token={token} />
 
             {shareDialogOpen && (
                 <ShareListDialog
