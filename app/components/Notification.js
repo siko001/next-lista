@@ -3,84 +3,72 @@ import {useEffect, useRef} from "react";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import {gsap} from "gsap";
 
-export default function Notification() {
-    const {notification, clearNotification} = useNotificationContext();
-    const notificationRef = useRef(null);
+function Toast({toast, onDone, index}) {
+    const ref = useRef(null);
     const timeoutRef = useRef(null);
-    const animationRef = useRef(null);
+    const animRef = useRef(null);
 
     useEffect(() => {
-        if (notification && notification.message) {
-            // Kill any existing animations
-            if (animationRef.current) {
-                animationRef.current.kill();
-            }
-
-            // Clear any existing timeouts
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-            }
-
-            // Animate in
-            animationRef.current = gsap.fromTo(
-                notificationRef.current,
-                {
-                    y: 100,
-                    opacity: 0,
-                    scale: 0.95,
-                },
-                {
-                    y: 0,
-                    opacity: 1,
-                    scale: 1,
-                    duration: 0.5,
-                    ease: "power2.out",
-                }
-            );
-
-            // Animate out after timeout
-            timeoutRef.current = setTimeout(() => {
-                animationRef.current = gsap.to(notificationRef.current, {
-                    y: 100,
-                    opacity: 0,
-                    scale: 0.95,
-                    duration: 0.5,
-                    ease: "power2.in",
-                    onComplete: () => {
-                        if (clearNotification) {
-                            clearNotification();
-                        }
-                    },
-                });
-            }, notification.timeout - 500); // Subtract animation duration
+        if (!toast) return;
+        if (animRef.current) {
+            animRef.current.kill();
+            animRef.current = null;
         }
+        animRef.current = gsap.fromTo(
+            ref.current,
+            {y: 20, opacity: 0, scale: 0.98},
+            {y: 0, opacity: 1, scale: 1, duration: 0.25, ease: "power2.out"}
+        );
 
-        // Cleanup function
+        timeoutRef.current = setTimeout(() => {
+            animRef.current = gsap.to(ref.current, {
+                y: 20,
+                opacity: 0,
+                scale: 0.98,
+                duration: 0.2,
+                ease: "power2.in",
+                onComplete: () => onDone(toast.id),
+            });
+        }, toast.timeout);
+
         return () => {
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
             }
-            if (animationRef.current) {
-                animationRef.current.kill();
+            if (animRef.current) {
+                animRef.current.kill();
+                animRef.current = null;
             }
         };
-    }, [notification, clearNotification]);
+    }, [toast, onDone]);
 
-    const notificationTypeError =
-        notification?.type === "error"
+    const cls =
+        toast.type === "error"
             ? "bg-red-500 text-white"
-            : notification?.type === "info"
+            : toast.type === "info"
             ? "bg-blue-500 text-white"
             : "bg-green-500 text-black";
 
     return (
-        notification &&
-        notification.message && (
-            <div
-                ref={notificationRef}
-                className={`${notificationTypeError} fixed bottom-8 z-[9999] mx-8 sm:mx-0  right-8 font-quicksand font-[600] p-4 rounded-md text-sm sm:text-base shadow-md transform`}
-            >
-                {notification.message}
+        <div
+            ref={ref}
+            className={`${cls} font-quicksand font-[600] p-4 rounded-md text-sm sm:text-base shadow-md transform`}
+            style={{marginTop: index === 0 ? 0 : 8}}
+        >
+            {toast.message}
+        </div>
+    );
+}
+
+export default function Notification() {
+    const {toasts, removeToast} = useNotificationContext();
+    return (
+        toasts?.length > 0 && (
+            <div className="fixed bottom-8 right-8 z-[9999] flex flex-col items-end gap-2 mx-8 sm:mx-0">
+                {toasts.map((t, i) => (
+                    <Toast key={t.id} toast={t} index={i} onDone={removeToast} />
+                ))}
             </div>
         )
     );
