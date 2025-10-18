@@ -48,7 +48,7 @@ body {
             .shopping-list button
         ):not(#reset-password-form button):not(#login-form button):not(
             button#empty-list-add-btn
-        ),
+        ):not(.no-border),
     a:not(.overlay a):not(a#site-logo):not(#reset-password-form a):not(
             #login-form a
         ):not(#empty-list-add-btn) {
