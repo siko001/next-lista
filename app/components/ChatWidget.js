@@ -29,6 +29,7 @@ export default function ChatWidget({
     const [canReadd, setCanReadd] = useState(false);
     const [listEmptied, setListEmptied] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [typing, setTyping] = useState(false);
     const [editedIngredients, setEditedIngredients] = useState([]);
     const [editingRecipe, setEditingRecipe] = useState(false);
     const ingredientInputRefs = useRef([]);
@@ -185,6 +186,7 @@ export default function ChatWidget({
         e?.preventDefault?.();
         const text = input.trim();
         if (!text) return;
+        if (typing || loading) return;
         setMessages((prev) => [...prev, {role: "user", text}]);
         setInput("");
 
@@ -238,6 +240,7 @@ export default function ChatWidget({
         // Prefer AI endpoint, fallback to local map
         let aiTitle = null;
         let aiIngredients = null;
+        setTyping(true);
         try {
             const resp = await fetch("/api/ai/recipes", {
                 method: "POST",
@@ -261,11 +264,32 @@ export default function ChatWidget({
             ? title.charAt(0).toUpperCase() + title.slice(1)
             : "Recipe";
 
+        const keyCheck = (title || "").toLowerCase().split(" ")[0];
+        const titleLooksUnknown = (title || "").toLowerCase().includes("no recipe");
+        const aiMissingOrEmpty = !aiIngredients || aiIngredients.length === 0;
+        const genericFallback = ["salt", "pepper", "olive oil"];
+        const aiLooksGeneric = Array.isArray(aiIngredients)
+            ? aiIngredients.length > 0 && aiIngredients.every((s) => genericFallback.includes(String(s).toLowerCase()))
+            : false;
+        const isUnknownRecipe = (aiMissingOrEmpty || aiLooksGeneric || titleLooksUnknown) && !recipeMap[keyCheck];
+        if (isUnknownRecipe) {
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Sorry, I couldn't find a recipe for "${text}". Please try another dish or rephrase (e.g., "recipe for lasagna").`,
+                },
+            ]);
+            setTyping(false);
+            return;
+        }
+
         const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join(
             "\n- "
         )}\n\nEdit the list below and confirm when ready.`;
         setMessages((prev) => [...prev, {role: "assistant", text: reply}]);
         setPendingRecipe({title: normalizedTitle, ingredients});
+        setTyping(false);
     };
 
     const ensureListForHome = useCallback(async () => {
@@ -591,6 +615,14 @@ export default function ChatWidget({
                             </div>
                         ))}
 
+                        {typing && (
+                            <div className="text-left">
+                                <span className="inline-block px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800">
+                                    Assistant is thinking…
+                                </span>
+                            </div>
+                        )}
+
                         {pendingRecipe && !editingRecipe && (
                             <div className="mt-3 space-y-2">
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -779,6 +811,44 @@ export default function ChatWidget({
                                     </button>
                                 </div>
                             )}
+
+                        {!pendingRecipe && (
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const ex = "I plan to make lasagna";
+                                        setInput(ex);
+                                        setTimeout(() => handleSubmit(), 0);
+                                    }}
+                                    className="px-2 py-1 rounded border dark:border-gray-700"
+                                >
+                                    Try: Lasagna
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const ex = "Recipe for pancakes";
+                                        setInput(ex);
+                                        setTimeout(() => handleSubmit(), 0);
+                                    }}
+                                    className="px-2 py-1 rounded border dark:border-gray-700"
+                                >
+                                    Try: Pancakes
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const ex = "I'm cooking salad";
+                                        setInput(ex);
+                                        setTimeout(() => handleSubmit(), 0);
+                                    }}
+                                    className="px-2 py-1 rounded border dark:border-gray-700"
+                                >
+                                    Try: Salad
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     <form
@@ -791,11 +861,13 @@ export default function ChatWidget({
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Ask for a recipe..."
-                            className="flex-1 rounded-md border dark:border-gray-700 px-3 py-2 bg-white dark:bg-black"
+                            disabled={typing || loading}
+                            className="flex-1 rounded-md border dark:border-gray-700 px-3 py-2 bg-white dark:bg-black disabled:opacity-50"
                         />
                         <button
                             type="submit"
-                            className="px-3 py-2 cursor-pointer rounded-md bg-blue-600 text-white"
+                            disabled={typing || loading}
+                            className="px-3 py-2 cursor-pointer rounded-md bg-blue-600 text-white disabled:opacity-50"
                         >
                             Send
                         </button>
