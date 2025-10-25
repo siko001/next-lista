@@ -28,7 +28,9 @@ export async function POST(req) {
         const openaiKey = process.env.OPENAI_API_KEY;
         if (!groqKey && !openaiKey) {
             return new Response(
-                JSON.stringify({error: "No AI provider configured. Set GROQ_API_KEY or OPENAI_API_KEY."}),
+                JSON.stringify({
+                    error: "No AI provider configured. Set GROQ_API_KEY or OPENAI_API_KEY.",
+                }),
                 {status: 500, headers: {"Content-Type": "application/json"}}
             );
         }
@@ -39,21 +41,24 @@ export async function POST(req) {
 
         let resp;
         if (groqKey) {
-            resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${groqKey}`,
-                },
-                body: JSON.stringify({
-                    model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
-                    messages: [
-                        {role: "system", content: system},
-                        {role: "user", content: user},
-                    ],
-                    temperature: 0.2,
-                }),
-            });
+            resp = await fetch(
+                "https://api.groq.com/openai/v1/chat/completions",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${groqKey}`,
+                    },
+                    body: JSON.stringify({
+                        model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
+                        messages: [
+                            {role: "system", content: system},
+                            {role: "user", content: user},
+                        ],
+                        temperature: 0.2,
+                    }),
+                }
+            );
         } else {
             resp = await fetch("https://api.openai.com/v1/chat/completions", {
                 method: "POST",
