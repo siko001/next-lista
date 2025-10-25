@@ -1,5 +1,6 @@
 "use client";
 import {useCallback, useMemo, useRef, useState, useEffect} from "react";
+import {gsap} from "gsap";
 import {useUserContext} from "../contexts/UserContext";
 import {useListContext} from "../contexts/ListContext";
 import {useNotificationContext} from "../contexts/NotificationContext";
@@ -15,6 +16,8 @@ export default function ChatWidget({
     const {showNotification} = useNotificationContext();
 
     const [open, setOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const panelRef = useRef(null);
     const inputRef = useRef(null);
     const messagesContainerRef = useRef(null);
     const [input, setInput] = useState("");
@@ -60,6 +63,45 @@ export default function ChatWidget({
             });
         }
     }, [messages, open, editedIngredients, pendingRecipe]);
+
+    // Animate modal open/close with GSAP: height 0 <-> auto (0.7s)
+    useEffect(() => {
+        const el = panelRef.current;
+        if (!el) return;
+
+        // respect reduced motion optionally (can be extended later)
+        const prefersReduced =
+            typeof window !== "undefined" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (open) {
+            setMounted(true);
+            // start from collapsed and expand to auto
+            gsap.killTweensOf(el);
+            gsap.set(el, {height: 0, overflow: "hidden"});
+            gsap.to(el, {
+                height: "auto",
+                duration: prefersReduced ? 0 : 0.5,
+                ease: "power2.out",
+                onComplete: () => {
+                    // keep auto after
+                    gsap.set(el, {clearProps: "height"});
+                },
+            });
+        } else if (mounted) {
+            // collapse to 0 then unmount
+            gsap.killTweensOf(el);
+            const currentHeight = el.scrollHeight;
+            gsap.set(el, {height: currentHeight, overflow: "hidden"});
+            gsap.to(el, {
+                height: 0,
+                duration: prefersReduced ? 0 : 0.3,
+                ease: "power2.in",
+                onComplete: () => setMounted(false),
+            });
+        }
+    }, [open, mounted]);
 
     useEffect(() => {
         if (pendingRecipe?.ingredients) {
@@ -1039,6 +1081,7 @@ export default function ChatWidget({
                 <button
                     onClick={() => {
                         setOpen(true);
+                        setMounted(true);
                         if (typeof window !== "undefined") {
                             requestAnimationFrame(() => {
                                 inputRef.current?.focus?.();
@@ -1051,8 +1094,11 @@ export default function ChatWidget({
                 </button>
             )}
 
-            {open && (
-                <div className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col">
+            {mounted && (
+                <div
+                    ref={panelRef}
+                    className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col"
+                >
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
                         <div className="font-bold">Recipe Assistant</div>
                         <button
