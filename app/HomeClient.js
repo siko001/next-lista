@@ -118,6 +118,24 @@ const HomeClient = ({
         }
     }, []);
 
+    // Animate settings menu open when listSettings is set
+    useEffect(() => {
+        if (!listSettings) return;
+        const sel = `#menu-${listSettings}`;
+        const el = typeof document !== "undefined" && document.querySelector(sel);
+        if (!el) return;
+        gsap.killTweensOf(el);
+        gsap.set(el, {height: 0, opacity: 0, y: -6, overflow: "hidden"});
+        gsap.to(el, {
+            height: "auto",
+            opacity: 1,
+            y: 0,
+            duration: 0.5,
+            ease: "power2.out",
+            onComplete: () => gsap.set(el, {clearProps: "height"}),
+        });
+    }, [listSettings]);
+
     const handleDragEnd = async (result) => {
         if (!result.destination) return;
         const items = Array.from(userLists);
@@ -150,7 +168,24 @@ const HomeClient = ({
 
     const handleListSettings = (id) => {
         if (listSettings === id) {
-            setListSettings(false);
+            // Animate close then unmount
+            const sel = `#menu-${id}`;
+            const el = typeof document !== "undefined" && document.querySelector(sel);
+            if (el) {
+                gsap.killTweensOf(el);
+                const currentH = el.scrollHeight;
+                gsap.set(el, {height: currentH, overflow: "hidden"});
+                gsap.to(el, {
+                    height: 0,
+                    opacity: 0,
+                    y: -6,
+                    duration: 0.3,
+                    ease: "power2.in",
+                    onComplete: () => setListSettings(false),
+                });
+            } else {
+                setListSettings(false);
+            }
         } else {
             setListSettings(id);
         }
@@ -160,18 +195,26 @@ const HomeClient = ({
         deleteList(id, token, state);
     };
 
-    // handle esc or click outside to close the settings
+    // handle esc or click outside to close the settings (animate close)
     useEffect(() => {
         const handleClickOutside = (event) => {
             const target = event.target;
             const isSettingsIcon = target.closest(".settings-icon");
-            if (!isSettingsIcon) {
-                setListSettings(false);
+            const openMenuSel = listSettings ? `#menu-${listSettings}` : null;
+            const isInsideMenu = openMenuSel
+                ? target.closest(openMenuSel)
+                : null;
+            if (!isSettingsIcon && !isInsideMenu) {
+                if (listSettings) {
+                    handleListSettings(listSettings);
+                }
             }
         };
         const handleEsc = (event) => {
             if (event.key === "Escape") {
-                setListSettings(false);
+                if (listSettings) {
+                    handleListSettings(listSettings);
+                }
             }
         };
         document.addEventListener("click", handleClickOutside);
@@ -180,7 +223,7 @@ const HomeClient = ({
             document.removeEventListener("click", handleClickOutside);
             document.removeEventListener("keydown", handleEsc);
         };
-    }, []);
+    }, [listSettings]);
 
     const handleCopyList = async (id) => {
         const copiedList = await copyShoppingList(id, token);
@@ -435,7 +478,10 @@ const HomeClient = ({
 
                                                 {/*  List Actions (out for z-index over other lists. closes on drag) */}
                                                 {listSettings === list.id && (
-                                                    <div className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                                    <div
+                                                        id={`menu-${list.id}`}
+                                                        className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
+                                                    >
                                                         <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                             <button
                                                                 onClick={() =>
