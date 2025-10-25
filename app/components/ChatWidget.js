@@ -103,6 +103,30 @@ export default function ChatWidget({
         }
     }, [open, mounted]);
 
+    // Close on Escape or outside click when open
+    useEffect(() => {
+        if (!mounted) return;
+        const onKey = (e) => {
+            if (e.key === "Escape") {
+                setOpen(false);
+            }
+        };
+        const onClickOutside = (e) => {
+            const el = panelRef.current;
+            if (!el) return;
+            if (!el.contains(e.target)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("keydown", onKey);
+        // mousedown to fire before focus shifts
+        document.addEventListener("mousedown", onClickOutside);
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            document.removeEventListener("mousedown", onClickOutside);
+        };
+    }, [mounted]);
+
     useEffect(() => {
         if (pendingRecipe?.ingredients) {
             setEditedIngredients([...pendingRecipe.ingredients]);
