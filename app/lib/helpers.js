@@ -152,14 +152,30 @@ export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
     }
 };
 
-export const extractUserName = (jsonString) => {
-    try {
-        const data = JSON.parse(jsonString);
-        return data.userName || null;
-    } catch (error) {
-        console.error("Invalid JSON:", error);
-        return null;
+export const extractUserName = (value) => {
+    if (!value) return null;
+
+    // If already an object, try common keys
+    if (typeof value === "object") {
+        return value.userName || value.username || value.name || null;
     }
+
+    // If a string, try JSON first; if it fails, return the string itself
+    if (typeof value === "string") {
+        const trimmed = value.trim();
+        // Quick check: looks like JSON object
+        if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+            try {
+                const data = JSON.parse(trimmed);
+                return data.userName || data.username || data.name || null;
+            } catch (_) {
+                // fall through to return the raw string
+            }
+        }
+        return trimmed;
+    }
+
+    return null;
 };
 
 export const decodeHtmlEntities = (text) => {
