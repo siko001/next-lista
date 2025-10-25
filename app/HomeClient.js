@@ -396,10 +396,14 @@ const HomeClient = ({
         };
     }, [userData?.id, shareDialogOpen, userLists]);
 
+    // Prefer client context for header auth state to avoid SSR/CSR mismatch flicker
+    const headerRegistered = userData?.registered === "yes" ? true : isRegistered;
+    const headerUserName = userData?.name || userName;
+
     if (error) return <div>Error: {error}</div>;
     return (
         <main className=" transition-all duration-300">
-            <Header isRegistered={isRegistered} userName={userName} />
+            <Header isRegistered={headerRegistered} userName={headerUserName} />
 
             <div
                 className={

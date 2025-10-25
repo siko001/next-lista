@@ -38,8 +38,9 @@ export default function List({
     } = useListContext();
     const {userData} = useUserContext();
 
-    // First check if we're the owner based on the userId prop
-    const isOwnerBasedOnId = list?.acf?.owner_id === userId?.toString();
+    // Prefer client user id when available, fallback to server-provided userId prop
+    const effectiveUserId = (userData?.id ?? userId)?.toString();
+    const isOwnerBasedOnId = list?.acf?.owner_id === effectiveUserId;
 
     // Only use metadata for non-owners
     const metadata = !isOwnerBasedOnId

@@ -1,9 +1,3 @@
-
-
-
-
-
-
 ### After Project ready ###
 After Launch Phase 1
 email confimartions
@@ -34,5 +28,3 @@ prices & quantity functionalaity
 divide by quantity of people / or number of people shared with.
 Send price to user via push notification.
 
---COOL to have
-Connect with OpenAI and connect to a receipy data and prompt ai to choose the products from the list and return the receipy. 
