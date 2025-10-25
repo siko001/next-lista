@@ -263,28 +263,134 @@ export default function ShoppingList({
     };
 
     const handleOpenChecklistSettings = () => {
+        if (checklistSettings) {
+            const el = document.querySelector('#checklist-settings-menu');
+            if (el) {
+                gsap.killTweensOf(el);
+                gsap.to(el, {
+                    opacity: 0,
+                    y: -6,
+                    scaleY: 0.96,
+                    transformOrigin: 'top left',
+                    duration: 0.25,
+                    ease: 'power2.in',
+                    onComplete: () => setChecklistSettings(false),
+                });
+                return;
+            }
+        }
         setChecklistSettings((prev) => !prev);
     };
 
     const handleOpenBaggedSettings = () => {
+        if (baggedSettings) {
+            const el = document.querySelector('#bagged-settings-menu');
+            if (el) {
+                gsap.killTweensOf(el);
+                gsap.to(el, {
+                    opacity: 0,
+                    y: -6,
+                    scaleY: 0.96,
+                    transformOrigin: 'top left',
+                    duration: 0.25,
+                    ease: 'power2.in',
+                    onComplete: () => setBaggedSettings(false),
+                });
+                return;
+            }
+        }
         setBaggedSettings((prev) => !prev);
     };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (event.target.closest(".checklist-settings") === null) {
-                setChecklistSettings(false);
+            const target = event.target;
+            const insideChecklistToggle = !!target.closest(
+                ".checklist-settings"
+            );
+            const insideBaggedToggle = !!target.closest(".bagged-settings");
+            const insideChecklistMenu = checklistSettings
+                ? !!target.closest("#checklist-settings-menu")
+                : false;
+            const insideBaggedMenu = baggedSettings
+                ? !!target.closest("#bagged-settings-menu")
+                : false;
+
+            if (!insideChecklistToggle && !insideChecklistMenu && checklistSettings) {
+                const el = document.querySelector("#checklist-settings-menu");
+                if (el) {
+                    gsap.killTweensOf(el);
+                    gsap.to(el, {
+                        opacity: 0,
+                        y: -6,
+                        scaleY: 0.96,
+                        transformOrigin: 'top left',
+                        duration: 0.25,
+                        ease: 'power2.in',
+                        onComplete: () => setChecklistSettings(false),
+                    });
+                } else {
+                    setChecklistSettings(false);
+                }
             }
-            if (event.target.closest(".bagged-settings") === null) {
-                setBaggedSettings(false);
+            if (!insideBaggedToggle && !insideBaggedMenu && baggedSettings) {
+                const el = document.querySelector("#bagged-settings-menu");
+                if (el) {
+                    gsap.killTweensOf(el);
+                    gsap.to(el, {
+                        opacity: 0,
+                        y: -6,
+                        scaleY: 0.96,
+                        transformOrigin: 'top left',
+                        duration: 0.25,
+                        ease: 'power2.in',
+                        onComplete: () => setBaggedSettings(false),
+                    });
+                } else {
+                    setBaggedSettings(false);
+                }
             }
         };
 
         // close if esc is pressed
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
-                setChecklistSettings(false);
-                setBaggedSettings(false);
+                if (checklistSettings) {
+                    const el = document.querySelector(
+                        "#checklist-settings-menu"
+                    );
+                    if (el) {
+                        gsap.killTweensOf(el);
+                        gsap.to(el, {
+                            opacity: 0,
+                            y: -6,
+                            scaleY: 0.96,
+                            transformOrigin: 'top left',
+                            duration: 0.25,
+                            ease: 'power2.in',
+                            onComplete: () => setChecklistSettings(false),
+                        });
+                    } else {
+                        setChecklistSettings(false);
+                    }
+                }
+                if (baggedSettings) {
+                    const el = document.querySelector("#bagged-settings-menu");
+                    if (el) {
+                        gsap.killTweensOf(el);
+                        gsap.to(el, {
+                            opacity: 0,
+                            y: -6,
+                            scaleY: 0.96,
+                            transformOrigin: 'top left',
+                            duration: 0.25,
+                            ease: 'power2.in',
+                            onComplete: () => setBaggedSettings(false),
+                        });
+                    } else {
+                        setBaggedSettings(false);
+                    }
+                }
             }
         };
         document.addEventListener("keydown", handleKeyDown);
@@ -294,7 +400,39 @@ export default function ShoppingList({
             document.removeEventListener("keydown", handleKeyDown);
             document.removeEventListener("click", handleClickOutside);
         };
-    }, []);
+    }, [checklistSettings, baggedSettings]);
+
+    // Animate open for checklist menu (transform + opacity for smoother perf)
+    useEffect(() => {
+        if (!checklistSettings) return;
+        const el = document.querySelector("#checklist-settings-menu");
+        if (!el) return;
+        gsap.killTweensOf(el);
+        gsap.set(el, {opacity: 0, y: -6, scaleY: 0.96, transformOrigin: 'top left'});
+        gsap.to(el, {
+            opacity: 1,
+            y: 0,
+            scaleY: 1,
+            duration: 0.35,
+            ease: "power2.out",
+        });
+    }, [checklistSettings]);
+
+    // Animate open for bagged menu (transform + opacity for smoother perf)
+    useEffect(() => {
+        if (!baggedSettings) return;
+        const el = document.querySelector("#bagged-settings-menu");
+        if (!el) return;
+        gsap.killTweensOf(el);
+        gsap.set(el, {opacity: 0, y: -6, scaleY: 0.96, transformOrigin: 'top left'});
+        gsap.to(el, {
+            opacity: 1,
+            y: 0,
+            scaleY: 1,
+            duration: 0.35,
+            ease: "power2.out",
+        });
+    }, [baggedSettings]);
 
     // Update progress when baggedProductCount or totalProductCount changes
     useEffect(() => {
@@ -866,8 +1004,9 @@ export default function ShoppingList({
                                     {checklistSettings && (
                                         <>
                                             <div
+                                                id="checklist-settings-menu"
                                                 ref={checkedListSettings}
-                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30"
+                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
                                             >
                                                 <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                     <button
@@ -993,8 +1132,9 @@ export default function ShoppingList({
                                     {baggedSettings && (
                                         <>
                                             <div
+                                                id="bagged-settings-menu"
                                                 ref={baggedListSettings}
-                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30"
+                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
                                             >
                                                 <div className="flex flex-col font-quicksand font-[500] gap-0.5">
                                                     <button

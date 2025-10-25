@@ -1,5 +1,6 @@
 "use client";
 import {useCallback, useMemo, useRef, useState, useEffect} from "react";
+import {gsap} from "gsap";
 import {useUserContext} from "../contexts/UserContext";
 import {useListContext} from "../contexts/ListContext";
 import {useNotificationContext} from "../contexts/NotificationContext";
@@ -15,6 +16,8 @@ export default function ChatWidget({
     const {showNotification} = useNotificationContext();
 
     const [open, setOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const panelRef = useRef(null);
     const inputRef = useRef(null);
     const messagesContainerRef = useRef(null);
     const [input, setInput] = useState("");
@@ -29,6 +32,8 @@ export default function ChatWidget({
     const [canReadd, setCanReadd] = useState(false);
     const [listEmptied, setListEmptied] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [typing, setTyping] = useState(false);
+    const [pendingVariation, setPendingVariation] = useState(null);
     const [editedIngredients, setEditedIngredients] = useState([]);
     const [editingRecipe, setEditingRecipe] = useState(false);
     const ingredientInputRefs = useRef([]);
@@ -38,6 +43,8 @@ export default function ChatWidget({
         typeof window !== "undefined" && window.globalLenis
             ? window.globalLenis
             : null;
+    const lastQueryRef = useRef("");
+    const ingredientContextRef = useRef(null);
 
     const token = propToken || ctxToken;
 
@@ -56,6 +63,69 @@ export default function ChatWidget({
             });
         }
     }, [messages, open, editedIngredients, pendingRecipe]);
+
+    // Animate modal open/close with GSAP: height 0 <-> auto (0.7s)
+    useEffect(() => {
+        const el = panelRef.current;
+        if (!el) return;
+
+        // respect reduced motion optionally (can be extended later)
+        const prefersReduced =
+            typeof window !== "undefined" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        if (open) {
+            setMounted(true);
+            // start from collapsed and expand to auto
+            gsap.killTweensOf(el);
+            gsap.set(el, {height: 0, overflow: "hidden"});
+            gsap.to(el, {
+                height: "auto",
+                duration: prefersReduced ? 0 : 0.5,
+                ease: "power2.out",
+                onComplete: () => {
+                    // keep auto after
+                    gsap.set(el, {clearProps: "height"});
+                },
+            });
+        } else if (mounted) {
+            // collapse to 0 then unmount
+            gsap.killTweensOf(el);
+            const currentHeight = el.scrollHeight;
+            gsap.set(el, {height: currentHeight, overflow: "hidden"});
+            gsap.to(el, {
+                height: 0,
+                duration: prefersReduced ? 0 : 0.3,
+                ease: "power2.in",
+                onComplete: () => setMounted(false),
+            });
+        }
+    }, [open, mounted]);
+
+    // Close on Escape or outside click when open
+    useEffect(() => {
+        if (!mounted) return;
+        const onKey = (e) => {
+            if (e.key === "Escape") {
+                setOpen(false);
+            }
+        };
+        const onClickOutside = (e) => {
+            const el = panelRef.current;
+            if (!el) return;
+            if (!el.contains(e.target)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("keydown", onKey);
+        // mousedown to fire before focus shifts
+        document.addEventListener("mousedown", onClickOutside);
+        return () => {
+            document.removeEventListener("keydown", onKey);
+            document.removeEventListener("mousedown", onClickOutside);
+        };
+    }, [mounted]);
 
     useEffect(() => {
         if (pendingRecipe?.ingredients) {
@@ -115,7 +185,7 @@ export default function ChatWidget({
     const recipeMap = useMemo(
         () => ({
             lasagna: [
-                "Lasagna noodles",
+                "Lasagna Sheet",
                 "Ground beef",
                 "Tomato sauce",
                 "Onion",
@@ -185,11 +255,123 @@ export default function ChatWidget({
         e?.preventDefault?.();
         const text = input.trim();
         if (!text) return;
+        if (typing || loading) return;
         setMessages((prev) => [...prev, {role: "user", text}]);
         setInput("");
+        lastQueryRef.current = text;
 
-        if (pendingRecipe) {
+        if (pendingVariation) {
+            const lower = text.toLowerCase().trim();
+            const options = pendingVariation.options || [];
+            const norm = (s) => (s || "").toString().toLowerCase().trim();
+            const lev = (a, b) => {
+                const m = a.length,
+                    n = b.length;
+                const dp = Array.from({length: m + 1}, () =>
+                    Array(n + 1).fill(0)
+                );
+                for (let i = 0; i <= m; i++) dp[i][0] = i;
+                for (let j = 0; j <= n; j++) dp[0][j] = j;
+                for (let i = 1; i <= m; i++) {
+                    for (let j = 1; j <= n; j++) {
+                        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                        dp[i][j] = Math.min(
+                            dp[i - 1][j] + 1,
+                            dp[i][j - 1] + 1,
+                            dp[i - 1][j - 1] + cost
+                        );
+                    }
+                }
+                return dp[m][n];
+            };
+            let matchKey = null;
+            for (const o of options) {
+                const k = norm(o.key);
+                const l = norm(o.label);
+                if (
+                    lower === k ||
+                    lower === l ||
+                    l.includes(lower) ||
+                    k.includes(lower)
+                ) {
+                    matchKey = o.key;
+                    break;
+                }
+                const d1 = lev(lower, k);
+                const d2 = lev(lower, l);
+                const threshold = Math.max(
+                    1,
+                    Math.floor(Math.min(k.length, l.length) * 0.4)
+                );
+                if (d1 <= threshold || d2 <= threshold) {
+                    matchKey = o.key;
+                    break;
+                }
+            }
+            if (matchKey) {
+                await handleSelectVariation(matchKey);
+                return;
+            }
+            setPendingVariation(null);
+            // continue as new request
+        }
+
+        // Detect alternate-intent like: "something else", "another one", etc. Use previous ingredient context if available
+        const lowerText = text.toLowerCase();
+        const altIntent =
+            /\b(another|something else|what else|else|different|other option)\b/.test(
+                lowerText
+            );
+        if (
+            altIntent &&
+            Array.isArray(ingredientContextRef.current) &&
+            ingredientContextRef.current.length
+        ) {
+            setPendingVariation(null);
+            setPendingRecipe(null);
+        }
+
+        if (pendingRecipe && !altIntent) {
             const lower = text.toLowerCase();
+            const baseTitle = (pendingRecipe?.title || "").toLowerCase();
+            const isBurgerLike = /burger|cheeseburger|sandwich|wrap/.test(
+                baseTitle
+            );
+
+            if (isBurgerLike && /\bfries?\b/.test(lower)) {
+                const toAdd = ["Potatoes", "Oil"];
+                setEditedIngredients((prev) => {
+                    const seed =
+                        prev && prev.length
+                            ? prev
+                            : pendingRecipe?.ingredients || [];
+                    const exists = (arr, item) =>
+                        arr.some(
+                            (x) =>
+                                (x || "").toLowerCase() === item.toLowerCase()
+                        );
+                    const next = [...seed];
+                    for (const it of toAdd)
+                        if (!exists(next, it)) next.push(it);
+                    return next;
+                });
+                setMessages((prev) => [
+                    ...prev,
+                    {role: "assistant", text: "Added: Fries (Potatoes, Oil)"},
+                ]);
+                return;
+            }
+
+            if (isBurgerLike && /\brice\b/.test(lower)) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Rice is usually a separate dish. Would you like a rice recipe instead? For example: Chicken Rice, Vegetable Rice, or Plain Rice.",
+                    },
+                ]);
+                return;
+            }
             const removeMatch = lower.match(/^remove\s+(.+)$/);
             const addMatch = lower.match(/^add\s+(\d+x\s+)?(.+)$/);
             const replaceMatch = lower.match(/^replace\s+(.+)\s+with\s+(.+)$/);
@@ -207,7 +389,9 @@ export default function ChatWidget({
             }
             if (addMatch) {
                 const qtyPrefix = addMatch[1] || "";
-                const item = (qtyPrefix + addMatch[2]).trim();
+                let raw = (qtyPrefix + addMatch[2]).trim();
+                raw = raw.replace(/\s+to\s+(it|the\s+list)$/i, "");
+                const item = raw;
                 setEditedIngredients((prev) => [...prev, item]);
                 setMessages((prev) => [
                     ...prev,
@@ -238,11 +422,26 @@ export default function ChatWidget({
         // Prefer AI endpoint, fallback to local map
         let aiTitle = null;
         let aiIngredients = null;
+        setTyping(true);
+        // If user asked for an alternative and we have ingredient context, steer the query to request another recipe with the same ingredients.
+        let finalQuery = text;
+        if (
+            altIntent &&
+            Array.isArray(ingredientContextRef.current) &&
+            ingredientContextRef.current.length
+        ) {
+            const list = ingredientContextRef.current.join(", ");
+            finalQuery = `Suggest another recipe using only: ${list}`;
+        }
         try {
             const resp = await fetch("/api/ai/recipes", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({query: text}),
+                body: JSON.stringify({
+                    query: finalQuery,
+                    ingredientsHint: ingredientContextRef.current || null,
+                    alternate: !!altIntent,
+                }),
             });
             if (resp.ok) {
                 const data = await resp.json();
@@ -252,6 +451,10 @@ export default function ChatWidget({
                           .map((s) => String(s || "").trim())
                           .filter(Boolean)
                     : null;
+                var apiVariations = Array.isArray(data?.variations)
+                    ? data.variations
+                    : null;
+                var apiVariationQuestion = data?.variationQuestion || null;
             }
         } catch {}
 
@@ -261,12 +464,387 @@ export default function ChatWidget({
             ? title.charAt(0).toUpperCase() + title.slice(1)
             : "Recipe";
 
+        const keyCheck = (title || "").toLowerCase().split(" ")[0];
+        const titleLooksUnknown = (title || "")
+            .toLowerCase()
+            .includes("no recipe");
+        const aiMissingOrEmpty = !aiIngredients || aiIngredients.length === 0;
+        const genericFallback = ["salt", "pepper", "olive oil"];
+        const aiLooksGeneric = Array.isArray(aiIngredients)
+            ? aiIngredients.length > 0 &&
+              aiIngredients.every((s) =>
+                  genericFallback.includes(String(s).toLowerCase())
+              )
+            : false;
+        const isUnknownRecipe =
+            (aiMissingOrEmpty || aiLooksGeneric || titleLooksUnknown) &&
+            !recipeMap[keyCheck];
+        if (isUnknownRecipe) {
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Sorry, I couldn't find a recipe for "${text}". Please try another dish or rephrase (e.g., "recipe for lasagna").`,
+                },
+            ]);
+            setPendingVariation(null);
+            setTyping(false);
+            return;
+        }
+
+        const detectBaseDish = (userText, aiTitleText, aiIngs) => {
+            const u = `${userText || ""}`.toLowerCase();
+            const t = `${aiTitleText || ""}`.toLowerCase();
+            const specifiedKeywords = [
+                "chicken",
+                "beef",
+                "tuna",
+                "tofu",
+                "vegetarian",
+                "jam",
+                "chocolate",
+                "plain",
+                "lamb",
+                "prawn",
+                "shrimp",
+                "prawns",
+            ];
+            const userSpecified = specifiedKeywords.some((k) => u.includes(k));
+            const s = `${u} ${t}`;
+            if (!userSpecified && s.includes("salad")) return "salad";
+            if (s.includes("lasagna") || s.includes("lasagne"))
+                return "lasagna";
+            if (
+                !userSpecified &&
+                (s.includes("pancake") || s.includes("pancakes"))
+            )
+                return "pancakes";
+            if (!userSpecified && s.includes("curry")) return "curry";
+            if (!userSpecified && Array.isArray(aiIngs)) {
+                const low = aiIngs.map((x) => String(x).toLowerCase());
+                const looksLikeSalad = ["lettuce", "cucumber"].every((k) =>
+                    low.find((v) => v.includes(k))
+                );
+                if (looksLikeSalad) return "salad";
+            }
+            return null;
+        };
+
+        const baseDish = detectBaseDish(text, title, aiIngredients);
+
+        // If user provided ingredients in the prompt (e.g., "I have carrots, onions and chickpeas"), persist them for follow-ups
+        const extractIngredientsFromText = (t) => {
+            if (!t) return null;
+            const m =
+                t.match(/\bi have\s+([^.?]+)/i) ||
+                t.match(/\bwith\s+([^.?]+)/i) ||
+                t.match(/\busing\s+([^.?]+)/i);
+            if (!m || !m[1]) return null;
+            const raw = m[1]
+                .replace(/\band\b/gi, ",")
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+            return raw.length >= 2 ? raw : null;
+        };
+        const parsedIngs = extractIngredientsFromText(text);
+        if (parsedIngs) {
+            ingredientContextRef.current = parsedIngs;
+        } else if (
+            altIntent &&
+            Array.isArray(aiIngredients) &&
+            aiIngredients.length
+        ) {
+            // If this was an alternate suggestion, keep using the AI's ingredients as the current context
+            ingredientContextRef.current = aiIngredients;
+        }
+
+        const determineVariations = (base, baseTitle, baseIngredients) => {
+            if (!base) return null;
+            if (base === "salad") {
+                return {
+                    title: baseTitle,
+                    baseIngredients,
+                    baseDish: base,
+                    question: "How would you like your salad?",
+                    options: [
+                        {key: "vegetarian", label: "Vegetarian"},
+                        {key: "chicken", label: "Chicken"},
+                        {key: "tuna", label: "Tuna"},
+                        {key: "tofu", label: "Tofu"},
+                        {key: "classic", label: "Classic"},
+                    ],
+                };
+            }
+            if (base === "lasagna") {
+                return {
+                    title: baseTitle,
+                    baseIngredients,
+                    baseDish: base,
+                    question: "Choose a lasagna variation:",
+                    options: [
+                        {key: "beef", label: "Beef"},
+                        {key: "vegetarian", label: "Vegetarian"},
+                        {key: "classic", label: "Classic"},
+                    ],
+                };
+            }
+            if (base === "pancakes") {
+                return {
+                    title: baseTitle,
+                    baseIngredients,
+                    baseDish: base,
+                    question: "Choose a pancakes variation:",
+                    options: [
+                        {key: "plain", label: "Plain"},
+                        {key: "jam", label: "Jam"},
+                        {key: "chocolate", label: "Chocolate"},
+                    ],
+                };
+            }
+            if (base === "curry") {
+                return {
+                    title: baseTitle,
+                    baseIngredients,
+                    baseDish: base,
+                    question: "Which curry variation would you like?",
+                    options: [
+                        {key: "chicken", label: "Chicken"},
+                        {key: "beef", label: "Beef"},
+                        {key: "lamb", label: "Lamb"},
+                        {key: "prawn", label: "Prawn"},
+                        {key: "vegetarian", label: "Vegetarian"},
+                        {key: "tofu", label: "Tofu"},
+                        {key: "classic", label: "Classic"},
+                    ],
+                };
+            }
+            return null;
+        };
+
+        if (apiVariations && apiVariations.length && baseDish) {
+            const normalizedOptions = apiVariations.map((it) => {
+                if (typeof it === "string")
+                    return {key: it.toLowerCase(), label: it};
+                const key = (
+                    it?.key ||
+                    it?.id ||
+                    it?.label ||
+                    it?.name ||
+                    ""
+                ).toString();
+                const label = (
+                    it?.label ||
+                    it?.name ||
+                    it?.title ||
+                    key
+                ).toString();
+                return {key: key.toLowerCase(), label};
+            });
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `${
+                        apiVariationQuestion || "Choose a variation:"
+                    } ${normalizedOptions.map((o) => o.label).join(", ")}`,
+                },
+            ]);
+            setPendingVariation({
+                title: normalizedTitle,
+                baseIngredients: ingredients,
+                baseDish,
+                question: apiVariationQuestion || "Choose a variation:",
+                options: normalizedOptions,
+                source: "api",
+            });
+            setTyping(false);
+            return;
+        }
+
+        const variations = determineVariations(
+            baseDish,
+            normalizedTitle,
+            ingredients
+        );
+        if (variations) {
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `${variations.question} ${variations.options
+                        .map((o) => o.label)
+                        .join(", ")}`,
+                },
+            ]);
+            setPendingVariation(variations);
+            setTyping(false);
+            return;
+        }
+
         const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join(
             "\n- "
         )}\n\nEdit the list below and confirm when ready.`;
         setMessages((prev) => [...prev, {role: "assistant", text: reply}]);
+        setPendingVariation(null);
         setPendingRecipe({title: normalizedTitle, ingredients});
+        setTyping(false);
     };
+
+    const handleSelectVariation = useCallback(
+        async (opt) => {
+            if (!pendingVariation) return;
+            const baseTitle = pendingVariation.title;
+            const baseIngredients = pendingVariation.baseIngredients || [];
+            const lower = (s) => (s || "").toLowerCase();
+            const has = (arr, item) =>
+                arr.some((x) => lower(x) === lower(item));
+            const addUnique = (arr, items) => {
+                const next = [...arr];
+                for (const it of items) {
+                    if (!has(next, it)) next.push(it);
+                }
+                return next;
+            };
+            let outTitle = baseTitle;
+            let outIngredients = [...baseIngredients];
+            const base =
+                pendingVariation?.baseDish || lower(baseTitle).split(" ")[0];
+
+            if (pendingVariation?.source === "api") {
+                try {
+                    setTyping(true);
+                    const resp = await fetch("/api/ai/recipes", {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({
+                            query: lastQueryRef.current || baseTitle,
+                            variationKey: opt,
+                            baseDish: base,
+                        }),
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const title = (data?.title || baseTitle).toString();
+                        const ings = Array.isArray(data?.ingredients)
+                            ? data.ingredients
+                                  .map((s) => String(s || "").trim())
+                                  .filter(Boolean)
+                            : outIngredients;
+                        const reply = `For ${title}, you'll need: \n- ${ings.join(
+                            "\n- "
+                        )}\n\nEdit the list below and confirm when ready.`;
+                        setMessages((prev) => [
+                            ...prev,
+                            {role: "assistant", text: reply},
+                        ]);
+                        setPendingRecipe({title, ingredients: ings});
+                        setPendingVariation(null);
+                        setTyping(false);
+                        return;
+                    }
+                } catch {}
+                setTyping(false);
+                // fall back to client variation handling below
+            }
+            if (base === "salad") {
+                if (opt === "vegetarian") {
+                    outTitle = "Vegetarian Salad";
+                    outIngredients = addUnique(outIngredients, [
+                        "Chickpeas",
+                        "Feta",
+                    ]);
+                } else if (opt === "chicken") {
+                    outTitle = "Chicken Salad";
+                    outIngredients = addUnique(outIngredients, [
+                        "Chicken breast",
+                    ]);
+                } else if (opt === "tuna") {
+                    outTitle = "Tuna Salad";
+                    outIngredients = addUnique(outIngredients, ["Tuna"]);
+                } else if (opt === "tofu") {
+                    outTitle = "Tofu Salad";
+                    outIngredients = addUnique(outIngredients, ["Tofu"]);
+                } else {
+                    outTitle = baseTitle;
+                }
+            } else if (base === "lasagna") {
+                const replaceMeat = (to) => {
+                    const idx = outIngredients.findIndex(
+                        (x) => lower(x) === "ground beef"
+                    );
+                    if (idx >= 0) {
+                        outIngredients[idx] = to;
+                    } else {
+                        outIngredients = addUnique(outIngredients, [to]);
+                    }
+                };
+                if (opt === "beef" || opt === "classic") {
+                    outTitle = "Beef Lasagna";
+                    replaceMeat("Ground beef");
+                } else if (opt === "vegetarian") {
+                    outTitle = "Vegetarian Lasagna";
+                    outIngredients = outIngredients.filter(
+                        (x) => lower(x) !== "ground beef"
+                    );
+                    outIngredients = addUnique(outIngredients, [
+                        "Spinach",
+                        "Mushrooms",
+                    ]);
+                }
+            } else if (base === "pancakes") {
+                if (opt === "plain") {
+                    outTitle = "Plain Pancakes";
+                } else if (opt === "jam") {
+                    outTitle = "Pancakes with Jam";
+                    outIngredients = addUnique(outIngredients, ["Jam"]);
+                } else if (opt === "chocolate") {
+                    outTitle = "Chocolate Pancakes";
+                    outIngredients = addUnique(outIngredients, [
+                        "Chocolate chips",
+                    ]);
+                }
+            } else if (base === "curry") {
+                const proteins = {
+                    chicken: "Chicken",
+                    beef: "Beef",
+                    lamb: "Lamb",
+                    prawn: "Prawns",
+                    tofu: "Tofu",
+                };
+                if (opt in proteins) {
+                    const p = proteins[opt];
+                    outTitle = `${p} Curry`;
+                    outIngredients = addUnique(outIngredients, [p]);
+                } else if (opt === "vegetarian" || opt === "classic") {
+                    outTitle = opt === "classic" ? "Curry" : "Vegetarian Curry";
+                    outIngredients = outIngredients.filter(
+                        (x) =>
+                            ![
+                                "chicken",
+                                "beef",
+                                "lamb",
+                                "prawn",
+                                "prawns",
+                            ].includes(lower(x))
+                    );
+                    if (opt === "vegetarian") {
+                        outIngredients = addUnique(outIngredients, [
+                            "Potatoes",
+                            "Cauliflower",
+                        ]);
+                    }
+                }
+            }
+            const reply = `For ${outTitle}, you'll need: \n- ${outIngredients.join(
+                "\n- "
+            )}\n\nEdit the list below and confirm when ready.`;
+            setMessages((prev) => [...prev, {role: "assistant", text: reply}]);
+            setPendingRecipe({title: outTitle, ingredients: outIngredients});
+            setPendingVariation(null);
+        },
+        [pendingVariation]
+    );
 
     const ensureListForHome = useCallback(async () => {
         if (!userData?.id || !token) return null;
@@ -527,6 +1105,7 @@ export default function ChatWidget({
                 <button
                     onClick={() => {
                         setOpen(true);
+                        setMounted(true);
                         if (typeof window !== "undefined") {
                             requestAnimationFrame(() => {
                                 inputRef.current?.focus?.();
@@ -539,8 +1118,11 @@ export default function ChatWidget({
                 </button>
             )}
 
-            {open && (
-                <div className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col">
+            {mounted && (
+                <div
+                    ref={panelRef}
+                    className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col"
+                >
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
                         <div className="font-bold">Recipe Assistant</div>
                         <button
@@ -590,6 +1172,45 @@ export default function ChatWidget({
                                 </span>
                             </div>
                         ))}
+
+                        {typing && (
+                            <div className="text-left">
+                                <span className="inline-block px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800">
+                                    Assistant is thinking…
+                                </span>
+                            </div>
+                        )}
+
+                        {pendingVariation && (
+                            <div className="mt-3 space-y-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {pendingVariation.question}
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {pendingVariation.options.map((o) => (
+                                        <button
+                                            key={o.key}
+                                            type="button"
+                                            onClick={() =>
+                                                handleSelectVariation(o.key)
+                                            }
+                                            className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        >
+                                            {o.label}
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setPendingVariation(null)
+                                        }
+                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {pendingRecipe && !editingRecipe && (
                             <div className="mt-3 space-y-2">
@@ -779,6 +1400,47 @@ export default function ChatWidget({
                                     </button>
                                 </div>
                             )}
+
+                        {!pendingRecipe &&
+                            !pendingVariation &&
+                            !typing &&
+                            !loading && (
+                                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const ex = "I plan to make lasagna";
+                                            setInput(ex);
+                                            setTimeout(() => handleSubmit(), 0);
+                                        }}
+                                        className="px-2 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Try: Lasagna
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const ex = "Recipe for pancakes";
+                                            setInput(ex);
+                                            setTimeout(() => handleSubmit(), 0);
+                                        }}
+                                        className="px-2 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Try: Pancakes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const ex = "I'm cooking salad";
+                                            setInput(ex);
+                                            setTimeout(() => handleSubmit(), 0);
+                                        }}
+                                        className="px-2 py-1 rounded border dark:border-gray-700"
+                                    >
+                                        Try: Salad
+                                    </button>
+                                </div>
+                            )}
                     </div>
 
                     <form
@@ -791,11 +1453,13 @@ export default function ChatWidget({
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Ask for a recipe..."
-                            className="flex-1 rounded-md border dark:border-gray-700 px-3 py-2 bg-white dark:bg-black"
+                            disabled={typing || loading}
+                            className="flex-1 rounded-md border dark:border-gray-700 px-3 py-2 bg-white dark:bg-black disabled:opacity-50"
                         />
                         <button
                             type="submit"
-                            className="px-3 py-2 cursor-pointer rounded-md bg-blue-600 text-white"
+                            disabled={typing || loading}
+                            className="px-3 py-2 cursor-pointer rounded-md bg-blue-600 text-white disabled:opacity-50"
                         >
                             Send
                         </button>

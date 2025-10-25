@@ -78,29 +78,95 @@ export default function ShoppingListHeader({
     };
 
     const handleListSettings = () => {
+        if (openSettings) {
+            const el = document.querySelector('#header-settings-menu');
+            if (el) {
+                gsap.killTweensOf(el);
+                const h = el.scrollHeight;
+                gsap.set(el, {height: h, overflow: 'hidden'});
+                gsap.to(el, {
+                    height: 0,
+                    opacity: 0,
+                    y: -6,
+                    duration: 0.3,
+                    ease: 'power2.in',
+                    onComplete: () => setOpenSettings(false),
+                });
+                return;
+            }
+        }
         setOpenSettings((prev) => !prev);
     };
 
     useEffect(() => {
-        // handle click outside of the settings menu
+        // handle click outside of the settings menu with animated close
         const handleClickOutside = (e) => {
-            if (e.target.closest(".shopping-list-header-settings") === null) {
+            if (e.target.closest('.shopping-list-header-settings') === null) {
+                if (openSettings) {
+                    const el = document.querySelector('#header-settings-menu');
+                    if (el) {
+                        gsap.killTweensOf(el);
+                        const h = el.scrollHeight;
+                        gsap.set(el, {height: h, overflow: 'hidden'});
+                        gsap.to(el, {
+                            height: 0,
+                            opacity: 0,
+                            y: -6,
+                            duration: 0.3,
+                            ease: 'power2.in',
+                            onComplete: () => setOpenSettings(false),
+                        });
+                        return;
+                    }
+                }
                 setOpenSettings(false);
             }
         };
         // esc key to close the settings menu
         const handleKeyDown = (e) => {
-            if (openSettings && e.key === "Escape") {
+            if (openSettings && e.key === 'Escape') {
+                const el = document.querySelector('#header-settings-menu');
+                if (el) {
+                    gsap.killTweensOf(el);
+                    const h = el.scrollHeight;
+                    gsap.set(el, {height: h, overflow: 'hidden'});
+                    gsap.to(el, {
+                        height: 0,
+                        opacity: 0,
+                        y: -6,
+                        duration: 0.3,
+                        ease: 'power2.in',
+                        onComplete: () => setOpenSettings(false),
+                    });
+                    return;
+                }
                 setOpenSettings(false);
             }
         };
-        document.addEventListener("click", handleClickOutside);
-        document.addEventListener("keydown", handleKeyDown);
+        document.addEventListener('click', handleClickOutside);
+        document.addEventListener('keydown', handleKeyDown);
         return () => {
-            document.removeEventListener("click", handleClickOutside);
-            document.removeEventListener("keydown", handleKeyDown);
+            document.removeEventListener('click', handleClickOutside);
+            document.removeEventListener('keydown', handleKeyDown);
         };
-    }, []);
+    }, [openSettings]);
+
+    // Animate open when toggled on
+    useEffect(() => {
+        if (!openSettings) return;
+        const el = document.querySelector('#header-settings-menu');
+        if (!el) return;
+        gsap.killTweensOf(el);
+        gsap.set(el, {height: 0, opacity: 0, y: -6, overflow: 'hidden'});
+        gsap.to(el, {
+            height: 'auto',
+            opacity: 1,
+            y: 0,
+            duration: 0.5,
+            ease: 'power2.out',
+            onComplete: () => gsap.set(el, {clearProps: 'height'}),
+        });
+    }, [openSettings]);
 
     const handleSearchProduct = (e) => {
         e.stopPropagation();
@@ -333,7 +399,7 @@ export default function ShoppingListHeader({
                             className="relative shopping-list-header-settings"
                         >
                             {openSettings && (
-                                <div className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30">
+                                <div id="header-settings-menu" className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden">
                                     <div className="flex flex-col gap-0.5 font-quicksand font-[500]">
                                         <button
                                             onClick={() =>
