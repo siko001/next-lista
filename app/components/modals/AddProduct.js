@@ -68,6 +68,8 @@ export default function AddProduct({
 
     const [selectedProductsSection, setSelectedProductsSection] =
         useState("popular");
+    const overlayRef = useRef(null);
+    const panelRef = useRef(null);
 
     // Create Fuse instance for fuzzy search
     const fuseOptions = {
@@ -182,6 +184,87 @@ export default function AddProduct({
         });
     }, []);
 
+    // Slide-up + fade for the full-screen AddProduct modal
+    useEffect(() => {
+        const overlay = overlayRef.current;
+        const panel = panelRef.current;
+        if (!overlay || !panel) return;
+        const prefersReduced =
+            typeof window !== "undefined" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        gsap.killTweensOf([overlay, panel]);
+        gsap.set(overlay, {opacity: 0});
+        gsap.set(panel, {
+            y: 24,
+            opacity: 0,
+            scale: 0.98,
+            willChange: "transform,opacity",
+        });
+        gsap.timeline()
+            .to(
+                overlay,
+                {
+                    opacity: 1,
+                    duration: prefersReduced ? 0 : 0.5,
+                    ease: "power1.out",
+                },
+                0
+            )
+            .to(
+                panel,
+                {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    duration: prefersReduced ? 0 : 1,
+                    ease: "power2.out",
+                },
+                0
+            );
+    }, []);
+
+    const closeOverlay = () => {
+        const overlay = overlayRef.current;
+        const panel = panelRef.current;
+        if (!overlay || !panel) {
+            document.body.style.overflow = "auto";
+            setProductOverlay(false);
+            return;
+        }
+        const prefersReduced =
+            typeof window !== "undefined" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        gsap.killTweensOf([overlay, panel]);
+        gsap.timeline({
+            onComplete: () => {
+                document.body.style.overflow = "auto";
+                setProductOverlay(false);
+            },
+        })
+            .to(
+                panel,
+                {
+                    y: 12,
+                    opacity: 0,
+                    scale: 0.99,
+                    duration: prefersReduced ? 0 : 0.25,
+                    ease: "power2.in",
+                },
+                0
+            )
+            .to(
+                overlay,
+                {
+                    opacity: 0,
+                    duration: prefersReduced ? 0 : 0.25,
+                    ease: "power1.in",
+                },
+                0.05
+            );
+    };
+
     // Search functionality with fuzzy search
     const [searchValue, setSearchValue] = useState("");
 
@@ -257,14 +340,12 @@ export default function AddProduct({
     useEffect(() => {
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
-                document.body.style.overflow = "auto";
-                setProductOverlay(false);
+                closeOverlay();
             }
         };
         const handleOutsideClick = (event) => {
             if (event.target.classList.contains("close-product-overlay")) {
-                document.body.style.overflow = "auto";
-                setProductOverlay(false);
+                closeOverlay();
             }
         };
 
@@ -736,13 +817,19 @@ export default function AddProduct({
                 <CloseIcon
                     className="sticky top-4 right-4 w-8 h-8 text-white cursor-pointer"
                     onClick={() => {
-                        setProductOverlay(false);
+                        closeOverlay();
                     }}
                 />
             </div>
-            <div className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#fefefeef] dark:bg-[#000000ef] blur-sm close-product-overlay"></div>
+            <div
+                ref={overlayRef}
+                className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#fefefeef] dark:bg-[#000000ef] blur-sm close-product-overlay"
+            ></div>
             <div className="relative top-0 ">
-                <div className="absolute top-0 z-[100]  inset-x-0 bg-white dark:bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6">
+                <div
+                    ref={panelRef}
+                    className="absolute top-0 z-[100]  inset-x-0 bg-white dark:bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6"
+                >
                     <div className="w-full bg-gray-300 dark:bg-gray-700 sticky top-0 z-20 rounded-md">
                         <div className="relative flex items-center">
                             <input
@@ -942,10 +1029,7 @@ export default function AddProduct({
                         action="close-product-overlay"
                         overrideDefaultClasses="bg-red-500 whitespace-nowrap text-black text-sm md:text-base"
                         light={true}
-                        setProductOverlay={() => {
-                            document.body.style.overflow = "auto";
-                            setProductOverlay(false);
-                        }}
+                        setProductOverlay={closeOverlay}
                     />
                 </div>
             </div>
