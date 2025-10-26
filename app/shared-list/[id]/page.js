@@ -5,7 +5,7 @@ export default async function SharedListPage({ params }) {
     const cookieStore = await cookies();
     const token = cookieStore.get('token')?.value;
     const userId = cookieStore.get('id')?.value;
-    const listId = params.id;
+    const { id: listId } = await params;
 
     return (
         <SharedListClient
