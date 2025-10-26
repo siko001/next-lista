@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSharedList } from '../../lib/api';
 import { decryptToken, WP_API_BASE } from '../../lib/helpers';
 import { redirect } from 'next/navigation';
@@ -10,14 +10,13 @@ export default function SharedListPage({ token, userId, listId }) {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (!token || !userId) {
-            redirect(`/shared-list/${listId}`);
-        }
-    }, []);
+    const startedRef = useRef(false);
 
     useEffect(() => {
-        if (!listId) return;
+        // Wait until required data is present, then process exactly once
+        if (!listId || !token || !userId) return;
+        if (startedRef.current) return;
+        startedRef.current = true;
 
         const processSharedList = async () => {
             try {
@@ -52,7 +51,7 @@ export default function SharedListPage({ token, userId, listId }) {
                     }
                 }
                 // 4. Redirect to the main lists page
-                router.push('/');
+                router.replace('/');
 
             } catch (err) {
                 setError(err.message || 'Failed to process shared list');
@@ -62,7 +61,7 @@ export default function SharedListPage({ token, userId, listId }) {
         };
 
         processSharedList();
-    }, []);
+    }, [listId, token, userId]);
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center h-screen">
