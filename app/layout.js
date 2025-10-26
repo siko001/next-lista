@@ -48,21 +48,40 @@ const ThemeScript = () => {
     const themeScript = `
         (function() {
             try {
-                // Get stored theme or default to 'system'
-                const storedTheme = localStorage.getItem('theme') || 'system';
+                // Function to get a cookie by name
+                function getCookie(name) {
+                    const value = '; ' + document.cookie;
+                    const parts = value.split('; ' + name + '=');
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                    return null;
+                }
                 
-                // Check if the user has a saved theme preference
-                if (storedTheme === 'dark' || storedTheme === 'light') {
-                    // If user has explicitly chosen a theme, apply it immediately
-                    document.documentElement.classList.add(storedTheme, storedTheme + '-mode');
-                } else {
-                    // For system theme, check the preferred color scheme
-                    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    if (isDark) {
-                        document.documentElement.classList.add('dark', 'dark-mode');
+                // Check if user is authenticated (has a token cookie)
+                const isAuthenticated = !!getCookie('token');
+                
+                // Only apply theme if user is authenticated
+                if (isAuthenticated) {
+                    // Get stored theme or default to 'system'
+                    const storedTheme = localStorage.getItem('theme') || 'system';
+                    
+                    // Check if the user has a saved theme preference
+                    if (storedTheme === 'dark' || storedTheme === 'light') {
+                        // If user has explicitly chosen a theme, apply it immediately
+                        document.documentElement.classList.add(storedTheme, storedTheme + '-mode');
                     } else {
-                        document.documentElement.classList.add('light', 'light-mode');
+                        // For system theme, check the preferred color scheme
+                        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        if (isDark) {
+                            document.documentElement.classList.add('dark', 'dark-mode');
+                        } else {
+                            document.documentElement.classList.add('light', 'light-mode');
+                        }
                     }
+                } else {
+                    // If not authenticated, ensure no theme classes are present
+                    const html = document.documentElement;
+                    ['dark', 'dark-mode', 'light', 'light-mode'].forEach(cls => html.classList.remove(cls));
+                    html.removeAttribute('data-theme');
                 }
                 
                 // Add a class to prevent transitions during initial load
