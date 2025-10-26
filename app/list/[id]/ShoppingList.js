@@ -1,6 +1,7 @@
 "use client";
 import gsap from "gsap";
 import {useEffect, useState, useMemo, useRef} from "react";
+import {useLoading} from "../../contexts/LoadingContext";
 import Fuse from "fuse.js";
 import {calculateProgress, WP_API_BASE, decryptToken} from "../../lib/helpers";
 import {
@@ -47,6 +48,7 @@ export default function ShoppingList({
     favourites,
     ownerName,
 }) {
+    // const {stopLoading} = useLoading();
     const [productOverlay, setProductOverlay] = useState(false);
     const [currentList, setCurrentList] = useState(initialList);
 
@@ -264,16 +266,16 @@ export default function ShoppingList({
 
     const handleOpenChecklistSettings = () => {
         if (checklistSettings) {
-            const el = document.querySelector('#checklist-settings-menu');
+            const el = document.querySelector("#checklist-settings-menu");
             if (el) {
                 gsap.killTweensOf(el);
                 gsap.to(el, {
                     opacity: 0,
                     y: -6,
                     scaleY: 0.96,
-                    transformOrigin: 'top left',
+                    transformOrigin: "top left",
                     duration: 0.25,
-                    ease: 'power2.in',
+                    ease: "power2.in",
                     onComplete: () => setChecklistSettings(false),
                 });
                 return;
@@ -284,16 +286,16 @@ export default function ShoppingList({
 
     const handleOpenBaggedSettings = () => {
         if (baggedSettings) {
-            const el = document.querySelector('#bagged-settings-menu');
+            const el = document.querySelector("#bagged-settings-menu");
             if (el) {
                 gsap.killTweensOf(el);
                 gsap.to(el, {
                     opacity: 0,
                     y: -6,
                     scaleY: 0.96,
-                    transformOrigin: 'top left',
+                    transformOrigin: "top left",
                     duration: 0.25,
-                    ease: 'power2.in',
+                    ease: "power2.in",
                     onComplete: () => setBaggedSettings(false),
                 });
                 return;
@@ -316,7 +318,11 @@ export default function ShoppingList({
                 ? !!target.closest("#bagged-settings-menu")
                 : false;
 
-            if (!insideChecklistToggle && !insideChecklistMenu && checklistSettings) {
+            if (
+                !insideChecklistToggle &&
+                !insideChecklistMenu &&
+                checklistSettings
+            ) {
                 const el = document.querySelector("#checklist-settings-menu");
                 if (el) {
                     gsap.killTweensOf(el);
@@ -324,9 +330,9 @@ export default function ShoppingList({
                         opacity: 0,
                         y: -6,
                         scaleY: 0.96,
-                        transformOrigin: 'top left',
+                        transformOrigin: "top left",
                         duration: 0.25,
-                        ease: 'power2.in',
+                        ease: "power2.in",
                         onComplete: () => setChecklistSettings(false),
                     });
                 } else {
@@ -341,9 +347,9 @@ export default function ShoppingList({
                         opacity: 0,
                         y: -6,
                         scaleY: 0.96,
-                        transformOrigin: 'top left',
+                        transformOrigin: "top left",
                         duration: 0.25,
-                        ease: 'power2.in',
+                        ease: "power2.in",
                         onComplete: () => setBaggedSettings(false),
                     });
                 } else {
@@ -365,9 +371,9 @@ export default function ShoppingList({
                             opacity: 0,
                             y: -6,
                             scaleY: 0.96,
-                            transformOrigin: 'top left',
+                            transformOrigin: "top left",
                             duration: 0.25,
-                            ease: 'power2.in',
+                            ease: "power2.in",
                             onComplete: () => setChecklistSettings(false),
                         });
                     } else {
@@ -382,9 +388,9 @@ export default function ShoppingList({
                             opacity: 0,
                             y: -6,
                             scaleY: 0.96,
-                            transformOrigin: 'top left',
+                            transformOrigin: "top left",
                             duration: 0.25,
-                            ease: 'power2.in',
+                            ease: "power2.in",
                             onComplete: () => setBaggedSettings(false),
                         });
                     } else {
@@ -408,7 +414,12 @@ export default function ShoppingList({
         const el = document.querySelector("#checklist-settings-menu");
         if (!el) return;
         gsap.killTweensOf(el);
-        gsap.set(el, {opacity: 0, y: -6, scaleY: 0.96, transformOrigin: 'top left'});
+        gsap.set(el, {
+            opacity: 0,
+            y: -6,
+            scaleY: 0.96,
+            transformOrigin: "top left",
+        });
         gsap.to(el, {
             opacity: 1,
             y: 0,
@@ -424,7 +435,12 @@ export default function ShoppingList({
         const el = document.querySelector("#bagged-settings-menu");
         if (!el) return;
         gsap.killTweensOf(el);
-        gsap.set(el, {opacity: 0, y: -6, scaleY: 0.96, transformOrigin: 'top left'});
+        gsap.set(el, {
+            opacity: 0,
+            y: -6,
+            scaleY: 0.96,
+            transformOrigin: "top left",
+        });
         gsap.to(el, {
             opacity: 1,
             y: 0,
@@ -837,16 +853,27 @@ export default function ShoppingList({
                 parseInt(data.listId) === parseInt(listId)
             ) {
                 const suppress = (() => {
-                    try { return sessionStorage.getItem('suppressSelfRemovalToast') === '1'; } catch { return false; }
+                    try {
+                        return (
+                            sessionStorage.getItem(
+                                "suppressSelfRemovalToast"
+                            ) === "1"
+                        );
+                    } catch {
+                        return false;
+                    }
                 })();
-                const selfRemoved = suppress || (parseInt(data.actorId) === parseInt(userId));
+                const selfRemoved =
+                    suppress || parseInt(data.actorId) === parseInt(userId);
                 showNotification(
                     selfRemoved
                         ? "List removed successfully"
                         : "The list owner has removed you from this list",
                     selfRemoved ? "success" : "info"
                 );
-                try { sessionStorage.removeItem('suppressSelfRemovalToast'); } catch {}
+                try {
+                    sessionStorage.removeItem("suppressSelfRemovalToast");
+                } catch {}
                 // Store removal data for home page
                 const removeData = {
                     listId: data.listId,
@@ -865,9 +892,9 @@ export default function ShoppingList({
                 parseInt(data.listId) === parseInt(listId)
             ) {
                 // Update shared users state
-                const updatedUsers = (currentList?.acf?.shared_with_users || []).filter(
-                    (user) => user.ID !== parseInt(data.userId)
-                );
+                const updatedUsers = (
+                    currentList?.acf?.shared_with_users || []
+                ).filter((user) => user.ID !== parseInt(data.userId));
 
                 // Update both the list and shared users state
                 setCurrentList((prevList) => ({
@@ -895,10 +922,13 @@ export default function ShoppingList({
                 );
 
                 // Notify owner/shared users inside inner list
-                const someoneLeft = parseInt(data.actorId) === parseInt(data.userId);
+                const someoneLeft =
+                    parseInt(data.actorId) === parseInt(data.userId);
                 const name = data.userName || "A user";
                 showNotification(
-                    someoneLeft ? `${name} left the list` : `${name} was removed from the list`,
+                    someoneLeft
+                        ? `${name} left the list`
+                        : `${name} was removed from the list`,
                     someoneLeft ? "info" : "warning"
                 );
             }
@@ -948,10 +978,11 @@ export default function ShoppingList({
                 />
 
                 <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32">
-                    <div className="flex items-center justify-between sticky top-24 bg-[#f8f8ff] dark:bg-[#0a0a0a] z-20 px-4 pt-4 pb-2">
+                    {/* bg-[#f8f8ff] dark:bg-[#0a0a0a] */}
+                    <div className="flex items-center justify-between sticky top-24 hidden-bg z-20 px-4 pt-4 pb-2">
                         {checkedProducts && checkedProducts?.length !== 0 && (
                             <>
-                                <div className="bg-[#ededed] dark:bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
+                                <div className="hidden-bg h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
                                 <h3
                                     onClick={handleOpenChecklistSettings}
                                     className="flex cursor-pointer relative z-20  gap-1 checklist-settings"
@@ -967,7 +998,7 @@ export default function ShoppingList({
                                         <span className="text-2xl font-bold">
                                             Checklist{" "}
                                         </span>
-                                        <span className="text-sm text-primary font-quicksand ml-2">
+                                        <span className="text-sm brand-color transition-colors duration-200 font-quicksand ml-2">
                                             {checkedProducts?.length} products
                                         </span>
                                     </div>
@@ -977,7 +1008,7 @@ export default function ShoppingList({
                                             <div
                                                 id="checklist-settings-menu"
                                                 ref={checkedListSettings}
-                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
+                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
                                             >
                                                 <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                     <button
@@ -986,7 +1017,7 @@ export default function ShoppingList({
                                                                 listId
                                                             )
                                                         }
-                                                        className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                        className="px-1 py-1 items-center flex tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                                     >
                                                         <BagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
                                                         Bag All Items
@@ -997,7 +1028,7 @@ export default function ShoppingList({
                                                                 listId
                                                             );
                                                         }}
-                                                        className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm"
+                                                        className="px-1 py-1  cursor-pointer items-center flex text-left duration-200 transition-colors text-red-600 rounded-sm"
                                                     >
                                                         <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
                                                         Remove All Items
@@ -1025,7 +1056,7 @@ export default function ShoppingList({
                                             onClick={() =>
                                                 setProductOverlay(true)
                                             }
-                                            className="text-primary hover:text-primary/70 font-bold dark:text-primary/70  dark:hover:text-primary cursor-pointer duration-200 transition-colors ease inline px-1"
+                                            className="brand-color font-bold hover cursor-pointer duration-200 transition-colors ease inline px-1"
                                         >
                                             Add Products
                                         </button>
@@ -1064,7 +1095,7 @@ export default function ShoppingList({
                     <div
                         className={`flex items-center justify-between sticky top-24 ${
                             checkedProducts?.length !== 0
-                                ? "bg-[#f8f8ff] dark:bg-[#0a0a0a]"
+                                ? "hidden-bg"
                                 : "bg-transparent"
                         }
                             z-20 px-4 pt-4 pb-2 
@@ -1074,7 +1105,7 @@ export default function ShoppingList({
                     >
                         {baggedProducts && baggedProducts?.length !== 0 && (
                             <>
-                                <div className="bg-[#ededed] dark:bg-[#0a0a0a] h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
+                                <div className=" hidden-bg h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
                                 <h3
                                     onClick={handleOpenBaggedSettings}
                                     className={`flex cursor-pointer relative z-20  gap-1 bagged-settings`}
@@ -1090,7 +1121,7 @@ export default function ShoppingList({
                                         <span className="text-2xl font-bold">
                                             Bagged
                                         </span>
-                                        <span className="text-sm text-primary font-quicksand ml-2">
+                                        <span className="text-sm brand-color transition-colors duration-200 font-quicksand ml-2">
                                             {baggedProducts?.length !== 0
                                                 ? baggedProducts?.length
                                                 : baggedItems.baggedCount !==
@@ -1105,7 +1136,7 @@ export default function ShoppingList({
                                             <div
                                                 id="bagged-settings-menu"
                                                 ref={baggedListSettings}
-                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
+                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
                                             >
                                                 <div className="flex flex-col font-quicksand font-[500] gap-0.5">
                                                     <button
@@ -1114,7 +1145,7 @@ export default function ShoppingList({
                                                                 listId
                                                             );
                                                         }}
-                                                        className="px-1 py-1 items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                        className="px-1 py-1 items-center flex tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                                     >
                                                         <EmptyBagIcon className="w-5 h-5 inline-block mr-1 text-neutral-900" />
                                                         Unbag All Items
@@ -1125,7 +1156,7 @@ export default function ShoppingList({
                                                                 listId
                                                             );
                                                         }}
-                                                        className="px-1 py-1 cursor-pointer items-center flex hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-600 rounded-sm"
+                                                        className="px-1 py-1 cursor-pointer items-center flex  text-left duration-200 transition-colors text-red-600 rounded-sm"
                                                     >
                                                         <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
                                                         Remove All Items
@@ -1205,7 +1236,7 @@ export default function ShoppingList({
                 />
             </div>
 
-            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 dark:bg-black bg-[#ededed] py-14  px-4 flex items-center justify-between"></div>
+            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 hidden-bg py-14  px-4 flex items-center justify-between"></div>
 
             {shareDialogOpen && (
                 <ShareListDialog

@@ -1,21 +1,132 @@
 @import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&family=Saira:ital,wght@0,100..900;1,100..900&display=swap");
 
 @import "tailwindcss";
-@theme {
-    --font-sans: var(--font-geist-sans);
-    --font-mono: var(--font-geist-mono);
+
+:root {
     --font-quicksand: "Quicksand", sans-serif;
     --font-saira: "Saira", sans-serif;
     --color-primary: #21ba9c;
-}
 
-:root {
+    /* Prevent transitions during initial page load */
+    html.theme-loading,
+    html.theme-loading *,
+    html.theme-loading *:before,
+    html.theme-loading *:after {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    /* System theme - used as fallback */
     --background: #f8f8ff;
     --foreground: #171717;
 }
 
+/* Light theme */
+:root,
+.light,
+.light-mode {
+    --background: #f8f8ff;
+    --foreground: #171717;
+    --drag: oklch(92.8% 0.006 264.531);
+    --hover: #f8f8ff;
+    --custom-text-color: #0a0a0a;
+    --hidden-bg: #f8f8ff;
+    --tools: var(--color-gray-200);
+    --product-item: var(--color-gray-100);
+    --product-item-hover: var(--color-gray-300);
+}
+
+/* Dark theme */
+.dark,
+.dark-mode {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --drag: oklch(21% 0.034 264.665);
+    --hover: #0a0a0a;
+    --custom-text-color: #ededed;
+    --hidden-bg: #0a0a0a;
+    --tools: var(--color-gray-700);
+    --product-item: var(--color-gray-800);
+    --product-item-hover: var(--color-gray-700);
+}
+bg-gray-200 dark:bg-gray-700
+
+/* Smooth transitions for theme changes */
+html:not(.theme-loading) {
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.drag {
+    background-color: var(--drag);
+}
+.shopping-list-hover:hover {
+    background-color: var(--hover);
+}
+
+.custom-text-color {
+    color: var(--custom-text-color);
+}
+
+.brand-color {
+    color: var(--color-primary);
+}
+.brand-color:hover {
+    color: var(--custom-text-color);
+}
+.brand-color.hover:hover {
+    color: var(--color-primary);
+    opacity: 0.8;
+}
+
+.username:hover {
+    border-color: #21ba9c !important;
+}
+
+.shopping-list-header {
+    background-color: var(--drag);
+}
+
+.hidden-bg {
+    background-color: var(--hidden-bg);
+}
+
+.product-item {
+    background-color: var(--product-item);
+}
+
+.product-item:hover {
+    background-color: var(--product-item-hover);
+}
+
+.product-item.bagged-product {
+    border: 2px solid var(--color-primary);
+}
+
+.tools {
+    background-color: var(--tools);
+}
+
+.tools .tool {
+    color: var(--custom-text-color);
+}
+
+/*  bg-gray-100  dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 */
+
+input:not(#login-form input):not(#register-form input):not(
+        #reset-password-form input
+    ):not(#password-reset-form input):not(#reset-password-form input):not(
+        #password-reset-form input
+    ):not(#reset-password-form input):not(#password-reset-form input):not(
+        #password-reset-form input
+    ):not(#password-reset-form input):not(#password-reset-form input):not(
+        #password-reset-form input
+    ):not(#overlay-content input) {
+    background-color: var(--drag);
+}
+
+/* System dark theme - only used for initial load */
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not(.light):not(.light-mode):not(.dark):not(.dark-mode) {
         --background: #0a0a0a;
         --foreground: #ededed;
     }
@@ -28,7 +139,7 @@ body {
 
     input[type="text"],
     label {
-        @apply placeholder:font-saira font-saira font-[500];
+        @apply placeholder:font-sans font-sans font-medium;
     }
 
     ::selection {
@@ -42,7 +153,10 @@ body {
         ):not(#reset-password-form input):not(#password-reset-form input),
     textarea:not(.overlay textarea),
     select {
-        @apply border-2  transition-colors duration-200  border-transparent focus:border-primary outline-0;
+        @apply border-2 transition-colors duration-200 border-transparent outline-0;
+        &:focus {
+            @apply border-[#21ba9c];
+        }
     }
     button:not(.overlay button):not(#site-logo a):not(
             .shopping-list button
@@ -52,7 +166,10 @@ body {
     a:not(.overlay a):not(a#site-logo):not(#reset-password-form a):not(
             #login-form a
         ):not(#empty-list-add-btn) {
-        @apply border-2  transition-colors duration-200 hover:border-current  border-transparent focus:border-primary outline-0;
+        @apply border-2 transition-colors duration-200 hover:border-current border-transparent outline-0;
+        &:focus {
+            @apply border-[#21ba9c];
+        }
     }
 }
 
