@@ -1112,7 +1112,7 @@ export default function ChatWidget({
                             });
                         }
                     }}
-                    className="fixed bottom-6 right-6 z-40 rounded-full bg-blue-600 text-white px-4 py-3 shadow-lg hover:opacity-90 transition-opacity"
+                    className="fixed font-bold font-saira bottom-6 right-6 z-40 rounded-full bg-blue-600 text-white px-4 py-3 shadow-lg hover:opacity-90 transition-opacity"
                 >
                     Ask AI
                 </button>
@@ -1124,9 +1124,11 @@ export default function ChatWidget({
                     className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col"
                 >
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
-                        <div className="font-bold">Recipe Assistant</div>
+                        <div className="font-bold font-saira">
+                            Recipe Assistant
+                        </div>
                         <button
-                            className="no-border cursor-pointer text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+                            className="no-border cursor-pointer text-lg text-red-500 hover:text-red-800 dark:hover:text-red-200"
                             onClick={() => setOpen(false)}
                         >
                             ✕
@@ -1138,7 +1140,7 @@ export default function ChatWidget({
                         id="lista-chat-scroll"
                         data-lenis-prevent
                         data-scroll-lock-scrollable
-                        className="overflow-y-auto overscroll-contain p-3 pb-12 space-y-2 text-sm"
+                        className="overflow-y-auto overscroll-contain p-3 pb-12 space-y-3 text-sm"
                         style={{
                             WebkitOverflowScrolling: "touch",
                             touchAction: "pan-y",
@@ -1175,7 +1177,7 @@ export default function ChatWidget({
 
                         {typing && (
                             <div className="text-left">
-                                <span className="inline-block px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800">
+                                <span className="inline-block font-quicksand font-black px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800">
                                     Assistant is thinking…
                                 </span>
                             </div>
@@ -1194,7 +1196,7 @@ export default function ChatWidget({
                                             onClick={() =>
                                                 handleSelectVariation(o.key)
                                             }
-                                            className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                            className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
                                         >
                                             {o.label}
                                         </button>
@@ -1204,7 +1206,7 @@ export default function ChatWidget({
                                         onClick={() =>
                                             setPendingVariation(null)
                                         }
-                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 text-red-500  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
                                     >
                                         Cancel
                                     </button>
@@ -1214,7 +1216,7 @@ export default function ChatWidget({
 
                         {pendingRecipe && !editingRecipe && (
                             <div className="mt-3 space-y-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs  font-quicksand font-black text-gray-500 dark:text-gray-400">
                                     Ready to add ingredients for:{" "}
                                     {pendingRecipe.title}
                                 </div>
@@ -1229,14 +1231,14 @@ export default function ChatWidget({
                                     <button
                                         type="button"
                                         onClick={() => setEditingRecipe(true)}
-                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Edit
                                     </button>
                                     <button
                                         disabled={loading}
                                         onClick={handleCancel}
-                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1 text-red-500  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Cancel
                                     </button>
@@ -1289,7 +1291,7 @@ export default function ChatWidget({
                                                             )
                                                     )
                                                 }
-                                                className="px-2 py-1 rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                                className="px-2 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
                                             >
                                                 Remove
                                             </button>
@@ -1307,7 +1309,7 @@ export default function ChatWidget({
                                                 return next;
                                             })
                                         }
-                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         + Add item
                                     </button>
@@ -1319,7 +1321,7 @@ export default function ChatWidget({
                                                     []),
                                             ])
                                         }
-                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Reset
                                     </button>
@@ -1329,21 +1331,21 @@ export default function ChatWidget({
                                     <button
                                         disabled={loading}
                                         onClick={handleConfirmAdd}
-                                        className="px-3 py-1 rounded cursor-pointer bg-blue-600 text-white disabled:opacity-50"
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer bg-blue-600 text-white disabled:opacity-50"
                                     >
                                         {loading ? "Adding..." : "Add to list"}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setEditingRecipe(false)}
-                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
                                     >
                                         Back
                                     </button>
                                     <button
                                         disabled={loading}
                                         onClick={handleCancel}
-                                        className="px-3 py-1 rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1 rounded text-red-500 font-quicksand font-black   cursor-pointer border dark:border-gray-700"
                                     >
                                         Cancel
                                     </button>
@@ -1394,7 +1396,7 @@ export default function ChatWidget({
                                                 setLoading(false);
                                             }
                                         }}
-                                        className="px-3 py-1 rounded border dark:border-gray-700"
+                                        className="px-3 py-1 font-quicksand font-black cursor-pointer  rounded border dark:border-gray-700"
                                     >
                                         Re-add {lastRecipe.title}
                                     </button>
@@ -1413,7 +1415,7 @@ export default function ChatWidget({
                                             setInput(ex);
                                             setTimeout(() => handleSubmit(), 0);
                                         }}
-                                        className="px-2 py-1 rounded border dark:border-gray-700"
+                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border dark:border-gray-700"
                                     >
                                         Try: Lasagna
                                     </button>
@@ -1424,7 +1426,7 @@ export default function ChatWidget({
                                             setInput(ex);
                                             setTimeout(() => handleSubmit(), 0);
                                         }}
-                                        className="px-2 py-1 rounded border dark:border-gray-700"
+                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border dark:border-gray-700"
                                     >
                                         Try: Pancakes
                                     </button>
@@ -1435,7 +1437,7 @@ export default function ChatWidget({
                                             setInput(ex);
                                             setTimeout(() => handleSubmit(), 0);
                                         }}
-                                        className="px-2 py-1 rounded border dark:border-gray-700"
+                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border dark:border-gray-700"
                                     >
                                         Try: Salad
                                     </button>
@@ -1454,12 +1456,12 @@ export default function ChatWidget({
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Ask for a recipe..."
                             disabled={typing || loading}
-                            className="flex-1 rounded-md border dark:border-gray-700 px-3 py-2 bg-white dark:bg-black disabled:opacity-50"
+                            className="flex-1 rounded-md font-quicksand !border-b dark:border-gray-700 px-3 py-2 bg-white dark:bg-black disabled:opacity-50"
                         />
                         <button
                             type="submit"
                             disabled={typing || loading}
-                            className="px-3 py-2 cursor-pointer rounded-md bg-blue-600 text-white disabled:opacity-50"
+                            className="px-3 py-2 cursor-pointer font-saira font-black rounded-md bg-blue-600 text-white disabled:opacity-50"
                         >
                             Send
                         </button>

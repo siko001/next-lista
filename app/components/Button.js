@@ -109,11 +109,16 @@ export default function Button(props) {
                     listId: props.data[0].id,
                     userId: props.data[2],
                     token: props.data[1],
+                    selfInitiated: true,
                 };
                 sessionStorage.setItem(
                     "removeListData",
                     JSON.stringify(removeData)
                 );
+                try {
+                    sessionStorage.setItem("suppressSelfRemovalToast", "1");
+                } catch {}
+                showNotification("List removed successfully", "success");
                 window.location.href = "/";
                 return;
             }
@@ -134,10 +139,6 @@ export default function Button(props) {
                     onComplete: () => {
                         setUserLists((prevLists) =>
                             prevLists.filter((list) => list.id !== listId)
-                        );
-                        showNotification(
-                            "List Removed successfully",
-                            "success"
                         );
                     },
                 }
@@ -217,7 +218,7 @@ export default function Button(props) {
             }  px-6 py-3 md:px-8 md:py-4 rounded-md overflow-hidden`}
         >
             <p
-                className={`z-20 relative delay-75 font-bold  ${
+                className={`z-20 relative delay-75 capitalize font-bold  ${
                     props.hover && props.light
                         ? "group-hover:text-white"
                         : "group-hover:text-black"
