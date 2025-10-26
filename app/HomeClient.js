@@ -77,14 +77,25 @@ const HomeClient = ({
         const removeListData = sessionStorage.getItem("removeListData");
         if (removeListData) {
             try {
-                const {listId, userId, token} = JSON.parse(removeListData);
+                const {listId, userId, token, selfInitiated} = JSON.parse(removeListData);
                 sessionStorage.removeItem("removeListData"); // Clear the data
 
-                // Show notification first
-                showNotification(
-                    "The list owner has removed you from this list",
-                    "info"
-                );
+                // Decide notification based on self-removal flag or suppress flag
+                let suppress = false;
+                try {
+                    suppress = sessionStorage.getItem('suppressSelfRemovalToast') === '1';
+                } catch {}
+                if (selfInitiated) {
+                    if (!suppress) {
+                        showNotification("List removed successfully", "success");
+                    }
+                    try { sessionStorage.removeItem('suppressSelfRemovalToast'); } catch {}
+                } else {
+                    showNotification(
+                        "The list owner has removed you from this list",
+                        "info"
+                    );
+                }
 
                 // Small delay to ensure the page is fully loaded
                 setTimeout(() => {

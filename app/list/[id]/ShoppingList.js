@@ -836,7 +836,17 @@ export default function ShoppingList({
                 parseInt(data.userId) === parseInt(userId) &&
                 parseInt(data.listId) === parseInt(listId)
             ) {
-                showNotification("You were removed from this list", "info");
+                const suppress = (() => {
+                    try { return sessionStorage.getItem('suppressSelfRemovalToast') === '1'; } catch { return false; }
+                })();
+                const selfRemoved = suppress || (parseInt(data.actorId) === parseInt(userId));
+                showNotification(
+                    selfRemoved
+                        ? "List removed successfully"
+                        : "The list owner has removed you from this list",
+                    selfRemoved ? "success" : "info"
+                );
+                try { sessionStorage.removeItem('suppressSelfRemovalToast'); } catch {}
                 // Store removal data for home page
                 const removeData = {
                     listId: data.listId,
@@ -855,50 +865,9 @@ export default function ShoppingList({
                 parseInt(data.listId) === parseInt(listId)
             ) {
                 // Update shared users state
-                const updatedUsers = (
-                    currentList?.acf?.shared_with_users || []
-                ).filter((user) => user.ID !== parseInt(data.userId));
-
-                // Update both the list and shared users state
-                setCurrentList((prevList) => ({
-                    ...prevList,
-                    acf: {
-                        ...prevList.acf,
-                        shared_with_users: updatedUsers,
-                    },
-                }));
-                setSharedWithUsers(updatedUsers);
-
-                // Update the list context
-                setUserLists((prevLists) =>
-                    prevLists.map((l) =>
-                        parseInt(l.id) === parseInt(listId)
-                            ? {
-                                  ...l,
-                                  acf: {
-                                      ...l.acf,
-                                      shared_with_users: updatedUsers,
-                                  },
-                              }
-                            : l
-                    )
+                const updatedUsers = (currentList?.acf?.shared_with_users || []).filter(
+                    (user) => user.ID !== parseInt(data.userId)
                 );
-            }
-            // If someone was added to this list
-            else if (
-                data.action === "add" &&
-                parseInt(data.listId) === parseInt(listId)
-            ) {
-                const newUser = {
-                    ID: parseInt(data.userId),
-                    nickname: data.userName,
-                };
-
-                // Update shared users state
-                const updatedUsers = [
-                    ...(currentList?.acf?.shared_with_users || []),
-                    newUser,
-                ];
 
                 // Update both the list and shared users state
                 setCurrentList((prevList) => ({
@@ -925,10 +894,12 @@ export default function ShoppingList({
                     )
                 );
 
-                // Always show notification for new user, regardless of owner status
+                // Notify owner/shared users inside inner list
+                const someoneLeft = parseInt(data.actorId) === parseInt(data.userId);
+                const name = data.userName || "A user";
                 showNotification(
-                    `${data.userName} was added to the list`,
-                    "success"
+                    someoneLeft ? `${name} left the list` : `${name} was removed from the list`,
+                    someoneLeft ? "info" : "warning"
                 );
             }
         });

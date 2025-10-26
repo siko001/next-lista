@@ -30,6 +30,7 @@ function remove_user_from_shared($request) {
 
         $removed_user = get_user_by('id', $userId);
         $actor_id = get_current_user_id();
+        if (!$actor_id) { $actor_id = intval($userId); } // fallback for self-removal when auth not resolved
         $actor_user = $actor_id ? get_user_by('id', $actor_id) : null;
         $eventData = array(
             'listId' => $listId,

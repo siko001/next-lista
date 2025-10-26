@@ -109,11 +109,14 @@ export default function Button(props) {
                     listId: props.data[0].id,
                     userId: props.data[2],
                     token: props.data[1],
+                    selfInitiated: true,
                 };
                 sessionStorage.setItem(
                     "removeListData",
                     JSON.stringify(removeData)
                 );
+                try { sessionStorage.setItem('suppressSelfRemovalToast', '1'); } catch {}
+                showNotification("List removed successfully", "success");
                 window.location.href = "/";
                 return;
             }
