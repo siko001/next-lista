@@ -263,6 +263,15 @@ export default function Product({
     };
 
     const handleClick = async () => {
+        // Check if the product has a temporary ID (starts with 'temp-' or is a number that's too large to be a real ID)
+        const isTemporaryProduct =
+            typeof product.id === "string" && product.id.startsWith("temp-");
+
+        if (isTemporaryProduct) {
+            // Don't allow interaction with temporary products
+            return;
+        }
+
         if (isBagged) {
             await animateToChecked();
             updateProductStatus("unbag");

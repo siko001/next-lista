@@ -54,6 +54,8 @@ export default function AddProduct({
     const [favouriteSearchResults, setFavouriteSearchResults] = useState(null);
     const customProductInputRef = useRef(null);
     const [customProductLength, setCustomProductLength] = useState(0);
+    const [savingProductId, setSavingProductId] = useState(null); // Track which product is being saved
+    const [savingProduct, setSavingProduct] = useState(null); // Track which product is being saved
     const maxLength = 36;
 
     const {showNotification} = useNotificationContext();
@@ -424,7 +426,17 @@ export default function AddProduct({
                 title: customProductTitle,
             };
 
-            const animatedProduct = {...newCustomProduct, id: Date.now()};
+            // Create a temporary ID with a 'temp-' prefix to identify unsaved products
+            const tempId = `temp-${Date.now()}`;
+            const animatedProduct = {
+                ...newCustomProduct,
+                id: tempId,
+                isTemporary: true, // Add a flag to identify temporary products
+                isSaving: true, // Add a flag to show loading state
+            };
+
+            // Set the currently saving product ID
+            setSavingProductId(tempId);
 
             // Animate only the newly added item once it is rendered
             requestAnimationFrame(() => {
@@ -449,9 +461,10 @@ export default function AddProduct({
 
             customProductInputRef.current.value = "";
             setCustomProductLength(0);
-            // Optimistically update UI lists
-            setCustomProducts((prev) => [animatedProduct, ...prev]);
-            const nextCustom = [animatedProduct, ...customProducts];
+            // Optimistically update UI lists with the temporary product
+            const updatedCustomProducts = [animatedProduct, ...customProducts];
+            setCustomProducts(updatedCustomProducts);
+            const nextCustom = [...updatedCustomProducts];
 
             // If searching, update the custom search results immediately
             if (searchValue) {
@@ -478,6 +491,7 @@ export default function AddProduct({
         const data = await res.json();
         const fetchedCustomProducts = await getAllCustomProducts(token);
         setCustomProducts(fetchedCustomProducts);
+        setSavingProductId(null); // Clear saving state
     };
 
     // Delete custom product
@@ -711,110 +725,158 @@ export default function AddProduct({
         setProducts(filtered);
     }, [selectedCategories, allProducts, searchValue]);
 
-    const renderProductItem = (product, index) => (
-        <div
-            onClick={(e) => {
+    const renderProductItem = (product, index) => {
+        const isTemporaryProduct =
+            typeof product.id === "string" && product.id.startsWith("temp-");
+
+        const handleClick = (e) => {
+            if (isTemporaryProduct) return; // Prevent interaction with temporary products
+            e.stopPropagation();
+            handleCheckboxChange(product.id, token);
+        };
+
+        const handleCheckboxClick = (e) => {
+            if (isTemporaryProduct) {
+                e.preventDefault();
                 e.stopPropagation();
-                handleCheckboxChange(product.id, token);
-            }}
-            key={product.id || index}
-            data-product-id={product.id}
-            className={`product-card  border cursor-pointer ml-4 px-4 py-3 rounded-md  text-black  duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
-                allLinkedProducts?.some((p) => p.ID === product.id)
-                    ? "border-primary"
-                    : ""
-            }`}
-        >
-            <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
-                <div className="checkbox-wrapper-28">
-                    <input
-                        id={`checkbox-${product.id}`}
-                        type="checkbox"
-                        className="promoted-input-checkbox peer"
-                        checked={
-                            !!allLinkedProducts?.some(
-                                (p) => p.ID === product.id
-                            )
-                        }
-                        onChange={(e) => {
-                            e.stopPropagation();
-                            handleCheckboxChange(product.id, token);
-                        }}
-                    />
-                    <label
-                        htmlFor={`checkbox-${product.id}`}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleCheckboxChange(product.id, token);
-                        }}
-                    ></label>
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="20 6 9 17 4 12" fill="none" />
-                    </svg>
+                return;
+            }
+            e.stopPropagation();
+            handleCheckboxChange(product.id, token);
+        };
+
+        const handleFavouriteClick = (e) => {
+            if (isTemporaryProduct) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            e.stopPropagation();
+            handleAddToFavourites(product.id, token);
+        };
+
+        return (
+            <div
+                onClick={handleClick}
+                key={product.id || index}
+                data-product-id={product.id}
+                className={`product-card border ml-4 px-4 py-3 rounded-md text-black duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
+                    allLinkedProducts?.some((p) => p.ID === product.id)
+                        ? "border-primary"
+                        : ""
+                } ${
+                    isTemporaryProduct
+                        ? "opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
+                }`}
+            >
+                <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
+                    <div className="checkbox-wrapper-28">
+                        <input
+                            id={`checkbox-${product.id}`}
+                            type="checkbox"
+                            className={`promoted-input-checkbox peer ${
+                                isTemporaryProduct ? "cursor-not-allowed" : ""
+                            }`}
+                            checked={
+                                !!allLinkedProducts?.some(
+                                    (p) => p.ID === product.id
+                                )
+                            }
+                            onChange={handleCheckboxClick}
+                            disabled={isTemporaryProduct}
+                        />
+                        <label
+                            htmlFor={`checkbox-${product.id}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (isTemporaryProduct) return;
+                                handleCheckboxChange(product.id, token);
+                            }}
+                            className={
+                                isTemporaryProduct ? "cursor-not-allowed" : ""
+                            }
+                        ></label>
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="20 6 9 17 4 12" fill="none" />
+                        </svg>
+                    </div>
+                    {decodeHtmlEntities(product.title)}
+                    {isTemporaryProduct && (
+                        <span className="text-xs text-gray-400 ml-2">
+                            Saving...
+                        </span>
+                    )}
                 </div>
-                {decodeHtmlEntities(product.title)}
-            </div>
-            <div className="flex items-center gap-2 md:gap-6">
-                <div
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToFavourites(product.id, token);
-                    }}
-                    className={`text-sm font-bold text-gray-400 block ${
-                        favouriteProducts?.some((p) => p.id === product.id)
-                            ? "opacity-100"
-                            : "sm:opacity-0 group-hover:opacity-100"
-                    } transition-opacity duration-200`}
-                >
-                    <StarIcon
-                        className={`w-6 h-6 hover:text-white transition-colors duration-200 cursor-pointer ${
+                <div className="flex items-center gap-2 md:gap-6">
+                    <div
+                        onClick={handleFavouriteClick}
+                        className={`text-sm font-bold text-gray-400 block ${
                             favouriteProducts?.some((p) => p.id === product.id)
-                                ? "fill-yellow-500 text-yellow-500"
-                                : ""
+                                ? "opacity-100"
+                                : isTemporaryProduct
+                                ? "opacity-50"
+                                : "sm:opacity-0 group-hover:opacity-100"
+                        } transition-opacity duration-200 ${
+                            isTemporaryProduct ? "cursor-not-allowed" : ""
                         }`}
-                    />
+                    >
+                        <StarIcon
+                            className={`w-6 h-6 transition-colors duration-200 ${
+                                isTemporaryProduct
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : "hover:text-white cursor-pointer"
+                            } ${
+                                favouriteProducts?.some(
+                                    (p) => p.id === product.id
+                                )
+                                    ? "fill-yellow-500 text-yellow-500"
+                                    : ""
+                            }`}
+                        />
+                    </div>
+
+                    {allLinkedProducts?.some((p) => p.ID === product.id) && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                updateProductInShoppingList(
+                                    product.id,
+                                    false,
+                                    token
+                                );
+                            }}
+                            className="rounded-full text-red-500 !border-transparent cursor-pointer hover:border-transparent transition-colors duration-200"
+                            aria-label="Remove from list"
+                            title="Remove from list"
+                        >
+                            <CloseIcon className="w-6 h-6" />
+                        </button>
+                    )}
+
+                    {selectedProductsSection === "custom" && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCustomProduct(
+                                    product.id,
+                                    token,
+                                    shoppingListId,
+                                    customProducts
+                                );
+                            }}
+                            className="text-red-500 hover:text-red-400 transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
+                            style={{WebkitTapHighlightColor: "transparent"}}
+                            aria-label="Delete custom product"
+                            title="Delete custom product"
+                        >
+                            <TrashIcon className="w-6 h-6" />
+                        </button>
+                    )}
                 </div>
-
-                {allLinkedProducts?.some((p) => p.ID === product.id) && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            updateProductInShoppingList(
-                                product.id,
-                                false,
-                                token
-                            );
-                        }}
-                        className="rounded-full text-red-500 !border-transparent cursor-pointer hover:border-transparent transition-colors duration-200"
-                        aria-label="Remove from list"
-                        title="Remove from list"
-                    >
-                        <CloseIcon className="w-6 h-6" />
-                    </button>
-                )}
-
-                {selectedProductsSection === "custom" && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCustomProduct(
-                                product.id,
-                                token,
-                                shoppingListId,
-                                customProducts
-                            );
-                        }}
-                        className="text-red-500 hover:text-red-400 transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
-                        style={{WebkitTapHighlightColor: "transparent"}}
-                        aria-label="Delete custom product"
-                        title="Delete custom product"
-                    >
-                        <TrashIcon className="w-6 h-6" />
-                    </button>
-                )}
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="w-full absolute top-0">
