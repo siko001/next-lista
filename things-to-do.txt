@@ -7,9 +7,7 @@ Navigation bar
 User Themes
 --prdefinded theme colors
 --user generated theme colors via color picker
---Delete list over channel for websockets to update other users
 
-Translations
 
 
 
@@ -20,12 +18,17 @@ user specific ordering for products
 -lock list to not be shared by other users if list owner desides to
 -cam edit custom prouct name
 -Products Show up According to users Choice + most clicked.
--Shared list link must include a token while sharing to aviod any other users randomly popping up in lists
 -Inform user if list has been delete and he wasn't active or when share is revowked by owner.
+Translations
 
 
 Phase 3
 prices & quantity functionalaity
 divide by quantity of people / or number of people shared with.
 Send price to user via push notification.
+User Currency settings
+List Currency settings
+Conversions from currency to currency -ask user to set conversions
+
+
 

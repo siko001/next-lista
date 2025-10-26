@@ -115,7 +115,9 @@ export default function Button(props) {
                     "removeListData",
                     JSON.stringify(removeData)
                 );
-                try { sessionStorage.setItem('suppressSelfRemovalToast', '1'); } catch {}
+                try {
+                    sessionStorage.setItem("suppressSelfRemovalToast", "1");
+                } catch {}
                 showNotification("List removed successfully", "success");
                 window.location.href = "/";
                 return;
@@ -216,7 +218,7 @@ export default function Button(props) {
             }  px-6 py-3 md:px-8 md:py-4 rounded-md overflow-hidden`}
         >
             <p
-                className={`z-20 relative delay-75 font-bold  ${
+                className={`z-20 relative delay-75 capitalize font-bold  ${
                     props.hover && props.light
                         ? "group-hover:text-white"
                         : "group-hover:text-black"
