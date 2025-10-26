@@ -13,6 +13,7 @@ import {
     removeListRelationship,
     WP_API_BASE,
     isListOwner,
+    decryptToken,
 } from "../../lib/helpers";
 import Pusher from "pusher-js";
 
@@ -28,9 +29,14 @@ const ShareListDialog = ({
     const {showNotification} = useNotificationContext();
     const {userLists, setUserLists} = useListContext();
     const {token: userToken} = useUserContext();
-    const listUrl = `${window.location.origin}/shared-list/${listId}`;
+
+    const [shareCode, setShareCode] = useState(null);
+    const [generatingTarget, setGeneratingTarget] = useState(null); // 'whatsapp' | 'messenger' | 'copy' | null
+
+    const listUrlBase = `${typeof window !== 'undefined' ? window.location.origin : ''}/shared-list/${listId}`;
+    const listUrlWithCode = shareCode ? `${listUrlBase}?k=${shareCode}` : listUrlBase;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
-        `Sharing this list with you: ${listUrl}`
+        `Sharing this list with you: ${listUrlWithCode}`
     )}`;
 
     const FB_APP_ID = process.env.NEXT_PUBLIC_FB_APP_ID;
@@ -68,8 +74,38 @@ const ShareListDialog = ({
         );
     }
 
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(listUrl);
+    const ensureShareCode = async (target) => {
+        if (shareCode) return shareCode;
+        if (generatingTarget) return null;
+        try {
+            setGeneratingTarget(target || 'unknown');
+            const decrypted = decryptToken(token);
+            const res = await fetch(`${WP_API_BASE}/custom/v1/generate-share-code`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${decrypted}`,
+                },
+                body: JSON.stringify({list_id: listId}),
+            });
+            const data = await res.json();
+            if (!res.ok || !data?.success || !data?.code) {
+                throw new Error(data?.message || "Failed to generate share code");
+            }
+            setShareCode(data.code);
+            return data.code;
+        } catch (e) {
+            showNotification("Could not generate share link", "error");
+            return null;
+        } finally {
+            setGeneratingTarget(null);
+        }
+    };
+
+    const copyToClipboard = async () => {
+        const code = await ensureShareCode('copy');
+        const url = code ? `${listUrlBase}?k=${code}` : listUrlBase;
+        navigator.clipboard.writeText(url);
         showNotification("Link copied to clipboard!", "success", 3000);
         onClose();
     };
@@ -172,7 +208,6 @@ const ShareListDialog = ({
                     },
                 };
 
-                showNotification("User removed from shared list", "success");
                 if (updatedUsers.length === 0) {
                     setUsersSharedWithOverlay(false);
                     onClose();
@@ -204,27 +239,40 @@ const ShareListDialog = ({
                             href={whatsappUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex cursor-pointer items-center px-4 py-2 bg-green-700 text-white rounded hover:bg-green-600"
+                            className="flex cursor-pointer items-center px-4 py-2 bg-green-700 text-white rounded hover:bg-green-600 disabled:opacity-60"
+                            onClick={async (e) => {
+                                e.preventDefault();
+                                const code = await ensureShareCode('whatsapp');
+                                if (!code) return;
+                                const url = `https://wa.me/?text=${encodeURIComponent(`Sharing this list with you: ${listUrlBase}?k=${code}`)}`;
+                                window.open(url, "_blank", "noopener,noreferrer");
+                            }}
                         >
                             <WhatsAppIcon className={"w-7 h-7 mr-2"} />
-                            Share via WhatsApp
+                            {generatingTarget === 'whatsapp' ? "Preparing link..." : "Share via WhatsApp"}
                         </a>
 
                         <button
                             type="button"
-                            onClick={() => shareOnMessenger(listUrl)}
-                            className="flex cursor-pointer w-full items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            onClick={async () => {
+                                const code = await ensureShareCode('messenger');
+                                const url = code ? `${listUrlBase}?k=${code}` : listUrlBase;
+                                shareOnMessenger(url);
+                            }}
+                            className="flex cursor-pointer w-full items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-60"
+                            disabled={generatingTarget === 'messenger'}
                         >
                             <MessengerIcon className={"w-8 h-8 mr-2"} />
-                            Share via Messenger
+                            {generatingTarget === 'messenger' ? "Preparing link..." : "Share via Messenger"}
                         </button>
 
                         <button
                             onClick={copyToClipboard}
-                            className="flex cursor-pointer items-center px-4 py-2 bg-gray-200 dark:bg-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full"
+                            className="flex cursor-pointer items-center px-4 py-2 bg-gray-200 dark:bg-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full disabled:opacity-60"
+                            disabled={generatingTarget === 'copy'}
                         >
                             <LinkIcon className="w-7 h-7 mr-3" />
-                            Copy Link
+                            {generatingTarget === 'copy' ? "Preparing link..." : "Copy Link"}
                         </button>
                         {sharedWithUsers?.length > 0 &&
                             isListOwner(list, userId) && (

@@ -309,10 +309,10 @@ const HomeClient = ({
             if (data.action === "add") {
                 const newUser = {
                     ID: parseInt(data.userId),
-                    nickname: data.userName,
+                    display_name: data.userName,
                 };
 
-                // First update userLists
+                let nextSharedUsers = null;
                 setUserLists((prevLists) =>
                     prevLists.map((list) => {
                         if (parseInt(list.id) === parseInt(data.listId)) {
@@ -320,7 +320,9 @@ const HomeClient = ({
                                 ...(list.acf.shared_with_users || []),
                                 newUser,
                             ];
-
+                            if (shareDialogOpen === parseInt(data.listId)) {
+                                nextSharedUsers = updatedUsers;
+                            }
                             return {
                                 ...list,
                                 acf: {
@@ -333,60 +335,12 @@ const HomeClient = ({
                     })
                 );
 
-                // Then separately update sharedWithUsers if dialog is open
-                if (shareDialogOpen === parseInt(data.listId)) {
-                    const currentList = userLists.find(
-                        (list) => parseInt(list.id) === parseInt(data.listId)
-                    );
-                    if (currentList) {
-                        const updatedUsers = [
-                            ...(currentList.acf.shared_with_users || []),
-                            newUser,
-                        ];
-                        setSharedWithUsers(updatedUsers);
-                    }
-                }
+                if (nextSharedUsers) setSharedWithUsers(nextSharedUsers);
 
-                // Show notification
                 showNotification(
                     `${data.userName} was added to the list`,
                     "success"
                 );
-            } else if (data.action === "remove") {
-                // First update userLists
-                setUserLists((prevLists) =>
-                    prevLists.map((list) => {
-                        if (parseInt(list.id) === parseInt(data.listId)) {
-                            const updatedUsers = (
-                                list.acf.shared_with_users || []
-                            ).filter(
-                                (user) => user.ID !== parseInt(data.userId)
-                            );
-
-                            return {
-                                ...list,
-                                acf: {
-                                    ...list.acf,
-                                    shared_with_users: updatedUsers,
-                                },
-                            };
-                        }
-                        return list;
-                    })
-                );
-
-                // Then separately update sharedWithUsers if dialog is open
-                if (shareDialogOpen === parseInt(data.listId)) {
-                    const currentList = userLists.find(
-                        (list) => parseInt(list.id) === parseInt(data.listId)
-                    );
-                    if (currentList) {
-                        const updatedUsers = (
-                            currentList.acf.shared_with_users || []
-                        ).filter((user) => user.ID !== parseInt(data.userId));
-                        setSharedWithUsers(updatedUsers);
-                    }
-                }
             }
         });
 

@@ -135,10 +135,6 @@ export default function Button(props) {
                         setUserLists((prevLists) =>
                             prevLists.filter((list) => list.id !== listId)
                         );
-                        showNotification(
-                            "List Removed successfully",
-                            "success"
-                        );
                     },
                 }
             );
