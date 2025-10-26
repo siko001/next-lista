@@ -33,8 +33,12 @@ const ShareListDialog = ({
     const [shareCode, setShareCode] = useState(null);
     const [generatingTarget, setGeneratingTarget] = useState(null); // 'whatsapp' | 'messenger' | 'copy' | null
 
-    const listUrlBase = `${typeof window !== 'undefined' ? window.location.origin : ''}/shared-list/${listId}`;
-    const listUrlWithCode = shareCode ? `${listUrlBase}?k=${shareCode}` : listUrlBase;
+    const listUrlBase = `${
+        typeof window !== "undefined" ? window.location.origin : ""
+    }/shared-list/${listId}`;
+    const listUrlWithCode = shareCode
+        ? `${listUrlBase}?k=${shareCode}`
+        : listUrlBase;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
         `Sharing this list with you: ${listUrlWithCode}`
     )}`;
@@ -78,19 +82,24 @@ const ShareListDialog = ({
         if (shareCode) return shareCode;
         if (generatingTarget) return null;
         try {
-            setGeneratingTarget(target || 'unknown');
+            setGeneratingTarget(target || "unknown");
             const decrypted = decryptToken(token);
-            const res = await fetch(`${WP_API_BASE}/custom/v1/generate-share-code`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${decrypted}`,
-                },
-                body: JSON.stringify({list_id: listId}),
-            });
+            const res = await fetch(
+                `${WP_API_BASE}/custom/v1/generate-share-code`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${decrypted}`,
+                    },
+                    body: JSON.stringify({list_id: listId}),
+                }
+            );
             const data = await res.json();
             if (!res.ok || !data?.success || !data?.code) {
-                throw new Error(data?.message || "Failed to generate share code");
+                throw new Error(
+                    data?.message || "Failed to generate share code"
+                );
             }
             setShareCode(data.code);
             return data.code;
@@ -103,7 +112,7 @@ const ShareListDialog = ({
     };
 
     const copyToClipboard = async () => {
-        const code = await ensureShareCode('copy');
+        const code = await ensureShareCode("copy");
         const url = code ? `${listUrlBase}?k=${code}` : listUrlBase;
         navigator.clipboard.writeText(url);
         showNotification("Link copied to clipboard!", "success", 3000);
@@ -227,9 +236,9 @@ const ShareListDialog = ({
     }, [sharedWithUsers]);
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 drag share-overlay  bg-opacity-50 flex items-center justify-center z-50">
             {!usersSharedWithOverlay && (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-sm">
+                <div className=" share-dialog p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-sm">
                     <h3 className="text-lg font-bold mb-4 dark:text-white">
                         Share List
                     </h3>
@@ -242,37 +251,51 @@ const ShareListDialog = ({
                             className="flex cursor-pointer items-center px-4 py-2 bg-green-700 text-white rounded hover:bg-green-600 disabled:opacity-60"
                             onClick={async (e) => {
                                 e.preventDefault();
-                                const code = await ensureShareCode('whatsapp');
+                                const code = await ensureShareCode("whatsapp");
                                 if (!code) return;
-                                const url = `https://wa.me/?text=${encodeURIComponent(`Sharing this list with you: ${listUrlBase}?k=${code}`)}`;
-                                window.open(url, "_blank", "noopener,noreferrer");
+                                const url = `https://wa.me/?text=${encodeURIComponent(
+                                    `Sharing this list with you: ${listUrlBase}?k=${code}`
+                                )}`;
+                                window.open(
+                                    url,
+                                    "_blank",
+                                    "noopener,noreferrer"
+                                );
                             }}
                         >
                             <WhatsAppIcon className={"w-7 h-7 mr-2"} />
-                            {generatingTarget === 'whatsapp' ? "Preparing link..." : "Share via WhatsApp"}
+                            {generatingTarget === "whatsapp"
+                                ? "Preparing link..."
+                                : "Share via WhatsApp"}
                         </a>
 
                         <button
                             type="button"
                             onClick={async () => {
-                                const code = await ensureShareCode('messenger');
-                                const url = code ? `${listUrlBase}?k=${code}` : listUrlBase;
+                                const code = await ensureShareCode("messenger");
+                                const url = code
+                                    ? `${listUrlBase}?k=${code}`
+                                    : listUrlBase;
                                 shareOnMessenger(url);
                             }}
                             className="flex cursor-pointer w-full items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-60"
-                            disabled={generatingTarget === 'messenger'}
+                            disabled={generatingTarget === "messenger"}
                         >
                             <MessengerIcon className={"w-8 h-8 mr-2"} />
-                            {generatingTarget === 'messenger' ? "Preparing link..." : "Share via Messenger"}
+                            {generatingTarget === "messenger"
+                                ? "Preparing link..."
+                                : "Share via Messenger"}
                         </button>
 
                         <button
                             onClick={copyToClipboard}
                             className="flex cursor-pointer items-center px-4 py-2 bg-gray-200 dark:bg-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full disabled:opacity-60"
-                            disabled={generatingTarget === 'copy'}
+                            disabled={generatingTarget === "copy"}
                         >
                             <LinkIcon className="w-7 h-7 mr-3" />
-                            {generatingTarget === 'copy' ? "Preparing link..." : "Copy Link"}
+                            {generatingTarget === "copy"
+                                ? "Preparing link..."
+                                : "Copy Link"}
                         </button>
                         {sharedWithUsers?.length > 0 &&
                             isListOwner(list, userId) && (

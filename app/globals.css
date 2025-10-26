@@ -34,6 +34,15 @@
     --tools: var(--color-gray-200);
     --product-item: var(--color-gray-100);
     --product-item-hover: var(--color-gray-300);
+    --ai-chat: var(--color-gray-600);
+    --drag-opage: oklch(92.8% 0.006 264.531 / 0.7);
+    --menu-bg: var(--color-gray-400);
+    --menu-bg-hover: var(--color-gray-500);
+    --search-input: var(--color-gray-300);
+    --filters: var(--color-gray-200);
+    --filters-hover: var(--color-primary);
+    --filters-text: var(--color-gray-700);
+    --filters-wrapper: var(--color-white);
 }
 
 /* Dark theme */
@@ -48,8 +57,16 @@
     --tools: var(--color-gray-700);
     --product-item: var(--color-gray-800);
     --product-item-hover: var(--color-gray-700);
+    --ai-chat: var(--color-gray-900);
+    --drag-opage: oklch(21% 0.034 264.665 / 0.7);
+    --menu-bg: var(--color-gray-900);
+    --menu-bg-hover: var(--color-gray-500);
+    --search-input: var(--color-gray-700);
+    --filters: var(--color-gray-800);
+    --filters-hover: var(--color-gray-700);
+    --filters-text: var(--color-gray-300);
+    --filters-wrapper: var(--color-gray-900);
 }
-bg-gray-200 dark:bg-gray-700
 
 /* Smooth transitions for theme changes */
 html:not(.theme-loading) {
@@ -110,6 +127,38 @@ html:not(.theme-loading) {
     color: var(--custom-text-color);
 }
 
+.ai-chat {
+    background-color: var(--ai-chat);
+}
+
+input.chatbot-input:not(.chatbot-input:focus) {
+    border: 2px solid var(--color-primary) !important;
+}
+
+.share-overlay {
+    background-color: var(--drag-opage);
+}
+
+.share-dialog {
+    background-color: var(--ai-chat);
+}
+
+.close-product-overlay {
+    background-color: var(--drag-opage);
+}
+
+.menu-selected {
+    background-color: var(--color-blue-600);
+    color: var(--custom-text-color);
+}
+
+.menu {
+    background-color: var(--menu-bg);
+}
+.menu:hover {
+    background-color: var(--menu-bg-hover);
+}
+
 /*  bg-gray-100  dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 */
 
 input:not(#login-form input):not(#register-form input):not(
@@ -120,7 +169,9 @@ input:not(#login-form input):not(#register-form input):not(
         #password-reset-form input
     ):not(#password-reset-form input):not(#password-reset-form input):not(
         #password-reset-form input
-    ):not(#overlay-content input) {
+    ):not(#overlay-content input):not(.chatbot-input input):not(
+        .close-product-overlay input
+    ) {
     background-color: var(--drag);
 }
 
@@ -237,4 +288,32 @@ select:-moz-autofill {
     box-shadow: 0 0 0px 1000px transparent inset !important;
     -moz-text-fill-color: #fff !important;
     caret-color: #fff;
+}
+
+.search-input {
+    background-color: var(--search-input) !important;
+}
+
+.product-card {
+    background-color: var(--product-item);
+    color: var(--custom-text-color);
+}
+.product-card:hover {
+    background-color: var(--product-item-hover);
+}
+
+.bg-brand-color {
+    background-color: var(--color-primary);
+}
+
+.filters-wrapper {
+    background-color: var(--filters-wrapper);
+}
+
+.filters {
+    background-color: var(--filters);
+    color: var(--filters-text);
+    &:hover {
+        background-color: var(--filters-hover);
+    }
 }

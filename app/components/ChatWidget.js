@@ -1121,7 +1121,7 @@ export default function ChatWidget({
             {mounted && (
                 <div
                     ref={panelRef}
-                    className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border bg-white dark:bg-black dark:text-white shadow-2xl overflow-hidden flex flex-col"
+                    className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border ai-chat dark:text-white shadow-2xl overflow-hidden flex flex-col"
                 >
                     <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
                         <div className="font-bold font-saira">
@@ -1447,7 +1447,7 @@ export default function ChatWidget({
 
                     <form
                         onSubmit={handleSubmit}
-                        className="flex items-center gap-2 p-3 border-t dark:border-gray-700 shrink-0"
+                        className="flex chatbot-input items-center gap-2 p-3 border-t dark:border-gray-700 shrink-0"
                     >
                         <input
                             ref={inputRef}
@@ -1456,7 +1456,7 @@ export default function ChatWidget({
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Ask for a recipe..."
                             disabled={typing || loading}
-                            className="flex-1 rounded-md font-quicksand !border-b dark:border-gray-700 px-3 py-2 bg-white dark:bg-black disabled:opacity-50"
+                            className="flex-1 rounded-md font-quicksand   px-3 py-2  disabled:opacity-50"
                         />
                         <button
                             type="submit"

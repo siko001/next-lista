@@ -719,7 +719,7 @@ export default function AddProduct({
             }}
             key={product.id || index}
             data-product-id={product.id}
-            className={`product-card  border cursor-pointer ml-4 px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
+            className={`product-card  border cursor-pointer ml-4 px-4 py-3 rounded-md  text-black  duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
                 allLinkedProducts?.some((p) => p.ID === product.id)
                     ? "border-primary"
                     : ""
@@ -820,7 +820,7 @@ export default function AddProduct({
         <div className="w-full absolute top-0">
             <div className="fixed lg:block hidden top-4 right-6 w-10 h-10 z-[100]">
                 <CloseIcon
-                    className="sticky top-4 right-4 w-8 h-8 text-white cursor-pointer"
+                    className="sticky top-4 right-4 w-8 h-8 text-red-500 cursor-pointer"
                     onClick={() => {
                         closeOverlay();
                     }}
@@ -828,12 +828,12 @@ export default function AddProduct({
             </div>
             <div
                 ref={overlayRef}
-                className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#fefefeef] dark:bg-[#000000ef] blur-sm close-product-overlay"
+                className="fixed top-0 z-[99] inset-0 w-full h-full  blur-sm close-product-overlay"
             ></div>
             <div className="relative top-0 ">
                 <div
                     ref={panelRef}
-                    className="absolute top-0 z-[100]  inset-x-0 bg-white dark:bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6"
+                    className="absolute top-0 z-[100]  inset-x-0  gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6"
                 >
                     <div className="w-full bg-gray-300 dark:bg-gray-700 sticky top-0 z-20 rounded-md">
                         <div className="relative flex items-center">
@@ -842,17 +842,17 @@ export default function AddProduct({
                                 onChange={handleSearchProduct}
                                 ref={searchRef}
                                 placeholder="Search for a Product..."
-                                className="w-full rounded-md border-2 transition-colors duration-200 border-transparent focus:border-primary outline-0 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"
+                                className="w-full rounded-md border-2 transition-colors duration-200 search-input border-transparent focus:border-primary outline-0 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"
                             />
                             <div className="absolute right-2 h-full grid place-items-center peer-focus:opacity-0 transition-opacity duration-200">
-                                <SearchIcon className="w-8 h-8 text-white" />
+                                <SearchIcon className="w-8 h-8 brand-color" />
                             </div>
                         </div>
                     </div>
 
                     <div
                         ref={productListRef}
-                        className="w-full bg-gray-300 dark:bg-gray-700 pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
+                        className="w-full search-input pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
                         style={{
                             WebkitOverflowScrolling: "touch",
                             overscrollBehavior: "contain",
@@ -870,8 +870,8 @@ export default function AddProduct({
                                         className={`py-2 pl-5 pr-4 ${
                                             selectedProductsSection ===
                                             "popular"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                                ? "menu-selected"
+                                                : "menu cursor-pointer"
                                         }`}
                                     >
                                         Popular
@@ -886,8 +886,8 @@ export default function AddProduct({
                                         className={`py-2 pl-5 pr-4 ${
                                             selectedProductsSection ===
                                             "categories"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                                ? "menu-selected"
+                                                : "menu cursor-pointer"
                                         }`}
                                     >
                                         Categories
@@ -899,8 +899,8 @@ export default function AddProduct({
                                         }
                                         className={`py-2 px-4  ${
                                             selectedProductsSection === "custom"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                                ? "menu-selected"
+                                                : "menu cursor-pointer"
                                         }`}
                                     >
                                         Custom
@@ -914,8 +914,8 @@ export default function AddProduct({
                                         className={`py-2 px-4  ${
                                             selectedProductsSection ===
                                             "favourite"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700 rounded-br-xl"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer rounded-br-xl"
+                                                ? "menu-selected rounded-br-xl"
+                                                : "menu cursor-pointer rounded-br-xl"
                                         }`}
                                     >
                                         Favourites
