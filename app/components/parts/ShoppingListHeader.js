@@ -1,7 +1,12 @@
 "use client";
 import {useState, useEffect, useRef} from "react";
 import {gsap} from "gsap";
-import {decryptToken, WP_API_BASE, isListOwner} from "../../lib/helpers";
+import {
+    decryptToken,
+    WP_API_BASE,
+    isListOwner,
+    decodeHtmlEntities,
+} from "../../lib/helpers";
 
 // Contexts
 import {useOverlayContext} from "../../contexts/OverlayContext";
@@ -79,17 +84,17 @@ export default function ShoppingListHeader({
 
     const handleListSettings = () => {
         if (openSettings) {
-            const el = document.querySelector('#header-settings-menu');
+            const el = document.querySelector("#header-settings-menu");
             if (el) {
                 gsap.killTweensOf(el);
                 const h = el.scrollHeight;
-                gsap.set(el, {height: h, overflow: 'hidden'});
+                gsap.set(el, {height: h, overflow: "hidden"});
                 gsap.to(el, {
                     height: 0,
                     opacity: 0,
                     y: -6,
                     duration: 0.3,
-                    ease: 'power2.in',
+                    ease: "power2.in",
                     onComplete: () => setOpenSettings(false),
                 });
                 return;
@@ -101,19 +106,19 @@ export default function ShoppingListHeader({
     useEffect(() => {
         // handle click outside of the settings menu with animated close
         const handleClickOutside = (e) => {
-            if (e.target.closest('.shopping-list-header-settings') === null) {
+            if (e.target.closest(".shopping-list-header-settings") === null) {
                 if (openSettings) {
-                    const el = document.querySelector('#header-settings-menu');
+                    const el = document.querySelector("#header-settings-menu");
                     if (el) {
                         gsap.killTweensOf(el);
                         const h = el.scrollHeight;
-                        gsap.set(el, {height: h, overflow: 'hidden'});
+                        gsap.set(el, {height: h, overflow: "hidden"});
                         gsap.to(el, {
                             height: 0,
                             opacity: 0,
                             y: -6,
                             duration: 0.3,
-                            ease: 'power2.in',
+                            ease: "power2.in",
                             onComplete: () => setOpenSettings(false),
                         });
                         return;
@@ -124,18 +129,18 @@ export default function ShoppingListHeader({
         };
         // esc key to close the settings menu
         const handleKeyDown = (e) => {
-            if (openSettings && e.key === 'Escape') {
-                const el = document.querySelector('#header-settings-menu');
+            if (openSettings && e.key === "Escape") {
+                const el = document.querySelector("#header-settings-menu");
                 if (el) {
                     gsap.killTweensOf(el);
                     const h = el.scrollHeight;
-                    gsap.set(el, {height: h, overflow: 'hidden'});
+                    gsap.set(el, {height: h, overflow: "hidden"});
                     gsap.to(el, {
                         height: 0,
                         opacity: 0,
                         y: -6,
                         duration: 0.3,
-                        ease: 'power2.in',
+                        ease: "power2.in",
                         onComplete: () => setOpenSettings(false),
                     });
                     return;
@@ -143,28 +148,28 @@ export default function ShoppingListHeader({
                 setOpenSettings(false);
             }
         };
-        document.addEventListener('click', handleClickOutside);
-        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener("click", handleClickOutside);
+        document.addEventListener("keydown", handleKeyDown);
         return () => {
-            document.removeEventListener('click', handleClickOutside);
-            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener("click", handleClickOutside);
+            document.removeEventListener("keydown", handleKeyDown);
         };
     }, [openSettings]);
 
     // Animate open when toggled on
     useEffect(() => {
         if (!openSettings) return;
-        const el = document.querySelector('#header-settings-menu');
+        const el = document.querySelector("#header-settings-menu");
         if (!el) return;
         gsap.killTweensOf(el);
-        gsap.set(el, {height: 0, opacity: 0, y: -6, overflow: 'hidden'});
+        gsap.set(el, {height: 0, opacity: 0, y: -6, overflow: "hidden"});
         gsap.to(el, {
-            height: 'auto',
+            height: "auto",
             opacity: 1,
             y: 0,
             duration: 0.5,
-            ease: 'power2.out',
-            onComplete: () => gsap.set(el, {clearProps: 'height'}),
+            ease: "power2.out",
+            onComplete: () => gsap.set(el, {clearProps: "height"}),
         });
     }, [openSettings]);
 
@@ -350,7 +355,9 @@ export default function ShoppingListHeader({
                                 onClick={() => handleRenameClick(list.id)}
                                 className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold "
                             >
-                                {listName || title || list?.title}
+                                {decodeHtmlEntities(
+                                    listName || title || list?.title
+                                )}
                             </h2>
 
                             {!isListOwner(list, userId) && (
@@ -399,7 +406,10 @@ export default function ShoppingListHeader({
                             className="relative shopping-list-header-settings"
                         >
                             {openSettings && (
-                                <div id="header-settings-menu" className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden">
+                                <div
+                                    id="header-settings-menu"
+                                    className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
+                                >
                                     <div className="flex flex-col gap-0.5 font-quicksand font-[500]">
                                         <button
                                             onClick={() =>

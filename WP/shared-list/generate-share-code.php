@@ -36,7 +36,7 @@ function generate_share_code(WP_REST_Request $request)
     }
 
     // Generate an 8-char share code
-    $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+    $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz';
     $code = '';
     for ($i = 0; $i < 8; $i++) {
         $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];

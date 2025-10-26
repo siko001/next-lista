@@ -686,11 +686,16 @@ export default function AddProduct({
     useEffect(() => {
         let filtered = allProducts;
 
-        // Apply category filter
+        // Apply category filter (normalize/decoded to handle &amp; vs & and case)
         if (selectedCategories.length > 0) {
+            const norm = (s) =>
+                decodeHtmlEntities(String(s || ""))
+                    .trim()
+                    .toLowerCase();
+            const selectedNorm = selectedCategories.map(norm);
             filtered = allProducts.filter((product) =>
                 product.categories?.some((category) =>
-                    selectedCategories.includes(category)
+                    selectedNorm.includes(norm(category))
                 )
             );
         }
