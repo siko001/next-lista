@@ -64,6 +64,15 @@ export default function RootLayout({children}) {
                         </ListProvider>
                     </NotificationProvider>
                 </LoadingProvider>
+
+                <a
+                    href="https://neilmallia.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="fixed bottom-2 left-2 z-50 text-primary text-[8px] !border-0 hover:text-white"
+                >
+                    By Neil VM
+                </a>
             </body>
         </html>
     );
