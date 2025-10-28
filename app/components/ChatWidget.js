@@ -5,6 +5,7 @@ import {useUserContext} from "../contexts/UserContext";
 import {useListContext} from "../contexts/ListContext";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import {decryptToken, WP_API_BASE, decodeHtmlEntities} from "../lib/helpers";
+import {LIST_NAME_MAX_LENGTH, INGREDIENT_NAME_MAX_LENGTH} from "../lib/config";
 
 export default function ChatWidget({
     context = "home",
@@ -166,6 +167,30 @@ export default function ChatWidget({
         }
     }, [awaitingNewListName, open]);
 
+    // Helper function to validate and filter ingredients by length
+    const validateIngredients = (ingredients) => {
+        const valid = [];
+        const invalid = [];
+
+        ingredients.forEach((ing) => {
+            const trimmed = ing.trim();
+            if (trimmed.length === 0) {
+                return;
+            }
+            if (trimmed.length > INGREDIENT_NAME_MAX_LENGTH) {
+                invalid.push({
+                    original: trimmed,
+                    suggested: trimmed.slice(0, INGREDIENT_NAME_MAX_LENGTH),
+                    length: trimmed.length,
+                });
+            } else {
+                valid.push(trimmed);
+            }
+        });
+
+        return {valid, invalid};
+    };
+
     // Only show Re-add after user empties the list (list context)
     useEffect(() => {
         if (context !== "list") return;
@@ -273,6 +298,197 @@ export default function ChatWidget({
         if (!text) return;
         if (typing || loading) return;
 
+        // Handle "add to {listname}: {ingredients}" pattern
+        const addToMatch = text.match(/^add\s+to\s+([^:]+):\s*(.+)$/i);
+        if (addToMatch) {
+            const listName = addToMatch[1].trim();
+            const ingredientsStr = addToMatch[2].trim();
+
+            if (!ingredientsStr) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Please specify ingredients after the colon.",
+                    },
+                ]);
+                return;
+            }
+
+            const ingredients = ingredientsStr
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+
+            if (ingredients.length === 0) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Please provide at least one ingredient.",
+                    },
+                ]);
+                return;
+            }
+
+            // Validate ingredient lengths
+            const {valid, invalid} = validateIngredients(ingredients);
+            const finalIngredients = valid.concat(
+                invalid.map((i) => i.suggested)
+            );
+
+            if (invalid.length > 0) {
+                const warnings = invalid
+                    .map(
+                        (item) =>
+                            `"${item.original}" (${item.length} chars, max ${INGREDIENT_NAME_MAX_LENGTH})`
+                    )
+                    .join(", ");
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `Some ingredients were too long and were truncated: ${warnings}`,
+                    },
+                ]);
+            }
+
+            setMessages((prev) => [...prev, {role: "user", text}]);
+            setInput("");
+
+            // Search for the list
+            await handleAddToNamedList(listName, finalIngredients);
+            return;
+        }
+
+        // Handle "create {listname} and add {ingredients}" pattern
+        const createAndAddMatch = text.match(
+            /^create\s+(.+?)\s+and\s+add\s+(.+)$/i
+        );
+        if (createAndAddMatch) {
+            const listName = createAndAddMatch[1].trim();
+            const ingredientsStr = createAndAddMatch[2].trim();
+
+            if (!listName || !ingredientsStr) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Please specify both list name and ingredients.",
+                    },
+                ]);
+                return;
+            }
+
+            const ingredients = ingredientsStr
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+
+            if (ingredients.length === 0) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Please provide at least one ingredient.",
+                    },
+                ]);
+                return;
+            }
+
+            // Validate ingredient lengths
+            const {valid, invalid} = validateIngredients(ingredients);
+            const finalIngredients = valid.concat(
+                invalid.map((i) => i.suggested)
+            );
+
+            if (invalid.length > 0) {
+                const warnings = invalid
+                    .map(
+                        (item) =>
+                            `"${item.original}" (${item.length} chars, max ${INGREDIENT_NAME_MAX_LENGTH})`
+                    )
+                    .join(", ");
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `Some ingredients were too long and were truncated: ${warnings}`,
+                    },
+                ]);
+            }
+
+            setMessages((prev) => [...prev, {role: "user", text}]);
+            setInput("");
+
+            // Create list and add ingredients
+            await handleCreateListAndAddNamed(listName, finalIngredients);
+            return;
+        }
+
+        // Handle "add {ingredients} in {listname}" pattern
+        const addInMatch = text.match(/^add\s+(.+?)\s+in\s+(.+)$/i);
+        if (addInMatch) {
+            const ingredientsStr = addInMatch[1].trim();
+            const listName = addInMatch[2].trim();
+
+            if (!listName || !ingredientsStr) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Please specify both list name and ingredients.",
+                    },
+                ]);
+                return;
+            }
+
+            const ingredients = ingredientsStr
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+
+            if (ingredients.length === 0) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Please provide at least one ingredient.",
+                    },
+                ]);
+                return;
+            }
+
+            // Validate ingredient lengths
+            const {valid, invalid} = validateIngredients(ingredients);
+            const finalIngredients = valid.concat(
+                invalid.map((i) => i.suggested)
+            );
+
+            if (invalid.length > 0) {
+                const warnings = invalid
+                    .map(
+                        (item) =>
+                            `"${item.original}" (${item.length} chars, max ${INGREDIENT_NAME_MAX_LENGTH})`
+                    )
+                    .join(", ");
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `Some ingredients were too long and were truncated: ${warnings}`,
+                    },
+                ]);
+            }
+
+            setMessages((prev) => [...prev, {role: "user", text}]);
+            setInput("");
+
+            // Search for the list and add ingredients
+            await handleAddToNamedList(listName, finalIngredients);
+            return;
+        }
+
         // Handle "add:" or "add " pattern for direct ingredient addition
         const addMatch = text.match(/^add(?:\s+|:)\s*(.+)$/i);
         if (addMatch) {
@@ -305,8 +521,31 @@ export default function ChatWidget({
                 return;
             }
 
-            // Set pending direct add and ask for list selection
-            setPendingDirectAdd(ingredients);
+            // Validate ingredient lengths
+            const {valid, invalid} = validateIngredients(ingredients);
+
+            if (invalid.length > 0) {
+                const warnings = invalid
+                    .map(
+                        (item) =>
+                            `"${item.original}" (${item.length} chars, max ${INGREDIENT_NAME_MAX_LENGTH})`
+                    )
+                    .join(", ");
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `Some ingredients are too long: ${warnings}. They will be added with truncated names or you can re-enter with shorter names.`,
+                    },
+                ]);
+                // Still proceed with valid ingredients, but use suggested names for invalid ones
+                const allIngredients = valid.concat(
+                    invalid.map((i) => i.suggested)
+                );
+                setPendingDirectAdd(allIngredients);
+            } else {
+                setPendingDirectAdd(valid);
+            }
             setAwaitingNewListName(false);
 
             setMessages((prev) => [
@@ -348,6 +587,52 @@ export default function ChatWidget({
             setAwaitingNewListName(false);
             setListSelectionMode(null);
             setPendingDirectAdd(null);
+            return;
+        }
+
+        // Handle list name too long - waiting for new name
+        if (pendingListNameTooLong) {
+            const listName = text.trim();
+            if (!listName) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `Please provide a list name (up to ${LIST_NAME_MAX_LENGTH} characters).`,
+                    },
+                ]);
+                return;
+            }
+
+            // Check if still too long
+            if (listName.length > LIST_NAME_MAX_LENGTH) {
+                const suggestedName = listName.slice(0, LIST_NAME_MAX_LENGTH);
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "user",
+                        text: listName,
+                    },
+                    {
+                        role: "assistant",
+                        text: `That name is still too long (${listName.length} characters). Maximum is ${LIST_NAME_MAX_LENGTH} characters.`,
+                    },
+                ]);
+                setInput("");
+                setPendingListNameTooLong({
+                    ...pendingListNameTooLong,
+                    suggestedName,
+                });
+                return;
+            }
+
+            setMessages((prev) => [...prev, {role: "user", text: listName}]);
+            setInput("");
+
+            // Use the new name with the stored ingredients
+            const {ingredients} = pendingListNameTooLong;
+            setPendingListNameTooLong(null);
+            await handleCreateListAndAddNamed(listName, ingredients);
             return;
         }
 
@@ -1194,6 +1479,309 @@ export default function ChatWidget({
         ]);
     };
 
+    // State for pending list not found action
+    const [pendingListNotFound, setPendingListNotFound] = useState(null);
+
+    // State for duplicate list name confirmation
+    const [pendingDuplicateList, setPendingDuplicateList] = useState(null);
+
+    // State for list name too long
+    const [pendingListNameTooLong, setPendingListNameTooLong] = useState(null);
+
+    // Handle adding ingredients to a named list (search required)
+    const handleAddToNamedList = async (listName, ingredients) => {
+        if (!userData?.id || !token) {
+            showNotification("Please sign in to use this feature", "error");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // Decrypt token if in list context
+            const authToken = context === "list" ? decryptToken(token) : token;
+
+            // Fetch all user lists
+            const fetchedLists = await getShoppingList(userData.id, authToken);
+
+            if (!fetchedLists || fetchedLists.length === 0) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `No lists found. Would you like to create "${listName}"?`,
+                    },
+                ]);
+                setPendingListNotFound({listName, ingredients});
+                setLoading(false);
+                return;
+            }
+
+            // Search for list by name (case-insensitive)
+            const listTitle = (l) => l.title?.rendered || l.title || "";
+            const foundList = fetchedLists.find((list) => {
+                const title = listTitle(list).toLowerCase().trim();
+                return title === listName.toLowerCase().trim();
+            });
+
+            if (!foundList) {
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `List "${listName}" not found. Would you like to create it?`,
+                    },
+                ]);
+                setPendingListNotFound({listName, ingredients});
+                setLoading(false);
+                return;
+            }
+
+            // List found, add ingredients
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Found "${listName}". Adding ingredients...`,
+                },
+            ]);
+
+            // Announce bulk add start
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
+            } catch {}
+
+            // Add each ingredient
+            for (const ing of ingredients) {
+                await addItemToList(foundList.id, ing);
+            }
+
+            showNotification(
+                `Added ${ingredients.length} item${
+                    ingredients.length > 1 ? "s" : ""
+                } to "${listName}"`,
+                "success",
+                1200
+            );
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Done! Added to "${listName}".`,
+                },
+            ]);
+        } catch (err) {
+            console.error("Error adding to named list:", err);
+            showNotification("Failed to add ingredients", "error");
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: "Sorry, something went wrong.",
+                },
+            ]);
+        } finally {
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
+            } catch {}
+            setLoading(false);
+        }
+    };
+
+    // Handle creating a list with a specific name and ingredients
+    const handleCreateListAndAddNamed = async (listName, ingredients) => {
+        if (!userData?.id || !token) {
+            showNotification("Please sign in to use this feature", "error");
+            return;
+        }
+
+        // Check if list name is too long
+        if (listName.length > LIST_NAME_MAX_LENGTH) {
+            const suggestedName = listName.slice(0, LIST_NAME_MAX_LENGTH);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `List name "${listName}" is too long (${listName.length} characters). Maximum is ${LIST_NAME_MAX_LENGTH} characters.`,
+                },
+            ]);
+            setPendingListNameTooLong({
+                originalName: listName,
+                suggestedName,
+                ingredients,
+            });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Checking if "${listName}" exists...`,
+                },
+            ]);
+
+            // Decrypt token if in list context
+            const authToken = context === "list" ? decryptToken(token) : token;
+
+            // Fetch existing lists to check for duplicates
+            const fetchedLists = await getShoppingList(userData.id, authToken);
+
+            // Check if list with same name already exists
+            const listTitle = (l) => l.title?.rendered || l.title || "";
+            const existingList = fetchedLists.find((list) => {
+                const title = listTitle(list).toLowerCase().trim();
+                return title === listName.toLowerCase().trim();
+            });
+
+            if (existingList) {
+                // List already exists, warn user and wait for confirmation
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: `A list named "${listName}" already exists. What would you like to do?`,
+                    },
+                ]);
+                setPendingDuplicateList({
+                    listName,
+                    ingredients,
+                    existingListId: existingList.id,
+                });
+                setLoading(false);
+                return;
+            }
+
+            // No duplicate, proceed with creation
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Creating "${listName}" and adding ingredients...`,
+                },
+            ]);
+
+            // Create the list
+            const newListData = await createShoppingList({
+                name: listName,
+                userId: userData.id,
+                token: authToken,
+            });
+
+            if (!newListData || !newListData.id) {
+                showNotification("Failed to create list", "error");
+                setLoading(false);
+                return;
+            }
+
+            // Refresh lists
+            await getShoppingList(userData.id, authToken);
+
+            // Announce bulk add start
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
+            } catch {}
+
+            // Add each ingredient
+            for (const ing of ingredients) {
+                await addItemToList(newListData.id, ing);
+            }
+
+            showNotification(
+                `List "${listName}" created and ingredients added`,
+                "success",
+                1200
+            );
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `List "${listName}" created and ingredients added successfully!`,
+                },
+            ]);
+        } catch (err) {
+            showNotification(
+                "Failed to create list or add ingredients",
+                "error"
+            );
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: "Sorry, something went wrong.",
+                },
+            ]);
+        } finally {
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
+            } catch {}
+            setLoading(false);
+        }
+    };
+
+    // Handle adding to existing list when duplicate detected
+    const handleAddToExistingDuplicate = async () => {
+        if (!pendingDuplicateList) return;
+
+        setLoading(true);
+        try {
+            const {listName, ingredients, existingListId} =
+                pendingDuplicateList;
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Adding ingredients to existing "${listName}"...`,
+                },
+            ]);
+
+            // Announce bulk add start
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
+            } catch {}
+
+            // Add each ingredient to the existing list
+            for (const ing of ingredients) {
+                await addItemToList(existingListId, ing);
+            }
+
+            showNotification(
+                `Added ${ingredients.length} item${
+                    ingredients.length > 1 ? "s" : ""
+                } to "${listName}"`,
+                "success",
+                1200
+            );
+            setMessages((prev) => [
+                ...prev,
+                {
+                    role: "assistant",
+                    text: `Done! Added to "${listName}".`,
+                },
+            ]);
+        } catch (err) {
+            console.error("Error adding to existing list:", err);
+            showNotification("Failed to add ingredients", "error");
+        } finally {
+            try {
+                window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
+            } catch {}
+            setLoading(false);
+            setPendingDuplicateList(null);
+        }
+    };
+
+    // Handle creating new list anyway (ignoring duplicate)
+    const handleCreateNewAnyway = async () => {
+        if (!pendingDuplicateList) return;
+
+        const {listName, ingredients} = pendingDuplicateList;
+        setPendingDuplicateList(null);
+        await handleCreateListAndAddNamed(listName, ingredients);
+    };
+
     // Handle direct add list selection
     const handleListSelectionChoice = async (choice) => {
         if (!pendingDirectAdd || choice === "cancel") {
@@ -1808,12 +2396,160 @@ export default function ChatWidget({
                                 </div>
                             )}
 
+                        {/* Show create/cancel options when list not found */}
+                        {pendingListNotFound && !loading && (
+                            <div className="mt-2 space-y-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Choose an action:
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setLoading(true);
+                                            await handleCreateListAndAddNamed(
+                                                pendingListNotFound.listName,
+                                                pendingListNotFound.ingredients
+                                            );
+                                            setPendingListNotFound(null);
+                                        }}
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Create "{pendingListNotFound.listName}"
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPendingListNotFound(null);
+                                            setMessages((prev) => [
+                                                ...prev,
+                                                {
+                                                    role: "assistant",
+                                                    text: "Okay, cancelled.",
+                                                },
+                                            ]);
+                                        }}
+                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Show options when duplicate list name detected */}
+                        {pendingDuplicateList && !loading && (
+                            <div className="mt-2 space-y-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Choose an action:
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleAddToExistingDuplicate}
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Add to existing list
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateNewAnyway}
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Create new
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPendingDuplicateList(null);
+                                            setMessages((prev) => [
+                                                ...prev,
+                                                {
+                                                    role: "assistant",
+                                                    text: "Okay, cancelled.",
+                                                },
+                                            ]);
+                                        }}
+                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Show options when list name is too long */}
+                        {pendingListNameTooLong && !loading && (
+                            <div className="mt-2 space-y-2">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    Choose an option:
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            const {suggestedName, ingredients} =
+                                                pendingListNameTooLong;
+                                            setPendingListNameTooLong(null);
+                                            await handleCreateListAndAddNamed(
+                                                suggestedName,
+                                                ingredients
+                                            );
+                                        }}
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Use: "
+                                        {pendingListNameTooLong.suggestedName}"
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            // Keep pendingListNameTooLong state to wait for new input
+                                            setMessages((prev) => [
+                                                ...prev,
+                                                {
+                                                    role: "assistant",
+                                                    text: `Please enter a new name (up to ${LIST_NAME_MAX_LENGTH} characters):`,
+                                                },
+                                            ]);
+                                            // Focus the input after a brief delay
+                                            setTimeout(() => {
+                                                inputRef.current?.focus?.();
+                                            }, 100);
+                                        }}
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Enter new name
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPendingListNameTooLong(null);
+                                            setMessages((prev) => [
+                                                ...prev,
+                                                {
+                                                    role: "assistant",
+                                                    text: "Okay, cancelled.",
+                                                },
+                                            ]);
+                                        }}
+                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Default Try buttons - only show when not in any special mode */}
                         {!pendingRecipe &&
                             !pendingVariation &&
                             !typing &&
                             !loading &&
-                            !pendingDirectAdd && (
+                            !pendingDirectAdd &&
+                            !pendingListNotFound &&
+                            !pendingDuplicateList &&
+                            !pendingListNameTooLong && (
                                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
                                     <button
                                         type="button"

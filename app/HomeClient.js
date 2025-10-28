@@ -580,7 +580,10 @@ const HomeClient = ({
                     <p className={"text-xl md:text-2xl"}>
                         <strong>Let&#39;s plan your shopping list!</strong>
                     </p>
-                    <p className={"mt-2 md:text-lg text-gray-400"}>
+                    <p className={"mt-2 md:text-md text-gray-200"}>
+                        Prompt to create lists & add ingredents
+                    </p>
+                    <p className={"mt-2 md:text-md text-gray-400"}>
                         Use the button to start a new list
                     </p>
                 </div>
