@@ -60,12 +60,13 @@
     --ai-chat: var(--color-gray-900);
     --drag-opage: oklch(21% 0.034 264.665 / 0.7);
     --menu-bg: var(--color-gray-900);
-    --menu-bg-hover: var(--color-gray-500);
+    --menu-bg-hover: var(--color-gray-600);
     --search-input: var(--color-gray-700);
     --filters: var(--color-gray-800);
     --filters-hover: var(--color-gray-700);
     --filters-text: var(--color-gray-300);
     --filters-wrapper: var(--color-gray-900);
+    --chat-widget-hover: var(--color-primary);
 }
 
 /* Smooth transitions for theme changes */
@@ -316,4 +317,8 @@ select:-moz-autofill {
     &:hover {
         background-color: var(--filters-hover);
     }
+}
+
+.chat-widget:hover {
+    border: 2px solid var(--chat-widget-hover) !important;
 }

@@ -10,6 +10,8 @@ import {
     getAllCustomProducts,
     decodeHtmlEntities,
 } from "../../lib/helpers";
+
+import {INGREDIENT_NAME_MAX_LENGTH} from "../../lib/config";
 import "../../css/checkbox.css";
 import CloseIcon from "../svgs/CloseIcon";
 import {useParams} from "next/navigation";
@@ -56,7 +58,7 @@ export default function AddProduct({
     const [customProductLength, setCustomProductLength] = useState(0);
     const [savingProductId, setSavingProductId] = useState(null); // Track which product is being saved
     const [savingProduct, setSavingProduct] = useState(null); // Track which product is being saved
-    const maxLength = 36;
+    const maxLength = INGREDIENT_NAME_MAX_LENGTH;
 
     const {showNotification} = useNotificationContext();
 
@@ -825,12 +827,12 @@ export default function AddProduct({
                             className={`w-6 h-6 transition-colors duration-200 ${
                                 isTemporaryProduct
                                     ? "text-gray-400 cursor-not-allowed"
-                                    : "hover:text-white cursor-pointer"
+                                    : "hover:text-yellow-500 cursor-pointer"
                             } ${
                                 favouriteProducts?.some(
                                     (p) => p.id === product.id
                                 )
-                                    ? "fill-yellow-500 text-yellow-500"
+                                    ? "fill-yellow-500 text-yellow-500 hover:opacity-50 transition-opacity"
                                     : ""
                             }`}
                         />
@@ -865,7 +867,7 @@ export default function AddProduct({
                                     customProducts
                                 );
                             }}
-                            className="text-red-500 hover:text-red-400 transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
+                            className="text-red-500 hover:text-red-400 cursor-pointer transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
                             style={{WebkitTapHighlightColor: "transparent"}}
                             aria-label="Delete custom product"
                             title="Delete custom product"
@@ -933,7 +935,7 @@ export default function AddProduct({
                                             selectedProductsSection ===
                                             "popular"
                                                 ? "menu-selected"
-                                                : "menu cursor-pointer"
+                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
                                         }`}
                                     >
                                         Popular
@@ -949,7 +951,7 @@ export default function AddProduct({
                                             selectedProductsSection ===
                                             "categories"
                                                 ? "menu-selected"
-                                                : "menu cursor-pointer"
+                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
                                         }`}
                                     >
                                         Categories
@@ -962,7 +964,7 @@ export default function AddProduct({
                                         className={`py-2 px-4  ${
                                             selectedProductsSection === "custom"
                                                 ? "menu-selected"
-                                                : "menu cursor-pointer"
+                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
                                         }`}
                                     >
                                         Custom
