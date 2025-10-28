@@ -77,19 +77,27 @@ const HomeClient = ({
         const removeListData = sessionStorage.getItem("removeListData");
         if (removeListData) {
             try {
-                const {listId, userId, token, selfInitiated} = JSON.parse(removeListData);
+                const {listId, userId, token, selfInitiated} =
+                    JSON.parse(removeListData);
                 sessionStorage.removeItem("removeListData"); // Clear the data
 
                 // Decide notification based on self-removal flag or suppress flag
                 let suppress = false;
                 try {
-                    suppress = sessionStorage.getItem('suppressSelfRemovalToast') === '1';
+                    suppress =
+                        sessionStorage.getItem("suppressSelfRemovalToast") ===
+                        "1";
                 } catch {}
                 if (selfInitiated) {
                     if (!suppress) {
-                        showNotification("List removed successfully", "success");
+                        showNotification(
+                            "List removed successfully",
+                            "success"
+                        );
                     }
-                    try { sessionStorage.removeItem('suppressSelfRemovalToast'); } catch {}
+                    try {
+                        sessionStorage.removeItem("suppressSelfRemovalToast");
+                    } catch {}
                 } else {
                     showNotification(
                         "The list owner has removed you from this list",
@@ -133,7 +141,8 @@ const HomeClient = ({
     useEffect(() => {
         if (!listSettings) return;
         const sel = `#menu-${listSettings}`;
-        const el = typeof document !== "undefined" && document.querySelector(sel);
+        const el =
+            typeof document !== "undefined" && document.querySelector(sel);
         if (!el) return;
         gsap.killTweensOf(el);
         gsap.set(el, {height: 0, opacity: 0, y: -6, overflow: "hidden"});
@@ -181,7 +190,8 @@ const HomeClient = ({
         if (listSettings === id) {
             // Animate close then unmount
             const sel = `#menu-${id}`;
-            const el = typeof document !== "undefined" && document.querySelector(sel);
+            const el =
+                typeof document !== "undefined" && document.querySelector(sel);
             if (el) {
                 gsap.killTweensOf(el);
                 const currentH = el.scrollHeight;
@@ -362,7 +372,8 @@ const HomeClient = ({
     }, [userData?.id, shareDialogOpen, userLists]);
 
     // Prefer client context for header auth state to avoid SSR/CSR mismatch flicker
-    const headerRegistered = userData?.registered === "yes" ? true : isRegistered;
+    const headerRegistered =
+        userData?.registered === "yes" ? true : isRegistered;
     const headerUserName = userData?.name || userName;
 
     if (error) return <div>Error: {error}</div>;
@@ -449,7 +460,7 @@ const HomeClient = ({
                                                 {listSettings === list.id && (
                                                     <div
                                                         id={`menu-${list.id}`}
-                                                        className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
+                                                        className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
                                                     >
                                                         <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                             <button
@@ -458,7 +469,7 @@ const HomeClient = ({
                                                                         list.id
                                                                     )
                                                                 }
-                                                                className=" cursor-pointer px-3 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                                className=" cursor-pointer px-3 py-1 flex items-center tool text-left duration-200 transition-colors dark:text-white rounded-sm"
                                                             >
                                                                 <RenameIcon className="w-4 h-4 inline-block mr-1" />
                                                                 Rename
@@ -469,7 +480,7 @@ const HomeClient = ({
                                                                         list.id
                                                                     )
                                                                 }
-                                                                className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                                className="px-3 py-1 tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                                             >
                                                                 <CopyIcon className="w-4 h-4 inline-block mr-1" />
                                                                 Copy
@@ -484,7 +495,7 @@ const HomeClient = ({
                                                                             .shared_with_users
                                                                     );
                                                                 }}
-                                                                className="px-3 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                                className="px-3 py-1 tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                                             >
                                                                 <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                                                 Share
@@ -502,7 +513,7 @@ const HomeClient = ({
                                                                             userData?.id
                                                                         );
                                                                     }}
-                                                                    className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                                    className="px-3 py-1 cursor-pointer   text-left duration-200 transition-colors text-red-500 rounded-sm"
                                                                 >
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Delete
@@ -522,7 +533,7 @@ const HomeClient = ({
                                                                             userData?.id
                                                                         );
                                                                     }}
-                                                                    className="px-3 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                                    className="px-3 py-1 cursor-pointer text-red-500 text-left duration-200 transition-colors text-red-500 rounded-sm"
                                                                 >
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Remove
@@ -569,7 +580,10 @@ const HomeClient = ({
                     <p className={"text-xl md:text-2xl"}>
                         <strong>Let&#39;s plan your shopping list!</strong>
                     </p>
-                    <p className={"mt-2 md:text-lg text-gray-400"}>
+                    <p className={"mt-2 md:text-md text-gray-200"}>
+                        Prompt to create lists & add ingredents
+                    </p>
+                    <p className={"mt-2 md:text-md text-gray-400"}>
                         Use the button to start a new list
                     </p>
                 </div>

@@ -307,7 +307,7 @@ export default function ShoppingListHeader({
             <div
                 className={`w-full  flex flex-col ${
                     isListOwner(list, userId) ? "gap-6" : "gap-2"
-                }  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px] border dark:border-transparent bg-gray-200 dark:bg-gray-900 min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40`}
+                }  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px] border dark:border-transparent shopping-list-header min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40`}
             >
                 {/* list name */}
                 <div className="flex items-center justify-between  px-2">
@@ -375,7 +375,8 @@ export default function ShoppingListHeader({
                                 onClick={handleSearchProduct}
                                 className="flex items-center gap-2 group relative"
                             >
-                                <div className="flex items-center pr-1 relative overflow-hidden dark:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 bg-gray-200 max-w-[400px]">
+                                {/*  dark:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 bg-gray-200 */}
+                                <div className="flex items-center pr-1 relative overflow-hidden max-w-[400px]">
                                     <input
                                         ref={searchProductRef}
                                         type="text"
@@ -408,14 +409,14 @@ export default function ShoppingListHeader({
                             {openSettings && (
                                 <div
                                     id="header-settings-menu"
-                                    className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm bg-gray-200 dark:bg-gray-700 shadow-md z-30 overflow-hidden"
+                                    className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
                                 >
                                     <div className="flex flex-col gap-0.5 font-quicksand font-[500]">
                                         <button
                                             onClick={() =>
                                                 handleRenameClick(list.id)
                                             }
-                                            className=" cursor-pointer px-2 py-1 flex items-center hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                            className=" cursor-pointer px-2 py-1 flex items-center tool  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                         >
                                             <RenameIcon className="w-4 h-4 inline-block mr-1" />
                                             Rename
@@ -424,7 +425,7 @@ export default function ShoppingListHeader({
                                             onClick={() =>
                                                 setShareDialogOpen(list.id)
                                             }
-                                            className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                            className="px-2 py-1 tool cursor-pointer tool  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                         >
                                             <ShareIcon className="w-4 h-4 inline-block mr-1" />
                                             Share
@@ -439,7 +440,7 @@ export default function ShoppingListHeader({
                                                         "Empty"
                                                     )
                                                 }
-                                                className="px-2 py-1 hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
+                                                className="px-2 py-1 tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                             >
                                                 <ThrowIcon className="w-4 h-4 inline-block mr-1" />
                                                 Empty
@@ -456,7 +457,7 @@ export default function ShoppingListHeader({
                                                         "Delete"
                                                     )
                                                 }
-                                                className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                className="px-2 py-1 cursor-pointer  text-red-500 text-left duration-200 transition-colors text-red-500 rounded-sm"
                                             >
                                                 <TranshIcon className="w-4 h-4 inline-block mr-1" />
                                                 Delete
@@ -474,7 +475,7 @@ export default function ShoppingListHeader({
                                                         userId
                                                     )
                                                 }
-                                                className="px-2 py-1 cursor-pointer  hover:bg-gray-300 dark:hover:bg-gray-600 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                className="px-2 py-1 cursor-pointer tools text-left duration-200 transition-colors text-red-600 rounded-sm"
                                             >
                                                 <TranshIcon className="w-4 h-4 inline-block mr-1" />
                                                 Remove

@@ -10,6 +10,8 @@ import {
     getAllCustomProducts,
     decodeHtmlEntities,
 } from "../../lib/helpers";
+
+import {INGREDIENT_NAME_MAX_LENGTH} from "../../lib/config";
 import "../../css/checkbox.css";
 import CloseIcon from "../svgs/CloseIcon";
 import {useParams} from "next/navigation";
@@ -54,7 +56,9 @@ export default function AddProduct({
     const [favouriteSearchResults, setFavouriteSearchResults] = useState(null);
     const customProductInputRef = useRef(null);
     const [customProductLength, setCustomProductLength] = useState(0);
-    const maxLength = 36;
+    const [savingProductId, setSavingProductId] = useState(null); // Track which product is being saved
+    const [savingProduct, setSavingProduct] = useState(null); // Track which product is being saved
+    const maxLength = INGREDIENT_NAME_MAX_LENGTH;
 
     const {showNotification} = useNotificationContext();
 
@@ -81,6 +85,7 @@ export default function AddProduct({
     const fuse = useMemo(
         () => new Fuse(originalProducts, fuseOptions),
         [originalProducts]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     );
 
     // Update initialCustomProducts when customProducts prop changes
@@ -424,7 +429,17 @@ export default function AddProduct({
                 title: customProductTitle,
             };
 
-            const animatedProduct = {...newCustomProduct, id: Date.now()};
+            // Create a temporary ID with a 'temp-' prefix to identify unsaved products
+            const tempId = `temp-${Date.now()}`;
+            const animatedProduct = {
+                ...newCustomProduct,
+                id: tempId,
+                isTemporary: true, // Add a flag to identify temporary products
+                isSaving: true, // Add a flag to show loading state
+            };
+
+            // Set the currently saving product ID
+            setSavingProductId(tempId);
 
             // Animate only the newly added item once it is rendered
             requestAnimationFrame(() => {
@@ -449,9 +464,10 @@ export default function AddProduct({
 
             customProductInputRef.current.value = "";
             setCustomProductLength(0);
-            // Optimistically update UI lists
-            setCustomProducts((prev) => [animatedProduct, ...prev]);
-            const nextCustom = [animatedProduct, ...customProducts];
+            // Optimistically update UI lists with the temporary product
+            const updatedCustomProducts = [animatedProduct, ...customProducts];
+            setCustomProducts(updatedCustomProducts);
+            const nextCustom = [...updatedCustomProducts];
 
             // If searching, update the custom search results immediately
             if (searchValue) {
@@ -478,6 +494,7 @@ export default function AddProduct({
         const data = await res.json();
         const fetchedCustomProducts = await getAllCustomProducts(token);
         setCustomProducts(fetchedCustomProducts);
+        setSavingProductId(null); // Clear saving state
     };
 
     // Delete custom product
@@ -709,118 +726,167 @@ export default function AddProduct({
 
         setFilteredProducts(filtered);
         setProducts(filtered);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCategories, allProducts, searchValue]);
 
-    const renderProductItem = (product, index) => (
-        <div
-            onClick={(e) => {
+    const renderProductItem = (product, index) => {
+        const isTemporaryProduct =
+            typeof product.id === "string" && product.id.startsWith("temp-");
+
+        const handleClick = (e) => {
+            if (isTemporaryProduct) return; // Prevent interaction with temporary products
+            e.stopPropagation();
+            handleCheckboxChange(product.id, token);
+        };
+
+        const handleCheckboxClick = (e) => {
+            if (isTemporaryProduct) {
+                e.preventDefault();
                 e.stopPropagation();
-                handleCheckboxChange(product.id, token);
-            }}
-            key={product.id || index}
-            data-product-id={product.id}
-            className={`product-card  border cursor-pointer ml-4 px-4 py-3 rounded-md bg-gray-100 hover:bg-gray-300 text-black dark:bg-gray-900 dark:hover:bg-gray-800 duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
-                allLinkedProducts?.some((p) => p.ID === product.id)
-                    ? "border-primary"
-                    : ""
-            }`}
-        >
-            <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
-                <div className="checkbox-wrapper-28">
-                    <input
-                        id={`checkbox-${product.id}`}
-                        type="checkbox"
-                        className="promoted-input-checkbox peer"
-                        checked={
-                            !!allLinkedProducts?.some(
-                                (p) => p.ID === product.id
-                            )
-                        }
-                        onChange={(e) => {
-                            e.stopPropagation();
-                            handleCheckboxChange(product.id, token);
-                        }}
-                    />
-                    <label
-                        htmlFor={`checkbox-${product.id}`}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handleCheckboxChange(product.id, token);
-                        }}
-                    ></label>
-                    <svg viewBox="0 0 24 24">
-                        <polyline points="20 6 9 17 4 12" fill="none" />
-                    </svg>
+                return;
+            }
+            e.stopPropagation();
+            handleCheckboxChange(product.id, token);
+        };
+
+        const handleFavouriteClick = (e) => {
+            if (isTemporaryProduct) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            e.stopPropagation();
+            handleAddToFavourites(product.id, token);
+        };
+
+        return (
+            <div
+                onClick={handleClick}
+                key={product.id || index}
+                data-product-id={product.id}
+                className={`product-card border ml-4 px-4 py-3 rounded-md text-black duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
+                    allLinkedProducts?.some((p) => p.ID === product.id)
+                        ? "border-primary"
+                        : ""
+                } ${
+                    isTemporaryProduct
+                        ? "opacity-50 cursor-not-allowed"
+                        : "cursor-pointer"
+                }`}
+            >
+                <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
+                    <div className="checkbox-wrapper-28">
+                        <input
+                            id={`checkbox-${product.id}`}
+                            type="checkbox"
+                            className={`promoted-input-checkbox peer ${
+                                isTemporaryProduct ? "cursor-not-allowed" : ""
+                            }`}
+                            checked={
+                                !!allLinkedProducts?.some(
+                                    (p) => p.ID === product.id
+                                )
+                            }
+                            onChange={handleCheckboxClick}
+                            disabled={isTemporaryProduct}
+                        />
+                        <label
+                            htmlFor={`checkbox-${product.id}`}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                if (isTemporaryProduct) return;
+                                handleCheckboxChange(product.id, token);
+                            }}
+                            className={
+                                isTemporaryProduct ? "cursor-not-allowed" : ""
+                            }
+                        ></label>
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="20 6 9 17 4 12" fill="none" />
+                        </svg>
+                    </div>
+                    {decodeHtmlEntities(product.title)}
+                    {isTemporaryProduct && (
+                        <span className="text-xs text-gray-400 ml-2">
+                            Saving...
+                        </span>
+                    )}
                 </div>
-                {decodeHtmlEntities(product.title)}
-            </div>
-            <div className="flex items-center gap-2 md:gap-6">
-                <div
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddToFavourites(product.id, token);
-                    }}
-                    className={`text-sm font-bold text-gray-400 block ${
-                        favouriteProducts?.some((p) => p.id === product.id)
-                            ? "opacity-100"
-                            : "sm:opacity-0 group-hover:opacity-100"
-                    } transition-opacity duration-200`}
-                >
-                    <StarIcon
-                        className={`w-6 h-6 hover:text-white transition-colors duration-200 cursor-pointer ${
+                <div className="flex items-center gap-2 md:gap-6">
+                    <div
+                        onClick={handleFavouriteClick}
+                        className={`text-sm font-bold text-gray-400 block ${
                             favouriteProducts?.some((p) => p.id === product.id)
-                                ? "fill-yellow-500 text-yellow-500"
-                                : ""
+                                ? "opacity-100"
+                                : isTemporaryProduct
+                                ? "opacity-50"
+                                : "sm:opacity-0 group-hover:opacity-100"
+                        } transition-opacity duration-200 ${
+                            isTemporaryProduct ? "cursor-not-allowed" : ""
                         }`}
-                    />
+                    >
+                        <StarIcon
+                            className={`w-6 h-6 transition-colors duration-200 ${
+                                isTemporaryProduct
+                                    ? "text-gray-400 cursor-not-allowed"
+                                    : "hover:text-yellow-500 cursor-pointer"
+                            } ${
+                                favouriteProducts?.some(
+                                    (p) => p.id === product.id
+                                )
+                                    ? "fill-yellow-500 text-yellow-500 hover:opacity-50 transition-opacity"
+                                    : ""
+                            }`}
+                        />
+                    </div>
+
+                    {allLinkedProducts?.some((p) => p.ID === product.id) && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                updateProductInShoppingList(
+                                    product.id,
+                                    false,
+                                    token
+                                );
+                            }}
+                            className="rounded-full text-red-500 !border-transparent cursor-pointer hover:border-transparent transition-colors duration-200"
+                            aria-label="Remove from list"
+                            title="Remove from list"
+                        >
+                            <CloseIcon className="w-6 h-6" />
+                        </button>
+                    )}
+
+                    {selectedProductsSection === "custom" && (
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCustomProduct(
+                                    product.id,
+                                    token,
+                                    shoppingListId,
+                                    customProducts
+                                );
+                            }}
+                            className="text-red-500 hover:text-red-400 cursor-pointer transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
+                            style={{WebkitTapHighlightColor: "transparent"}}
+                            aria-label="Delete custom product"
+                            title="Delete custom product"
+                        >
+                            <TrashIcon className="w-6 h-6" />
+                        </button>
+                    )}
                 </div>
-
-                {allLinkedProducts?.some((p) => p.ID === product.id) && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            updateProductInShoppingList(
-                                product.id,
-                                false,
-                                token
-                            );
-                        }}
-                        className="rounded-full text-red-500 !border-transparent cursor-pointer hover:border-transparent transition-colors duration-200"
-                        aria-label="Remove from list"
-                        title="Remove from list"
-                    >
-                        <CloseIcon className="w-6 h-6" />
-                    </button>
-                )}
-
-                {selectedProductsSection === "custom" && (
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCustomProduct(
-                                product.id,
-                                token,
-                                shoppingListId,
-                                customProducts
-                            );
-                        }}
-                        className="text-red-500 hover:text-red-400 transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
-                        style={{WebkitTapHighlightColor: "transparent"}}
-                        aria-label="Delete custom product"
-                        title="Delete custom product"
-                    >
-                        <TrashIcon className="w-6 h-6" />
-                    </button>
-                )}
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="w-full absolute top-0">
             <div className="fixed lg:block hidden top-4 right-6 w-10 h-10 z-[100]">
                 <CloseIcon
-                    className="sticky top-4 right-4 w-8 h-8 text-white cursor-pointer"
+                    className="sticky top-4 right-4 w-8 h-8 text-red-500 cursor-pointer"
                     onClick={() => {
                         closeOverlay();
                     }}
@@ -828,12 +894,12 @@ export default function AddProduct({
             </div>
             <div
                 ref={overlayRef}
-                className="fixed top-0 z-[99] inset-0 w-full h-full bg-[#fefefeef] dark:bg-[#000000ef] blur-sm close-product-overlay"
+                className="fixed top-0 z-[99] inset-0 w-full h-full  blur-sm close-product-overlay"
             ></div>
             <div className="relative top-0 ">
                 <div
                     ref={panelRef}
-                    className="absolute top-0 z-[100]  inset-x-0 bg-white dark:bg-black gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6"
+                    className="absolute top-0 z-[100]  inset-x-0  gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6"
                 >
                     <div className="w-full bg-gray-300 dark:bg-gray-700 sticky top-0 z-20 rounded-md">
                         <div className="relative flex items-center">
@@ -842,17 +908,17 @@ export default function AddProduct({
                                 onChange={handleSearchProduct}
                                 ref={searchRef}
                                 placeholder="Search for a Product..."
-                                className="w-full rounded-md border-2 transition-colors duration-200 border-transparent focus:border-primary outline-0 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"
+                                className="w-full rounded-md border-2 transition-colors duration-200 search-input border-transparent focus:border-primary outline-0 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"
                             />
                             <div className="absolute right-2 h-full grid place-items-center peer-focus:opacity-0 transition-opacity duration-200">
-                                <SearchIcon className="w-8 h-8 text-white" />
+                                <SearchIcon className="w-8 h-8 brand-color" />
                             </div>
                         </div>
                     </div>
 
                     <div
                         ref={productListRef}
-                        className="w-full bg-gray-300 dark:bg-gray-700 pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
+                        className="w-full search-input pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
                         style={{
                             WebkitOverflowScrolling: "touch",
                             overscrollBehavior: "contain",
@@ -870,8 +936,8 @@ export default function AddProduct({
                                         className={`py-2 pl-5 pr-4 ${
                                             selectedProductsSection ===
                                             "popular"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                                ? "menu-selected"
+                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
                                         }`}
                                     >
                                         Popular
@@ -886,8 +952,8 @@ export default function AddProduct({
                                         className={`py-2 pl-5 pr-4 ${
                                             selectedProductsSection ===
                                             "categories"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                                ? "menu-selected"
+                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
                                         }`}
                                     >
                                         Categories
@@ -899,8 +965,8 @@ export default function AddProduct({
                                         }
                                         className={`py-2 px-4  ${
                                             selectedProductsSection === "custom"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer"
+                                                ? "menu-selected"
+                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
                                         }`}
                                     >
                                         Custom
@@ -914,8 +980,8 @@ export default function AddProduct({
                                         className={`py-2 px-4  ${
                                             selectedProductsSection ===
                                             "favourite"
-                                                ? "bg-gray-300 hover:bg-gary-300 dark:bg-gray-700 dark:hover:bg-gray-700 rounded-br-xl"
-                                                : "dark:hover:bg-gray-900 hover:bg-gray-500 transition-colors duration-200 bg-gray-400 dark:bg-gray-800 cursor-pointer rounded-br-xl"
+                                                ? "menu-selected rounded-br-xl"
+                                                : "menu cursor-pointer rounded-br-xl"
                                         }`}
                                     >
                                         Favourites

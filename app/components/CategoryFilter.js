@@ -138,7 +138,7 @@ const CategoryFilter = ({
     };
 
     return (
-        <div className="relative font-quicksand bg-white dark:bg-gray-900 shadow-xl rounded-sm ml-4">
+        <div className="relative font-quicksand filters-wrapper shadow-xl rounded-sm ml-4">
             {/* Left scroll button */}
             <button
                 onClick={scrollLeft}
@@ -189,8 +189,8 @@ const CategoryFilter = ({
                         transition-all duration-200 ease-in-out flex-shrink-0  
                         ${
                             selectedCategories.length === 0
-                                ? "bg-primary text-black shadow-md dark:hover:opacity-80 "
-                                : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary dark:hover:bg-gray-700"
+                                ? "bg-brand-color text-black shadow-md dark:hover:opacity-80 "
+                                : "filters"
                         }
                     `}
                 >
@@ -205,8 +205,8 @@ const CategoryFilter = ({
                             transition-all duration-200 ease-in-out flex-shrink-0
                             ${
                                 selectedCategories.includes(category)
-                                    ? "bg-primary text-black shadow-md dark:hover:opacity-80 "
-                                    : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                    ? "bg-brand-color text-black shadow-md dark:hover:opacity-80 "
+                                    : "filters"
                             }
                         `}
                     >

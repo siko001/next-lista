@@ -82,9 +82,9 @@ export default function List({
             {...(provided?.dragHandleProps || {})}
             className={`shoppinglist-item ${
                 list.isNew ? "new-list" : ""
-            } focus:border-primary outline-0  transition-colors hover:shadow-[#00000033] dark:shadow-[#ffffff02] hover:dark:shadow-[#ffffff05] hover:scale-[102%] flex flex-col gap-2 border hover:border-blue-600 dark:hover:border-blue-800  px-6 py-3 2xl:px-8 2xl:py-4 rounded-lg shadow-xl shadow-[#00000022] dark:bg-black bg-white min-w-full w-full md:min-w-[550px] lg:min-w-[850px] 2xl:min-w-[950px]  duration-200 hover:dark:bg-gray-950 hover:bg-gray-100 mx-auto relative ${
+            } focus:border-primary outline-0  transition-colors hover:shadow-[#00000033] dark:shadow-[#ffffff02] hover:dark:shadow-[#ffffff05] hover:scale-[102%] flex flex-col gap-2 border hover:border-blue-600 dark:hover:border-blue-800  px-6 py-3 2xl:px-8 2xl:py-4 rounded-lg shadow-xl shadow-[#00000022]  min-w-full w-full md:min-w-[550px] lg:min-w-[850px] 2xl:min-w-[950px]  duration-200 shopping-list-hover mx-auto relative ${
                 snapshot?.isDragging
-                    ? "!scale-90 dark:!bg-gray-900 border-blue-800 !bg-gray-100 md:scale-110 !left-0 md:!left-[50%] md:!-translate-x-[50%]"
+                    ? "!scale-90  border-blue-800 drag md:scale-110 !left-0 md:!left-[50%] md:!-translate-x-[50%]"
                     : "scale-100 "
             }`}
             style={{

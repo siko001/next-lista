@@ -43,11 +43,78 @@ export const metadata = {
     },
 };
 
+// This script runs before the page renders to prevent flash of incorrect theme
+const ThemeScript = () => {
+    const themeScript = `
+        (function() {
+            try {
+                // Function to get a cookie by name
+                function getCookie(name) {
+                    const value = '; ' + document.cookie;
+                    const parts = value.split('; ' + name + '=');
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                    return null;
+                }
+                
+                // Check if user is authenticated (has a token cookie)
+                const isAuthenticated = !!getCookie('token');
+                
+                // Only apply theme if user is authenticated
+                if (isAuthenticated) {
+                    // Get stored theme or default to 'system'
+                    const storedTheme = localStorage.getItem('theme') || 'system';
+                    
+                    // Check if the user has a saved theme preference
+                    if (storedTheme === 'dark' || storedTheme === 'light') {
+                        // If user has explicitly chosen a theme, apply it immediately
+                        document.documentElement.classList.add(storedTheme, storedTheme + '-mode');
+                    } else {
+                        // For system theme, check the preferred color scheme
+                        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        if (isDark) {
+                            document.documentElement.classList.add('dark', 'dark-mode');
+                        } else {
+                            document.documentElement.classList.add('light', 'light-mode');
+                        }
+                    }
+                } else {
+                    // If not authenticated, ensure no theme classes are present
+                    const html = document.documentElement;
+                    ['dark', 'dark-mode', 'light', 'light-mode'].forEach(cls => html.classList.remove(cls));
+                    html.removeAttribute('data-theme');
+                }
+                
+                // Add a class to prevent transitions during initial load
+                document.documentElement.classList.add('theme-loading');
+                
+                // Remove the loading class after a short delay to prevent flash
+                setTimeout(() => {
+                    document.documentElement.classList.remove('theme-loading');
+                    document.documentElement.classList.add('theme-loaded');
+                }, 0);
+            } catch (e) {
+                console.error('Error applying theme:', e);
+            }
+        })();
+    `;
+
+    return (
+        <script
+            dangerouslySetInnerHTML={{__html: themeScript}}
+            // This ensures the script runs before anything else
+            suppressHydrationWarning
+        />
+    );
+};
+
 export default function RootLayout({children}) {
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
+            <head>
+                <ThemeScript />
+            </head>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} ${saira} ${quicksand} antialiased`}
+                className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${quicksand.variable} font-saira antialiased bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-200`}
             >
                 <LoadingProvider>
                     <NotificationProvider>
@@ -69,7 +136,7 @@ export default function RootLayout({children}) {
                     href="https://neilmallia.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="fixed bottom-2 left-2 z-50 text-primary text-[8px] !border-0 hover:text-white"
+                    className="fixed bottom-2 left-2 z-50 brand-color transition-colors duration-200 text-[10px] !border-0 "
                 >
                     By Neil VM
                 </a>

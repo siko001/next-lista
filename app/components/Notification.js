@@ -62,7 +62,7 @@ function Toast({toast, onDone, index}) {
     return (
         <div
             ref={ref}
-            className={`${cls} font-quicksand font-[600] p-4 rounded-md text-sm sm:text-base shadow-md transform`}
+            className={`${cls} font-quicksand  font-[600] font-black p-4 rounded-md text-sm sm:text-base shadow-md transform`}
             style={{marginTop: index === 0 ? 0 : 8}}
         >
             {toast.message}
@@ -74,9 +74,14 @@ export default function Notification() {
     const {toasts, removeToast} = useNotificationContext();
     return (
         toasts?.length > 0 && (
-            <div className="fixed top-4 left-4 z-[9999] flex flex-col items-start gap-2 mx-0">
+            <div className="fixed top-4 left-4 font-quicksand font-[600] z-[9999] flex flex-col items-start gap-2 mx-0">
                 {toasts.map((t, i) => (
-                    <Toast key={t.id} toast={t} index={i} onDone={removeToast} />
+                    <Toast
+                        key={t.id}
+                        toast={t}
+                        index={i}
+                        onDone={removeToast}
+                    />
                 ))}
             </div>
         )
