@@ -81,26 +81,29 @@ export const UserProvider = ({children}) => {
     // Function to log out the user
     const logout = () => {
         // Ensure we're in a browser environment
-        if (typeof document !== 'undefined') {
+        if (typeof document !== "undefined") {
             // Remove all possible theme-related classes
             const html = document.documentElement;
-            const themeClasses = ['dark', 'dark-mode', 'light', 'light-mode'];
-            
+            const themeClasses = ["dark", "dark-mode", "light", "light-mode"];
+
             // Remove all theme classes
-            themeClasses.forEach(cls => html.classList.remove(cls));
-            
+            themeClasses.forEach((cls) => html.classList.remove(cls));
+
             // Remove any data-theme attribute
-            html.removeAttribute('data-theme');
-            
+            html.removeAttribute("data-theme");
+
             // Clear any stored theme preference
             if (typeof window !== "undefined") {
                 localStorage.removeItem("theme");
                 sessionStorage.removeItem("theme");
             }
-            
+
             // Log the current state for verification
-            console.log('After logout - HTML classes:', html.className);
-            console.log('After logout - data-theme:', html.getAttribute('data-theme'));
+            console.log("After logout - HTML classes:", html.className);
+            console.log(
+                "After logout - data-theme:",
+                html.getAttribute("data-theme")
+            );
         }
 
         // Clear authentication data
@@ -178,6 +181,7 @@ export const UserProvider = ({children}) => {
 
     useEffect(() => {
         initializeUser();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

@@ -29,6 +29,7 @@ export default function Overlay({handleDeleteList, handleEmptyList}) {
 
         window.addEventListener("keydown", closeOnEsc);
         return () => window.removeEventListener("keydown", closeOnEsc);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return (

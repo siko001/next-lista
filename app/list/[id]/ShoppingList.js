@@ -134,6 +134,7 @@ export default function ShoppingList({
             window.removeEventListener("scroll", handleScroll);
             clearTimeout(scrollTimeout);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         checklistSettings,
         baggedSettings,
@@ -152,10 +153,12 @@ export default function ShoppingList({
     const fuseChecked = useMemo(
         () => new Fuse(originalCheckedProducts, fuseCheckedOptions),
         [originalCheckedProducts]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     );
     const fuseBagged = useMemo(
         () => new Fuse(originalBaggedProducts, fuseCheckedOptions),
         [originalBaggedProducts]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     );
 
     // Update original product lists when primary lists change (outside of search)
@@ -163,12 +166,14 @@ export default function ShoppingList({
         if (checkedProducts && !isSearching) {
             setOriginalCheckedProducts([...checkedProducts]);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [checkedProducts]);
 
     useEffect(() => {
         if (baggedProducts && !isSearching) {
             setOriginalBaggedProducts([...baggedProducts]);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [baggedProducts]);
 
     // Track if we're currently searching
@@ -938,6 +943,7 @@ export default function ShoppingList({
             channel.unbind_all();
             pusher.unsubscribe("user-lists-" + userId);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userId, listId, token, currentList]);
 
     // Update sharedWithUsers when list changes

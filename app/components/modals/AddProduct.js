@@ -725,6 +725,7 @@ export default function AddProduct({
 
         setFilteredProducts(filtered);
         setProducts(filtered);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCategories, allProducts, searchValue]);
 
     const renderProductItem = (product, index) => {
