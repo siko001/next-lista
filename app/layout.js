@@ -114,7 +114,7 @@ export default function RootLayout({children}) {
                 <ThemeScript />
             </head>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} ${saira} ${quicksand} antialiased bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-200`}
+                className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${quicksand.variable} font-saira antialiased bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-200`}
             >
                 <LoadingProvider>
                     <NotificationProvider>
