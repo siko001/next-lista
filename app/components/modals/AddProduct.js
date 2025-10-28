@@ -85,6 +85,7 @@ export default function AddProduct({
     const fuse = useMemo(
         () => new Fuse(originalProducts, fuseOptions),
         [originalProducts]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     );
 
     // Update initialCustomProducts when customProducts prop changes

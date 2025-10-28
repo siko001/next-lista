@@ -2428,7 +2428,8 @@ export default function ChatWidget({
                                         }}
                                         className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
                                     >
-                                        Create "{pendingListNotFound.listName}"
+                                        Create &quot;
+                                        {pendingListNotFound.listName}&quot;
                                     </button>
                                     <button
                                         type="button"
@@ -2511,8 +2512,9 @@ export default function ChatWidget({
                                         }}
                                         className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
                                     >
-                                        Use: "
-                                        {pendingListNameTooLong.suggestedName}"
+                                        Use: &quot;
+                                        {pendingListNameTooLong.suggestedName}
+                                        &quot;
                                     </button>
                                     <button
                                         type="button"
