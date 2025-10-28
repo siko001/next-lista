@@ -156,6 +156,16 @@ export default function ChatWidget({
 
     // Focus is only triggered when clicking '+ Add item' via focusIndex
 
+    // Auto-focus input when awaiting new list name
+    useEffect(() => {
+        if (awaitingNewListName && open) {
+            const timer = setTimeout(() => {
+                inputRef.current?.focus?.();
+            }, 150);
+            return () => clearTimeout(timer);
+        }
+    }, [awaitingNewListName, open]);
+
     // Only show Re-add after user empties the list (list context)
     useEffect(() => {
         if (context !== "list") return;
@@ -1204,67 +1214,60 @@ export default function ChatWidget({
                     text: "Great! Please provide a name for your new list.",
                 },
             ]);
+            // Focus the input after a brief delay to ensure the DOM has updated
+            setTimeout(() => {
+                inputRef.current?.focus?.();
+            }, 100);
         } else if (choice === "existing") {
             setListSelectionMode("existing");
-            // Fetch available lists
-            if (userData?.id && token && userLists.length > 0) {
-                setAvailableLists(userLists);
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: "assistant",
-                        text: `Please select a list from your ${
-                            userLists.length
-                        } list${userLists.length > 1 ? "s" : ""}:`,
-                    },
-                ]);
-            } else {
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: "assistant",
-                        text: "No lists found. Would you like to create a new one?",
-                    },
-                ]);
-                // Fetch lists from server
-                try {
-                    const fetchedLists = await getShoppingList(
-                        userData.id,
-                        token
-                    );
-                    if (fetchedLists && fetchedLists.length > 0) {
-                        setAvailableLists(fetchedLists);
-                        setMessages((prev) => [
-                            ...prev,
-                            {
-                                role: "assistant",
-                                text: `Found ${fetchedLists.length} list${
-                                    fetchedLists.length > 1 ? "s" : ""
-                                }. Please select one:`,
-                            },
-                        ]);
-                    } else {
-                        setMessages((prev) => [
-                            ...prev,
-                            {
-                                role: "assistant",
-                                text: "You don't have any lists yet. Please create a new one.",
-                            },
-                        ]);
-                        setPendingDirectAdd(null);
-                        setListSelectionMode(null);
-                    }
-                } catch (err) {
+            setTyping(true);
+
+            try {
+                // Decrypt token if in list context (same logic as addItemToList)
+                const authToken =
+                    context === "list" ? decryptToken(token) : token;
+
+                // Always fetch fresh lists from server to ensure we have the latest data
+                const fetchedLists = await getShoppingList(
+                    userData.id,
+                    authToken
+                );
+
+                if (fetchedLists && fetchedLists.length > 0) {
+                    setAvailableLists(fetchedLists);
                     setMessages((prev) => [
                         ...prev,
                         {
                             role: "assistant",
-                            text: "Failed to fetch lists. Please try creating a new one.",
+                            text: `Please select a list (found ${
+                                fetchedLists.length
+                            } ${fetchedLists.length > 1 ? "lists" : "list"}):`,
+                        },
+                    ]);
+                } else {
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            role: "assistant",
+                            text: "You don't have any lists yet. Would you like to create a new one?",
                         },
                     ]);
                     setPendingDirectAdd(null);
                     setListSelectionMode(null);
                 }
+            } catch (err) {
+                console.error("Error fetching lists:", err);
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "assistant",
+                        text: "Failed to fetch lists. Please try creating a new one.",
+                    },
+                ]);
+                setPendingDirectAdd(null);
+                setListSelectionMode(null);
+            } finally {
+                setTyping(false);
             }
         }
     };
@@ -1335,11 +1338,14 @@ export default function ChatWidget({
                 },
             ]);
 
+            // Decrypt token if in list context
+            const authToken = context === "list" ? decryptToken(token) : token;
+
             // Create the list
             const newListData = await createShoppingList({
                 name: listName,
                 userId: userData.id,
-                token,
+                token: authToken,
             });
 
             if (!newListData || !newListData.id) {
@@ -1349,7 +1355,7 @@ export default function ChatWidget({
             }
 
             // Refresh lists
-            await getShoppingList(userData.id, token);
+            await getShoppingList(userData.id, authToken);
 
             // Announce bulk add start
             try {
