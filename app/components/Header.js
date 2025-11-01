@@ -45,7 +45,7 @@ export default function Header({isRegistered, userName}) {
                         <div className="flex items-center  gap-4">
                             <button
                                 onClick={() => setIsSettingsOpen(true)}
-                                className="text-white flex cursor-pointer username items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-200"
+                                className="text-white flex cursor-pointer username items-center border user-settings-button gap-2 px-3 py-1.5 rounded-lg transition-colors duration-200"
                                 aria-label="Open settings"
                             >
                                 <span className="inline-block font-saira wave-emoji">

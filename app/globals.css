@@ -28,6 +28,7 @@
     --drag: oklch(92.8% 0.006 264.531);
     --hover: #f8f8ff;
     --custom-text-color: #0a0a0a;
+    --custom-text-color-lighter: var(--color-gray-600);
     --hidden-bg: #f8f8ff;
     --tools: var(--color-gray-200);
     --product-item: var(--color-gray-100);
@@ -41,6 +42,7 @@
     --filters-hover: var(--color-primary);
     --filters-text: var(--color-gray-700);
     --filters-wrapper: var(--color-white);
+    --user-settings: var(--color-gray-200);
 }
 
 /* Dark theme */
@@ -51,6 +53,7 @@
     --drag: oklch(21% 0.034 264.665);
     --hover: #0a0a0a;
     --custom-text-color: #ededed;
+    --custom-text-color-lighter: var(--color-gray-300);
     --hidden-bg: #0a0a0a;
     --tools: var(--color-gray-700);
     --product-item: var(--color-gray-800);
@@ -65,11 +68,16 @@
     --filters-text: var(--color-gray-300);
     --filters-wrapper: var(--color-gray-900);
     --chat-widget-hover: var(--color-primary);
+    --user-settings: var(--color-gray-900);
 }
 
 /* Smooth transitions for theme changes */
 html:not(.theme-loading) {
     transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.user-settings-button {
+    border-color: var(--color-primary);
 }
 
 .drag {
@@ -83,6 +91,9 @@ html:not(.theme-loading) {
     color: var(--custom-text-color);
 }
 
+.custom-text-color-lighter {
+    color: var(--custom-text-color-lighter);
+}
 .brand-color {
     color: var(--color-primary);
 }
@@ -158,6 +169,10 @@ input.chatbot-input:not(.chatbot-input:focus) {
     background-color: var(--menu-bg-hover);
 }
 
+.user-settings {
+    background-color: var(--user-settings);
+    color: var(--custom-text-color);
+}
 /*  bg-gray-100  dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 */
 
 input:not(#login-form input):not(#register-form input):not(
@@ -208,14 +223,20 @@ body {
             @apply border-[#21ba9c];
         }
     }
-    button:not(.overlay button):not(#site-logo a):not(
-            .shopping-list button
-        ):not(#reset-password-form button):not(#login-form button):not(
-            button#empty-list-add-btn
-        ):not(.no-border),
-    a:not(.overlay a):not(a#site-logo):not(#reset-password-form a):not(
-            #login-form a
-        ):not(#empty-list-add-btn) {
+
+    button:not(.overlay button)
+        :not(#site-logo a)
+        :not(.shopping-list button)
+        :not(#reset-password-form button)
+        :not(#login-form button)
+        :not(button#empty-list-add-btn)
+        :not(.no-border),
+    a:not(.overlay a)
+        :not(a#site-logo)
+        :not(#reset-password-form a)
+        :not(#login-form a)
+        :not(#empty-list-add-btn)
+        :not(.user-settings button) {
         @apply border-2 transition-colors duration-200 hover:border-current border-transparent outline-0;
         &:focus {
             @apply border-[#21ba9c];
