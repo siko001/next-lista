@@ -908,7 +908,7 @@ export default function AddProduct({
                                 onChange={handleSearchProduct}
                                 ref={searchRef}
                                 placeholder="Search for a Product..."
-                                className="w-full rounded-md border-2 transition-colors duration-200 search-input border-transparent focus:border-primary outline-0 placeholder:text-2xl md:placeholder:font-black h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"
+                                className="w-full rounded-md border-2 transition-colors duration-200 search-input border-transparent focus:border-primary outline-0 placeholder:text-2xl md:placeholder:font-medium h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"
                             />
                             <div className="absolute right-2 h-full grid place-items-center peer-focus:opacity-0 transition-opacity duration-200">
                                 <SearchIcon className="w-8 h-8 brand-color" />
@@ -993,8 +993,8 @@ export default function AddProduct({
                             {/* Custom Products Input */}
                             {selectedProductsSection === "custom" && (
                                 <div className="mb-4 ml-4">
-                                    <div className="w-full flex items-center text-gray-400 text-lg font-bold group relative ">
-                                        <div className="w-full relative">
+                                    <div className="w-full flex items-stretch text-gray-400 text-lg font-bold group relative ">
+                                        <div className="w-full relative flex items-center">
                                             <input
                                                 ref={customProductInputRef}
                                                 placeholder="Input Product"
@@ -1010,9 +1010,9 @@ export default function AddProduct({
                                                         value.length
                                                     );
                                                 }}
-                                                className="w-full px-3 py-[9.5px] pr-12 sm:pr-14 md:pr-16 peer group-hover:!border-primary rounded-l-md h-full text-black dark:text-white !border-r-0 placeholder:text-gray-700 dark:placeholder:text-white !border-blue-800 focus:!border-primary"
+                                                className="w-full px-3 py-[9.5px] pr-12 sm:pr-14 md:pr-16 peer group-hover:!border-primary rounded-l-md !text-[#171717] dark:!text-white custom-product-input !border-r-0 placeholder:!text-[#171717] placeholder:!opacity-60 dark:placeholder:!text-gray-300 dark:placeholder:!opacity-100 !border-blue-800 focus:!border-primary"
                                             />
-                                            <div className="hidden peer-focus:block text-xs sm:text-sm md:text-base absolute right-2 top-[50%] -translate-y-1/2">
+                                            <div className="opacity-0 custom-product-input-text transition-all duration-300 ease peer-focus:opacity-100 text-xs sm:text-sm md:text-base absolute right-2 top-[50%] -translate-y-1/2">
                                                 <span>
                                                     {customProductLength}
                                                 </span>
@@ -1021,7 +1021,7 @@ export default function AddProduct({
                                         </div>
                                         <button
                                             onClick={handleCreateCustomProduct}
-                                            className="whitespace-pre px-3 py-1.5 !border-blue-800 peer group-hover:!border-primary peer-focus:!border-primary cursor-pointer hover:!border-primary rounded-r-md h-full bg-blue-800 text-white"
+                                            className="whitespace-pre px-3 py-[9.5px] !border-blue-800 peer group-hover:!border-primary peer-focus:!border-primary cursor-pointer hover:!border-primary rounded-r-md bg-blue-800 text-white flex items-center"
                                         >
                                             Add product
                                         </button>
