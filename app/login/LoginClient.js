@@ -8,6 +8,7 @@ import {yupResolver} from "@hookform/resolvers/yup";
 import {setCookie} from "cookies-next";
 import CryptoJS from "crypto-js";
 import {SECRET_KEY} from "../lib/helpers";
+import SocialAuthButtons from "../components/SocialAuthButtons";
 
 import Notification from "../components/Notification";
 import {useNotificationContext} from "../contexts/NotificationContext";
@@ -329,6 +330,8 @@ const LoginClient = () => {
                             )}{" "}
                         </button>
                     </div>
+
+                    <SocialAuthButtons />
 
                     <a
                         href="/password-reset"
