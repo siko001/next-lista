@@ -1,5 +1,5 @@
 "use client";
-import {useEffect, useState} from "react";
+import {useEffect, useState, useRef} from "react";
 import {DragDropContext, Droppable, Draggable} from "@hello-pangea/dnd";
 import {WP_API_BASE, isListOwner, removeListRelationship} from "./lib/helpers";
 import gsap from "gsap";
@@ -62,6 +62,7 @@ const HomeClient = ({
     const {overlay, showVerbConfirmation} = useOverlayContext();
     const {showNotification} = useNotificationContext();
     const [listsMetadata, setListsMetadata] = useState({});
+    const chatWidgetRef = useRef(null);
 
     useEffect(() => {
         setListsMetadata(metadata);
@@ -580,12 +581,20 @@ const HomeClient = ({
                     <p className={"text-xl md:text-2xl"}>
                         <strong>Let&#39;s plan your shopping list!</strong>
                     </p>
-                    <p className={"mt-2 md:text-md text-gray-200"}>
-                        Prompt to create lists & add ingredents
-                    </p>
                     <p className={"mt-2 md:text-md text-gray-400"}>
-                        Use the button to start a new list
+                        <span
+                            onClick={() =>
+                                chatWidgetRef.current?.openWidget?.()
+                            }
+                            className="font-quicksand font-black brand-color hover:text-primary duration-200 transition-colors cursor-pointer"
+                        >
+                            Prompt{" "}
+                        </span>
+                        to create lists & add ingredents
                     </p>
+                    {/* <p className={"mt-2 md:text-md text-gray-400"}>
+                        Use the button to start a new list
+                    </p> */}
                 </div>
             </div>
 
@@ -599,7 +608,7 @@ const HomeClient = ({
 
             <Notification />
 
-            <ChatWidget context="home" token={token} />
+            <ChatWidget ref={chatWidgetRef} context="home" token={token} />
 
             {shareDialogOpen && (
                 <ShareListDialog

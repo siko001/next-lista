@@ -75,6 +75,9 @@
 html:not(.theme-loading) {
     transition: background-color 0.2s ease, color 0.2s ease;
 }
+.bg-primary {
+    background-color: var(--color-primary);
+}
 
 .user-settings-button {
     border-color: var(--color-primary);
@@ -200,11 +203,17 @@ input:not(#login-form input):not(#register-form input):not(
 body {
     color: var(--foreground);
     background: var(--background);
-    font-family: var(--font-saira);
 
     input[type="text"],
     label {
         @apply placeholder:font-sans font-sans font-medium;
+    }
+
+    .font-saira {
+        font-family: var(--font-saira);
+    }
+    .font-quicksand {
+        font-family: var(--font-quicksand);
     }
 
     ::selection {

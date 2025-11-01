@@ -1,5 +1,13 @@
 "use client";
-import {useCallback, useMemo, useRef, useState, useEffect} from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    useEffect,
+    forwardRef,
+    useImperativeHandle,
+} from "react";
 import {gsap} from "gsap";
 import {useUserContext} from "../contexts/UserContext";
 import {useListContext} from "../contexts/ListContext";
@@ -7,11 +15,10 @@ import {useNotificationContext} from "../contexts/NotificationContext";
 import {decryptToken, WP_API_BASE, decodeHtmlEntities} from "../lib/helpers";
 import {LIST_NAME_MAX_LENGTH, INGREDIENT_NAME_MAX_LENGTH} from "../lib/config";
 
-export default function ChatWidget({
-    context = "home",
-    listId: propListId,
-    token: propToken,
-}) {
+const ChatWidget = forwardRef(function ChatWidget(
+    {context = "home", listId: propListId, token: propToken},
+    ref
+) {
     const {userData, token: ctxToken} = useUserContext();
     const {createShoppingList, getShoppingList, userLists} = useListContext();
     const {showNotification} = useNotificationContext();
@@ -54,6 +61,19 @@ export default function ChatWidget({
     const [awaitingNewListName, setAwaitingNewListName] = useState(false);
 
     const token = propToken || ctxToken;
+
+    // Expose openWidget method to parent via ref
+    useImperativeHandle(ref, () => ({
+        openWidget: () => {
+            setOpen(true);
+            setMounted(true);
+            if (typeof window !== "undefined") {
+                requestAnimationFrame(() => {
+                    inputRef.current?.focus?.();
+                });
+            }
+        },
+    }));
 
     // Auto-scroll to bottom on new messages/open/editor changes
     useEffect(() => {
@@ -1996,7 +2016,7 @@ export default function ChatWidget({
                             });
                         }
                     }}
-                    className="chat-widget duration-200 transition-all ease-in fixed font-bold font-saira cursor-pointer bottom-6 right-6 z-40 group  rounded-full bg-blue-600 text-white px-4 py-3 shadow-lg hover:opacity-90 transition-opacity"
+                    className="chat-widget !duration-200 !transition-all fixed font-bold font-saira cursor-pointer bottom-6 right-6 z-40 group  rounded-full bg-blue-600 text-white px-4 py-3 shadow-lg hover:opacity-90 transition-opacity"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -2632,4 +2652,6 @@ export default function ChatWidget({
             )}
         </div>
     );
-}
+});
+
+export default ChatWidget;
