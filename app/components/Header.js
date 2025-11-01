@@ -45,7 +45,7 @@ export default function Header({isRegistered, userName}) {
                         <div className="flex items-center  gap-4">
                             <button
                                 onClick={() => setIsSettingsOpen(true)}
-                                className="text-white flex cursor-pointer username items-center gap-2 px-3 py-1.5 rounded-lg transition-colors duration-200"
+                                className="text-white flex cursor-pointer username items-center border user-settings-button gap-2 px-3 py-1.5 rounded-lg transition-colors duration-200"
                                 aria-label="Open settings"
                             >
                                 <span className="inline-block font-saira wave-emoji">
@@ -60,7 +60,7 @@ export default function Header({isRegistered, userName}) {
                         {/* Logout Button */}
                         <Link
                             href={"/logout"}
-                            className="text-primary py-2 px-4 md:py-3 md:px-6 xl:px-8 text-xs md:text-sm group font-bold rounded-full bg-blue-800 relative"
+                            className="text-primary py-2 px-4 md:py-3 md:px-6 xl:px-8 text-xs md:text-sm group  font-bold rounded-full bg-blue-800 relative"
                         >
                             <p className="relative z-20 text-white group-hover:text-black duration-700">
                                 Logout

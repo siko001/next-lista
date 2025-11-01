@@ -1,5 +1,13 @@
 "use client";
-import {useCallback, useMemo, useRef, useState, useEffect} from "react";
+import {
+    useCallback,
+    useMemo,
+    useRef,
+    useState,
+    useEffect,
+    forwardRef,
+    useImperativeHandle,
+} from "react";
 import {gsap} from "gsap";
 import {useUserContext} from "../contexts/UserContext";
 import {useListContext} from "../contexts/ListContext";
@@ -7,11 +15,10 @@ import {useNotificationContext} from "../contexts/NotificationContext";
 import {decryptToken, WP_API_BASE, decodeHtmlEntities} from "../lib/helpers";
 import {LIST_NAME_MAX_LENGTH, INGREDIENT_NAME_MAX_LENGTH} from "../lib/config";
 
-export default function ChatWidget({
-    context = "home",
-    listId: propListId,
-    token: propToken,
-}) {
+const ChatWidget = forwardRef(function ChatWidget(
+    {context = "home", listId: propListId, token: propToken},
+    ref
+) {
     const {userData, token: ctxToken} = useUserContext();
     const {createShoppingList, getShoppingList, userLists} = useListContext();
     const {showNotification} = useNotificationContext();
@@ -22,10 +29,35 @@ export default function ChatWidget({
     const inputRef = useRef(null);
     const messagesContainerRef = useRef(null);
     const [input, setInput] = useState("");
+
+    const recipePhrases = [
+        "I plan to make lasagna",
+        "I want to make a curry",
+        "I'm craving a burger",
+        "Suggest a recipe with eggs, carrots, onions",
+    ];
+
+    const ingredentsExamples = [
+        "Add milk, carrots, eggs",
+        "Add flour, eggs, cheese",
+        "create things for curry and add red curry paste, onions, ginger",
+    ];
+
+    // Generate initial message with random examples
+    const getInitialMessage = () => {
+        const randomRecipe =
+            recipePhrases[Math.floor(Math.random() * recipePhrases.length)];
+        const randomIngredient =
+            ingredentsExamples[
+                Math.floor(Math.random() * ingredentsExamples.length)
+            ];
+        return `Hi, Ask me for a recipe '${randomRecipe}', or tell me to add ingredents e.g. '${randomIngredient}'`;
+    };
+
     const [messages, setMessages] = useState([
         {
             role: "assistant",
-            text: "Hi! Ask me for a recipe, e.g. 'I plan to make lasagna'",
+            text: getInitialMessage(),
         },
     ]);
     const [pendingRecipe, setPendingRecipe] = useState(null);
@@ -46,6 +78,7 @@ export default function ChatWidget({
             : null;
     const lastQueryRef = useRef("");
     const ingredientContextRef = useRef(null);
+    const wasOpenRef = useRef(false);
 
     // Direct add functionality states
     const [pendingDirectAdd, setPendingDirectAdd] = useState(null);
@@ -54,6 +87,36 @@ export default function ChatWidget({
     const [awaitingNewListName, setAwaitingNewListName] = useState(false);
 
     const token = propToken || ctxToken;
+
+    // Expose openWidget method to parent via ref
+    useImperativeHandle(ref, () => ({
+        openWidget: () => {
+            setOpen(true);
+            setMounted(true);
+            if (typeof window !== "undefined") {
+                requestAnimationFrame(() => {
+                    inputRef.current?.focus?.();
+                });
+            }
+        },
+    }));
+
+    // Update initial message with random examples when chat opens
+    useEffect(() => {
+        if (open && !wasOpenRef.current) {
+            // Chat just opened (was closed before), reset messages with new random examples
+            setMessages([
+                {
+                    role: "assistant",
+                    text: getInitialMessage(),
+                },
+            ]);
+            wasOpenRef.current = true;
+        } else if (!open && wasOpenRef.current) {
+            // Chat just closed
+            wasOpenRef.current = false;
+        }
+    }, [open]);
 
     // Auto-scroll to bottom on new messages/open/editor changes
     useEffect(() => {
@@ -292,9 +355,9 @@ export default function ChatWidget({
         [recipeMap]
     );
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e, overrideText = null) => {
         e?.preventDefault?.();
-        const text = input.trim();
+        const text = (overrideText || input).trim();
         if (!text) return;
         if (typing || loading) return;
 
@@ -1996,7 +2059,7 @@ export default function ChatWidget({
                             });
                         }
                     }}
-                    className="chat-widget duration-200 transition-all ease-in fixed font-bold font-saira cursor-pointer bottom-6 right-6 z-40 group  rounded-full bg-blue-600 text-white px-4 py-3 shadow-lg hover:opacity-90 transition-opacity"
+                    className="chat-widget !duration-200 !transition-all fixed font-bold font-saira cursor-pointer bottom-6 right-6 z-40 group  rounded-full bg-blue-600 text-white px-4 py-3 shadow-lg hover:opacity-90 transition-opacity"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -2018,9 +2081,9 @@ export default function ChatWidget({
             {mounted && (
                 <div
                     ref={panelRef}
-                    className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border ai-chat dark:text-white shadow-2xl overflow-hidden flex flex-col"
+                    className="fixed right-4 sm:right-6 bottom-6 z-[9999] max-w-[350px] sm:w-[380px] max-h-[75vh] sm:max-h-[70vh] rounded-md border ai-chat ai-chat-text shadow-2xl overflow-hidden flex flex-col"
                 >
-                    <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700 shrink-0">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--ai-chat-border)] shrink-0">
                         <div className="font-bold font-saira">
                             Recipe Assistant
                         </div>
@@ -2064,7 +2127,7 @@ export default function ChatWidget({
                                     className={`inline-block px-3 py-2 rounded-md ${
                                         m.role === "user"
                                             ? "bg-blue-600 text-white"
-                                            : "bg-gray-100 dark:bg-gray-800"
+                                            : "ai-chat-message-bg"
                                     }`}
                                 >
                                     {m.text}
@@ -2074,7 +2137,7 @@ export default function ChatWidget({
 
                         {typing && (
                             <div className="text-left">
-                                <span className="inline-block font-quicksand font-black px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800">
+                                <span className="inline-block font-quicksand font-black px-3 py-2 rounded-md ai-chat-message-bg">
                                     Assistant is thinking…
                                 </span>
                             </div>
@@ -2082,7 +2145,7 @@ export default function ChatWidget({
 
                         {pendingVariation && (
                             <div className="mt-3 space-y-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs ai-chat-help-text">
                                     {pendingVariation.question}
                                 </div>
                                 <div className="flex flex-wrap gap-2">
@@ -2093,7 +2156,7 @@ export default function ChatWidget({
                                             onClick={() =>
                                                 handleSelectVariation(o.key)
                                             }
-                                            className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                            className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm ai-chat-button"
                                         >
                                             {o.label}
                                         </button>
@@ -2103,7 +2166,7 @@ export default function ChatWidget({
                                         onClick={() =>
                                             setPendingVariation(null)
                                         }
-                                        className="px-3 py-1 text-red-500  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 text-red-500  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm ai-chat-button"
                                     >
                                         Cancel
                                     </button>
@@ -2113,7 +2176,7 @@ export default function ChatWidget({
 
                         {pendingRecipe && !editingRecipe && (
                             <div className="mt-3 space-y-2">
-                                <div className="text-xs  font-quicksand font-black text-gray-500 dark:text-gray-400">
+                                <div className="text-xs  font-quicksand font-black ai-chat-help-text">
                                     Ready to add ingredients for:{" "}
                                     {pendingRecipe.title}
                                 </div>
@@ -2121,21 +2184,21 @@ export default function ChatWidget({
                                     <button
                                         disabled={loading}
                                         onClick={handleConfirmAdd}
-                                        className="px-3 py-1 rounded cursor-pointer bg-blue-600 text-white disabled:opacity-50"
+                                        className="px-3 py-1 rounded cursor-pointer bg-blue-600 text-white disabled:opacity-50 ai-chat-button-blue"
                                     >
                                         {loading ? "Adding..." : "Add"}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setEditingRecipe(true)}
-                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Edit
                                     </button>
                                     <button
                                         disabled={loading}
                                         onClick={handleCancel}
-                                        className="px-3 py-1 text-red-500  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1 text-red-500  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Cancel
                                     </button>
@@ -2145,7 +2208,7 @@ export default function ChatWidget({
 
                         {pendingRecipe && editingRecipe && (
                             <div className="mt-3 space-y-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs ai-chat-help-text">
                                     Editing ingredients for:{" "}
                                     {pendingRecipe.title}
                                 </div>
@@ -2175,7 +2238,7 @@ export default function ChatWidget({
                                                         idx
                                                     ] = el)
                                                 }
-                                                className="flex-1 rounded-md border dark:border-gray-700 px-2 py-1 bg-white dark:bg-black text-sm"
+                                                className="flex-1 rounded-md border border-[var(--ai-chat-border)] px-2 py-1 ai-chat-input text-sm"
                                             />
                                             <button
                                                 type="button"
@@ -2188,7 +2251,7 @@ export default function ChatWidget({
                                                             )
                                                     )
                                                 }
-                                                className="px-2 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                                className="px-2 py-1  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm ai-chat-button"
                                             >
                                                 Remove
                                             </button>
@@ -2206,7 +2269,7 @@ export default function ChatWidget({
                                                 return next;
                                             })
                                         }
-                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         + Add item
                                     </button>
@@ -2218,7 +2281,7 @@ export default function ChatWidget({
                                                     []),
                                             ])
                                         }
-                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Reset
                                     </button>
@@ -2235,14 +2298,14 @@ export default function ChatWidget({
                                     <button
                                         type="button"
                                         onClick={() => setEditingRecipe(false)}
-                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1  font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Back
                                     </button>
                                     <button
                                         disabled={loading}
                                         onClick={handleCancel}
-                                        className="px-3 py-1 rounded text-red-500 font-quicksand font-black   cursor-pointer border dark:border-gray-700"
+                                        className="px-3 py-1 rounded text-red-500 font-quicksand font-black   cursor-pointer border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Cancel
                                     </button>
@@ -2293,7 +2356,7 @@ export default function ChatWidget({
                                                 setLoading(false);
                                             }
                                         }}
-                                        className="px-3 py-1 font-quicksand font-black cursor-pointer  rounded border dark:border-gray-700"
+                                        className="px-3 py-1 font-quicksand font-black cursor-pointer  rounded border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Re-add {lastRecipe.title}
                                     </button>
@@ -2306,7 +2369,7 @@ export default function ChatWidget({
                             !awaitingNewListName &&
                             !loading && (
                                 <div className="mt-2 space-y-2">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="text-xs ai-chat-help-text">
                                         Choose where to add the ingredients:
                                     </div>
                                     <div className="flex flex-wrap gap-2">
@@ -2317,7 +2380,7 @@ export default function ChatWidget({
                                                     "existing"
                                                 )
                                             }
-                                            className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                            className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                         >
                                             Add to existing list
                                         </button>
@@ -2326,7 +2389,7 @@ export default function ChatWidget({
                                             onClick={() =>
                                                 handleListSelectionChoice("new")
                                             }
-                                            className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                            className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                         >
                                             Create new list
                                         </button>
@@ -2337,7 +2400,7 @@ export default function ChatWidget({
                                                     "cancel"
                                                 )
                                             }
-                                            className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                            className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                         >
                                             Cancel
                                         </button>
@@ -2350,7 +2413,7 @@ export default function ChatWidget({
                             availableLists.length > 0 &&
                             !loading && (
                                 <div className="mt-2 space-y-2">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="text-xs ai-chat-help-text">
                                         Select a list:
                                     </div>
                                     <div className="flex flex-wrap gap-2">
@@ -2366,7 +2429,7 @@ export default function ChatWidget({
                                                             `List ${list.id}`
                                                     )
                                                 }
-                                                className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                                className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                             >
                                                 {list.title.rendered ||
                                                     list.title ||
@@ -2380,7 +2443,7 @@ export default function ChatWidget({
                                                     "cancel"
                                                 )
                                             }
-                                            className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                            className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                         >
                                             Cancel
                                         </button>
@@ -2393,7 +2456,7 @@ export default function ChatWidget({
                             listSelectionMode === "new" &&
                             !loading && (
                                 <div className="mt-2 space-y-2">
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    <div className="text-xs ai-chat-help-text">
                                         Please enter a name for your new list in
                                         the input below:
                                     </div>
@@ -2402,7 +2465,7 @@ export default function ChatWidget({
                                         onClick={() =>
                                             handleListSelectionChoice("cancel")
                                         }
-                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Cancel
                                     </button>
@@ -2412,7 +2475,7 @@ export default function ChatWidget({
                         {/* Show create/cancel options when list not found */}
                         {pendingListNotFound && !loading && (
                             <div className="mt-2 space-y-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs ai-chat-help-text">
                                     Choose an action:
                                 </div>
                                 <div className="flex flex-wrap gap-2">
@@ -2426,7 +2489,7 @@ export default function ChatWidget({
                                             );
                                             setPendingListNotFound(null);
                                         }}
-                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Create &quot;
                                         {pendingListNotFound.listName}&quot;
@@ -2443,7 +2506,7 @@ export default function ChatWidget({
                                                 },
                                             ]);
                                         }}
-                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Cancel
                                     </button>
@@ -2454,21 +2517,21 @@ export default function ChatWidget({
                         {/* Show options when duplicate list name detected */}
                         {pendingDuplicateList && !loading && (
                             <div className="mt-2 space-y-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs ai-chat-help-text">
                                     Choose an action:
                                 </div>
                                 <div className="flex flex-wrap gap-2">
                                     <button
                                         type="button"
                                         onClick={handleAddToExistingDuplicate}
-                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Add to existing list
                                     </button>
                                     <button
                                         type="button"
                                         onClick={handleCreateNewAnyway}
-                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Create new
                                     </button>
@@ -2484,7 +2547,7 @@ export default function ChatWidget({
                                                 },
                                             ]);
                                         }}
-                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Cancel
                                     </button>
@@ -2495,7 +2558,7 @@ export default function ChatWidget({
                         {/* Show options when list name is too long */}
                         {pendingListNameTooLong && !loading && (
                             <div className="mt-2 space-y-2">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs ai-chat-help-text">
                                     Choose an option:
                                 </div>
                                 <div className="flex flex-wrap gap-2">
@@ -2510,7 +2573,7 @@ export default function ChatWidget({
                                                 ingredients
                                             );
                                         }}
-                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Use: &quot;
                                         {pendingListNameTooLong.suggestedName}
@@ -2532,7 +2595,7 @@ export default function ChatWidget({
                                                 inputRef.current?.focus?.();
                                             }, 100);
                                         }}
-                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Enter new name
                                     </button>
@@ -2548,7 +2611,7 @@ export default function ChatWidget({
                                                 },
                                             ]);
                                         }}
-                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border dark:border-gray-700 text-sm"
+                                        className="px-3 py-1 text-red-500 font-quicksand font-black rounded cursor-pointer border border-[var(--ai-chat-border)] text-sm"
                                     >
                                         Cancel
                                     </button>
@@ -2571,9 +2634,9 @@ export default function ChatWidget({
                                         onClick={() => {
                                             const ex = "I plan to make lasagna";
                                             setInput(ex);
-                                            setTimeout(() => handleSubmit(), 0);
+                                            handleSubmit(null, ex);
                                         }}
-                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border dark:border-gray-700"
+                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Try: Lasagna
                                     </button>
@@ -2582,9 +2645,9 @@ export default function ChatWidget({
                                         onClick={() => {
                                             const ex = "Recipe for pancakes";
                                             setInput(ex);
-                                            setTimeout(() => handleSubmit(), 0);
+                                            handleSubmit(null, ex);
                                         }}
-                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border dark:border-gray-700"
+                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Try: Pancakes
                                     </button>
@@ -2593,9 +2656,9 @@ export default function ChatWidget({
                                         onClick={() => {
                                             const ex = "I'm cooking salad";
                                             setInput(ex);
-                                            setTimeout(() => handleSubmit(), 0);
+                                            handleSubmit(null, ex);
                                         }}
-                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border dark:border-gray-700"
+                                        className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
                                         Try: Salad
                                     </button>
@@ -2605,7 +2668,7 @@ export default function ChatWidget({
 
                     <form
                         onSubmit={handleSubmit}
-                        className="flex chatbot-input items-center gap-2 p-3 border-t dark:border-gray-700 shrink-0"
+                        className="flex chatbot-input items-center gap-2 p-3 border-t border-[var(--ai-chat-border)] shrink-0"
                     >
                         <input
                             ref={inputRef}
@@ -2618,12 +2681,12 @@ export default function ChatWidget({
                                     : "Ask for a recipe..."
                             }
                             disabled={typing || loading}
-                            className="flex-1 rounded-md font-quicksand   px-3 py-2  disabled:opacity-50"
+                            className="flex-1 rounded-md font-quicksand   px-3 py-2  disabled:opacity-50 ai-chat-input"
                         />
                         <button
                             type="submit"
                             disabled={typing || loading}
-                            className="px-3 py-2 cursor-pointer font-saira font-black rounded-md bg-blue-600 text-white disabled:opacity-50"
+                            className="px-3 py-2 cursor-pointer font-saira font-black rounded-md bg-blue-600 text-white disabled:opacity-50 ai-chat-button-blue"
                         >
                             Send
                         </button>
@@ -2632,4 +2695,6 @@ export default function ChatWidget({
             )}
         </div>
     );
-}
+});
+
+export default ChatWidget;

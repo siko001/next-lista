@@ -28,77 +28,94 @@ export default function UserSettings({isOpen, onClose}) {
     // Handle theme changes
     useEffect(() => {
         // Get stored theme or default to 'system'
-        const storedTheme = localStorage.getItem('theme') || 'system';
+        const storedTheme = localStorage.getItem("theme") || "system";
         setTheme(storedTheme);
-        
+
         // Apply the theme
         const applyThemeToDOM = (themeToApply) => {
-            console.log('Applying theme:', themeToApply);
-            
+            console.log("Applying theme:", themeToApply);
+
             // Remove all theme-related classes
-            document.documentElement.classList.remove('light', 'dark', 'light-mode', 'dark-mode');
-            
-            if (themeToApply === 'system') {
+            document.documentElement.classList.remove(
+                "light",
+                "dark",
+                "light-mode",
+                "dark-mode"
+            );
+
+            if (themeToApply === "system") {
                 // For system theme, let CSS handle it based on prefers-color-scheme
-                const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const isSystemDark = window.matchMedia(
+                    "(prefers-color-scheme: dark)"
+                ).matches;
                 if (isSystemDark) {
-                    document.documentElement.classList.add('dark', 'dark-mode');
+                    document.documentElement.classList.add("dark", "dark-mode");
                 } else {
-                    document.documentElement.classList.add('light', 'light-mode');
+                    document.documentElement.classList.add(
+                        "light",
+                        "light-mode"
+                    );
                 }
-            } else if (themeToApply === 'dark') {
-                document.documentElement.classList.add('dark', 'dark-mode');
+            } else if (themeToApply === "dark") {
+                document.documentElement.classList.add("dark", "dark-mode");
             } else {
-                document.documentElement.classList.add('light', 'light-mode');
+                document.documentElement.classList.add("light", "light-mode");
             }
-            
+
             // Force a reflow to ensure styles are applied
-            document.documentElement.style.display = 'none';
+            document.documentElement.style.display = "none";
             document.documentElement.offsetHeight; // Trigger reflow
-            document.documentElement.style.display = '';
+            document.documentElement.style.display = "";
         };
-        
+
         // Apply initial theme
         applyThemeToDOM(storedTheme);
-        
+
         // Listen for system theme changes if using system preference
-        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
         const handleSystemThemeChange = () => {
-            console.log('System theme changed');
-            if (theme === 'system') {
-                applyThemeToDOM('system');
+            console.log("System theme changed");
+            if (theme === "system") {
+                applyThemeToDOM("system");
             }
         };
-        
-        mediaQuery.addEventListener('change', handleSystemThemeChange);
-        return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+
+        mediaQuery.addEventListener("change", handleSystemThemeChange);
+        return () =>
+            mediaQuery.removeEventListener("change", handleSystemThemeChange);
     }, [theme]);
-    
+
     const applyTheme = (selectedTheme) => {
         // Save the preference
-        localStorage.setItem('theme', selectedTheme);
+        localStorage.setItem("theme", selectedTheme);
         setTheme(selectedTheme);
-        
+
         // Apply the theme
-        const isDark = selectedTheme === 'dark' || 
-                      (selectedTheme === 'system' && 
-                       window.matchMedia('(prefers-color-scheme: dark)').matches);
-        
+        const isDark =
+            selectedTheme === "dark" ||
+            (selectedTheme === "system" &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches);
+
         // Remove all theme-related classes and attributes
-        document.documentElement.classList.remove('light', 'dark', 'light-mode', 'dark-mode');
-        document.documentElement.removeAttribute('data-theme');
-        
+        document.documentElement.classList.remove(
+            "light",
+            "dark",
+            "light-mode",
+            "dark-mode"
+        );
+        document.documentElement.removeAttribute("data-theme");
+
         // Add the appropriate class
         if (isDark) {
-            document.documentElement.classList.add('dark', 'dark-mode');
+            document.documentElement.classList.add("dark", "dark-mode");
         } else {
-            document.documentElement.classList.add('light', 'light-mode');
+            document.documentElement.classList.add("light", "light-mode");
         }
-        
+
         // Force a reflow to ensure styles are applied
-        document.documentElement.style.display = 'none';
+        document.documentElement.style.display = "none";
         document.documentElement.offsetHeight; // Trigger reflow
-        document.documentElement.style.display = '';
+        document.documentElement.style.display = "";
     };
 
     // Handle ESC key press
@@ -171,7 +188,7 @@ export default function UserSettings({isOpen, onClose}) {
             />
             <div
                 ref={modalRef}
-                className={`fixed inset-y-0 right-0 w-full max-w-md bg-white dark:bg-gray-900 shadow-xl transition-transform duration-300 ease-out transform ${
+                className={`fixed inset-y-0 right-0 w-full max-w-md  user-settings shadow-xl transition-transform duration-300 ease-out transform ${
                     isClosing ? "translate-x-full" : "translate-x-0"
                 }`}
                 style={{
@@ -185,15 +202,12 @@ export default function UserSettings({isOpen, onClose}) {
                 <div className="h-full flex flex-col">
                     {/* Header */}
                     <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                        <h2
-                            id="modal-title"
-                            className="text-lg font-medium text-gray-900 dark:text-white"
-                        >
+                        <h2 id="modal-title" className="text-lg font-medium ">
                             User Settings
                         </h2>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300"
+                            className="text-red-500 cursor-pointer hover:text-red-300 duration-200 transition-colors"
                         >
                             <X className="h-5 w-5" />
                         </button>
@@ -204,12 +218,12 @@ export default function UserSettings({isOpen, onClose}) {
                         <div className="space-y-6">
                             {/* Theme Selection */}
                             <div>
-                                <h3 className="text-base font-medium text-gray-900 dark:text-white mb-4">
+                                <h3 className="text-base font-medium  mb-4">
                                     Appearance
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        <span className="text-sm font-medium custom-text-color-lighter">
                                             Theme
                                         </span>
                                         <div
@@ -224,18 +238,17 @@ export default function UserSettings({isOpen, onClose}) {
                                                         onClick={() =>
                                                             applyTheme(option)
                                                         }
-                                                        className={`px-3 py-1.5 text-sm font-medium rounded-md ${
+                                                        className={`px-3 py-1.5 text-sm font-medium cursor-pointer duration-200 transition-colors hover:text-white ${
                                                             theme === option
-                                                                ? "bg-blue-600 text-white"
-                                                                : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                                                ? "bg-blue-600 text-white hover:bg-blue-600"
+                                                                : "hover:bg-gray-700"
                                                         } ${
-                                                            option === "light"
-                                                                ? "rounded-r-none"
-                                                                : ""
+                                                            option ===
+                                                                "light" &&
+                                                            "rounded-r-none rounded-md"
                                                         } ${
-                                                            option === "dark"
-                                                                ? "rounded-l-none"
-                                                                : ""
+                                                            option === "dark" &&
+                                                            "rounded-l-none rounded-md"
                                                         } border border-gray-300 dark:border-gray-600`}
                                                     >
                                                         {option
@@ -252,10 +265,10 @@ export default function UserSettings({isOpen, onClose}) {
 
                             {/* Add more settings sections here */}
                             <div>
-                                <h3 className="text-base font-medium text-gray-900 dark:text-white mb-4">
+                                <h3 className="text-base font-medium  mb-4">
                                     Account
                                 </h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                <p className="text-sm brand-color">
                                     More account settings coming soon...
                                 </p>
                             </div>

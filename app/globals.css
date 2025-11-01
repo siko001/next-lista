@@ -28,11 +28,12 @@
     --drag: oklch(92.8% 0.006 264.531);
     --hover: #f8f8ff;
     --custom-text-color: #0a0a0a;
+    --custom-text-color-lighter: var(--color-gray-600);
     --hidden-bg: #f8f8ff;
     --tools: var(--color-gray-200);
     --product-item: var(--color-gray-100);
     --product-item-hover: var(--color-gray-300);
-    --ai-chat: var(--color-gray-600);
+    --ai-chat: var(--color-gray-400);
     --drag-opage: oklch(92.8% 0.006 264.531 / 0.7);
     --menu-bg: var(--color-gray-400);
     --menu-bg-hover: var(--color-gray-500);
@@ -41,6 +42,18 @@
     --filters-hover: var(--color-primary);
     --filters-text: var(--color-gray-700);
     --filters-wrapper: var(--color-white);
+    --user-settings: var(--color-gray-200);
+    --share-bg: var(--color-white);
+    --ai-chat-text: var(--color-gray-800);
+    --ai-chat-message-bg: var(--color-gray-200);
+    --ai-chat-message-text: var(--color-gray-900);
+    --ai-chat-help-text: var(--color-gray-600);
+    --ai-chat-border: var(--color-gray-300);
+    --ai-chat-input-bg: var(--color-white);
+    --ai-chat-input-text: var(--color-gray-900);
+    --ai-chat-input-placeholder: var(--color-gray-600);
+    --custom-product-input: var(--color-gray-400);
+    --custom-product-input-text: var(--color-gray-800);
 }
 
 /* Dark theme */
@@ -51,6 +64,7 @@
     --drag: oklch(21% 0.034 264.665);
     --hover: #0a0a0a;
     --custom-text-color: #ededed;
+    --custom-text-color-lighter: var(--color-gray-300);
     --hidden-bg: #0a0a0a;
     --tools: var(--color-gray-700);
     --product-item: var(--color-gray-800);
@@ -65,11 +79,30 @@
     --filters-text: var(--color-gray-300);
     --filters-wrapper: var(--color-gray-900);
     --chat-widget-hover: var(--color-primary);
+    --user-settings: var(--color-gray-900);
+    --share-bg: var(--color-black);
+    --ai-chat-text: var(--color-white);
+    --ai-chat-message-bg: var(--color-gray-800);
+    --ai-chat-message-text: var(--color-gray-100);
+    --ai-chat-help-text: var(--color-gray-400);
+    --ai-chat-border: var(--color-gray-700);
+    --ai-chat-input-bg: var(--color-black);
+    --ai-chat-input-text: var(--color-gray-100);
+    --ai-chat-input-placeholder: var(--color-gray-500);
+    --custom-product-input: var(--color-gray-600);
+    --custom-product-input-text: var(--color-gray-800);
 }
 
 /* Smooth transitions for theme changes */
 html:not(.theme-loading) {
     transition: background-color 0.2s ease, color 0.2s ease;
+}
+.bg-primary {
+    background-color: var(--color-primary);
+}
+
+.user-settings-button {
+    border-color: var(--color-primary);
 }
 
 .drag {
@@ -83,6 +116,9 @@ html:not(.theme-loading) {
     color: var(--custom-text-color);
 }
 
+.custom-text-color-lighter {
+    color: var(--custom-text-color-lighter);
+}
 .brand-color {
     color: var(--color-primary);
 }
@@ -128,6 +164,7 @@ html:not(.theme-loading) {
 
 .ai-chat {
     background-color: var(--ai-chat);
+    border-color: var(--ai-chat-border);
 }
 
 input.chatbot-input:not(.chatbot-input:focus) {
@@ -135,11 +172,12 @@ input.chatbot-input:not(.chatbot-input:focus) {
 }
 
 .share-overlay {
-    background-color: var(--drag-opage);
+    background-color: var(--share-bg);
 }
 
 .share-dialog {
-    background-color: var(--ai-chat);
+    background-color: var(--user-settings);
+    color: var(--custom-text-color);
 }
 
 .close-product-overlay {
@@ -158,6 +196,16 @@ input.chatbot-input:not(.chatbot-input:focus) {
     background-color: var(--menu-bg-hover);
 }
 
+.custom-product-input {
+    background-color: var(--custom-product-input) !important;
+}
+.custom-product-input-text {
+    color: var(--custom-product-input-text) !important;
+}
+.user-settings {
+    background-color: var(--user-settings);
+    color: var(--custom-text-color);
+}
 /*  bg-gray-100  dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 */
 
 input:not(#login-form input):not(#register-form input):not(
@@ -185,11 +233,17 @@ input:not(#login-form input):not(#register-form input):not(
 body {
     color: var(--foreground);
     background: var(--background);
-    font-family: var(--font-saira);
 
     input[type="text"],
     label {
         @apply placeholder:font-sans font-sans font-medium;
+    }
+
+    .font-saira {
+        font-family: var(--font-saira);
+    }
+    .font-quicksand {
+        font-family: var(--font-quicksand);
     }
 
     ::selection {
@@ -208,14 +262,20 @@ body {
             @apply border-[#21ba9c];
         }
     }
-    button:not(.overlay button):not(#site-logo a):not(
-            .shopping-list button
-        ):not(#reset-password-form button):not(#login-form button):not(
-            button#empty-list-add-btn
-        ):not(.no-border),
-    a:not(.overlay a):not(a#site-logo):not(#reset-password-form a):not(
-            #login-form a
-        ):not(#empty-list-add-btn) {
+
+    button:not(.overlay button)
+        :not(#site-logo a)
+        :not(.shopping-list button)
+        :not(#reset-password-form button)
+        :not(#login-form button)
+        :not(button#empty-list-add-btn)
+        :not(.no-border),
+    a:not(.overlay a)
+        :not(a#site-logo)
+        :not(#reset-password-form a)
+        :not(#login-form a)
+        :not(#empty-list-add-btn)
+        :not(.user-settings button) {
         @apply border-2 transition-colors duration-200 hover:border-current border-transparent outline-0;
         &:focus {
             @apply border-[#21ba9c];
@@ -319,4 +379,59 @@ select:-moz-autofill {
 
 .chat-widget:hover {
     border: 2px solid var(--chat-widget-hover) !important;
+}
+
+.ai-chat-text {
+    color: var(--ai-chat-text);
+}
+
+.ai-chat-message-bg {
+    background-color: var(--ai-chat-message-bg);
+    color: var(--ai-chat-message-text);
+}
+
+.ai-chat-help-text {
+    color: var(--ai-chat-help-text);
+}
+
+.ai-chat-button {
+    transition: all 0.2s ease;
+}
+
+.ai-chat-button:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ai-chat-button-blue {
+    transition: all 0.2s ease;
+}
+
+.ai-chat-button-blue:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(33, 186, 156, 0.3);
+}
+
+.ai-chat-input {
+    background-color: var(--ai-chat-input-bg);
+    color: var(--ai-chat-input-text);
+}
+
+.ai-chat-input::placeholder {
+    color: var(--ai-chat-input-placeholder);
+}
+
+.tools .tool,
+.tools .tool-danger {
+    border: 1px solid transparent;
+}
+
+.tools .tool:hover {
+    border: 1px solid currentColor !important;
+}
+
+.tools .tool-danger:hover {
+    border: 1px solid red !important;
 }

@@ -457,7 +457,7 @@ export default function ShoppingListHeader({
                                                         "Delete"
                                                     )
                                                 }
-                                                className="px-2 py-1 cursor-pointer  text-red-500 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                className="px-2 py-1 cursor-pointer tool-danger  text-red-500 text-left duration-200 transition-colors text-red-500 rounded-sm"
                                             >
                                                 <TranshIcon className="w-4 h-4 inline-block mr-1" />
                                                 Delete
@@ -475,7 +475,7 @@ export default function ShoppingListHeader({
                                                         userId
                                                     )
                                                 }
-                                                className="px-2 py-1 cursor-pointer tools text-left duration-200 transition-colors text-red-600 rounded-sm"
+                                                className="px-2 py-1 cursor-pointer tools tools-danger text-left duration-200 transition-colors text-red-600 rounded-sm"
                                             >
                                                 <TranshIcon className="w-4 h-4 inline-block mr-1" />
                                                 Remove

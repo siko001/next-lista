@@ -236,142 +236,149 @@ const ShareListDialog = ({
     }, [sharedWithUsers]);
 
     return (
-        <div className="fixed inset-0 drag share-overlay  bg-opacity-50 flex items-center justify-center z-50">
-            {!usersSharedWithOverlay && (
-                <div className=" share-dialog p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-sm">
-                    <h3 className="text-lg font-bold mb-4 dark:text-white">
-                        Share List
-                    </h3>
+        <>
+            <div className="fixed inset-0 drag share-overlay blur-[50px]  bg-opacity-30 flex items-center justify-center z-50"></div>
+            <div className="fixed inset-0  flex items-center justify-center z-50">
+                {!usersSharedWithOverlay && (
+                    <div className=" share-dialog p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-sm">
+                        <h3 className="text-lg font-bold mb-4">Share List</h3>
 
-                    <div className="space-y-3">
-                        <a
-                            href={whatsappUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex cursor-pointer items-center px-4 py-2 bg-green-700 text-white rounded hover:bg-green-600 disabled:opacity-60"
-                            onClick={async (e) => {
-                                e.preventDefault();
-                                const code = await ensureShareCode("whatsapp");
-                                if (!code) return;
-                                const url = `https://wa.me/?text=${encodeURIComponent(
-                                    `Sharing this list with you: ${listUrlBase}?k=${code}`
-                                )}`;
-                                window.open(
-                                    url,
-                                    "_blank",
-                                    "noopener,noreferrer"
-                                );
-                            }}
-                        >
-                            <WhatsAppIcon className={"w-7 h-7 mr-2"} />
-                            {generatingTarget === "whatsapp"
-                                ? "Preparing link..."
-                                : "Share via WhatsApp"}
-                        </a>
-
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                const code = await ensureShareCode("messenger");
-                                const url = code
-                                    ? `${listUrlBase}?k=${code}`
-                                    : listUrlBase;
-                                shareOnMessenger(url);
-                            }}
-                            className="flex cursor-pointer w-full items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-60"
-                            disabled={generatingTarget === "messenger"}
-                        >
-                            <MessengerIcon className={"w-8 h-8 mr-2"} />
-                            {generatingTarget === "messenger"
-                                ? "Preparing link..."
-                                : "Share via Messenger"}
-                        </button>
-
-                        <button
-                            onClick={copyToClipboard}
-                            className="flex cursor-pointer items-center px-4 py-2 bg-gray-200 dark:bg-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full disabled:opacity-60"
-                            disabled={generatingTarget === "copy"}
-                        >
-                            <LinkIcon className="w-7 h-7 mr-3" />
-                            {generatingTarget === "copy"
-                                ? "Preparing link..."
-                                : "Copy Link"}
-                        </button>
-                        {sharedWithUsers?.length > 0 &&
-                            isListOwner(list, userId) && (
-                                <button
-                                    onClick={handleSeeUsersSharedWith}
-                                    className="flex cursor-pointer items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full"
-                                >
-                                    <BinocularIcon className="w-7 h-7 mr-3" />
-                                    See Users Shared With
-                                </button>
-                            )}
-                    </div>
-
-                    <div>
-                        <button
-                            onClick={onClose}
-                            className="mt-4 text-gray-500 dark:text-gray-400 px-2 py-1 rounded-sm cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {usersSharedWithOverlay && (
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-lg">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold  dark:text-white">
-                            Shared With Users
-                        </h3>
-                        <button
-                            onClick={() => setUsersSharedWithOverlay(false)}
-                            className="text-red-500 px-2 py-1 !border-none rounded-sm cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
-                        >
-                            <CloseIcon className="w-6 h-6" />
-                        </button>
-                    </div>
-
-                    {sharedWithUsers.length > 0 && (
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
-                            {sharedWithUsers.length} user
-                            {sharedWithUsers.length > 1 ? "s" : ""}
-                        </p>
-                    )}
-
-                    <div className="">
-                        {sharedWithUsers.map((user, index) => (
-                            <div
-                                className={
-                                    "py-2 px-2 border-b first:border-t border-gray-200 dark:border-gray-700 text-lg flex items-center gap-2 justify-between"
-                                }
-                                key={index}
+                        <div className="space-y-3">
+                            <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex cursor-pointer transition-colors duration-200 items-center px-4 py-2 bg-green-700 text-white rounded hover:bg-green-600 disabled:opacity-60"
+                                onClick={async (e) => {
+                                    e.preventDefault();
+                                    const code = await ensureShareCode(
+                                        "whatsapp"
+                                    );
+                                    if (!code) return;
+                                    const url = `https://wa.me/?text=${encodeURIComponent(
+                                        `Sharing this list with you: ${listUrlBase}?k=${code}`
+                                    )}`;
+                                    window.open(
+                                        url,
+                                        "_blank",
+                                        "noopener,noreferrer"
+                                    );
+                                }}
                             >
-                                <h4 className="text-lg">{user.display_name}</h4>
-                                <button
-                                    onClick={() =>
-                                        handleRevokeShare(
-                                            listId,
-                                            user.ID,
-                                            userToken
-                                        )
-                                    }
-                                    className="text-gray-500 dark:text-gray-400 group hover:!border-red-500 duration-200 text-base transition-colors hover:!text-red-500 px-2 py-1 rounded-sm cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-3"
-                                >
-                                    Revoke Share
-                                    <MinusIcon
-                                        className="w-5 h-5 group-hover:text-red-500 duration-200 transition-colors"
-                                        strokeWidth={2}
-                                    />
-                                </button>
-                            </div>
-                        ))}
+                                <WhatsAppIcon className={"w-7 h-7 mr-2"} />
+                                {generatingTarget === "whatsapp"
+                                    ? "Preparing link..."
+                                    : "Share via WhatsApp"}
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    const code = await ensureShareCode(
+                                        "messenger"
+                                    );
+                                    const url = code
+                                        ? `${listUrlBase}?k=${code}`
+                                        : listUrlBase;
+                                    shareOnMessenger(url);
+                                }}
+                                className="flex cursor-pointer transition-colors duration-200 w-full items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-60"
+                                disabled={generatingTarget === "messenger"}
+                            >
+                                <MessengerIcon className={"w-8 h-8 mr-2"} />
+                                {generatingTarget === "messenger"
+                                    ? "Preparing link..."
+                                    : "Share via Messenger"}
+                            </button>
+
+                            <button
+                                onClick={copyToClipboard}
+                                className="flex cursor-pointer transition-colors duration-200 items-center px-4 py-2 hover:text-white bg-gray-200 dark:bg-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full disabled:opacity-60"
+                                disabled={generatingTarget === "copy"}
+                            >
+                                <LinkIcon className="w-7 h-7 mr-3" />
+                                {generatingTarget === "copy"
+                                    ? "Preparing link..."
+                                    : "Copy Link"}
+                            </button>
+                            {sharedWithUsers?.length > 0 &&
+                                isListOwner(list, userId) && (
+                                    <button
+                                        onClick={handleSeeUsersSharedWith}
+                                        className="flex cursor-pointer transition-colors duration-200 items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full"
+                                    >
+                                        <BinocularIcon className="w-7 h-7 mr-3" />
+                                        See Users Shared With
+                                    </button>
+                                )}
+                        </div>
+
+                        <div>
+                            <button
+                                onClick={onClose}
+                                className="mt-4  px-2 py-1 rounded-sm cursor-pointer hover:text-red-500 duration-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+
+                {usersSharedWithOverlay && (
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-lg">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold  dark:text-white">
+                                Shared With Users
+                            </h3>
+                            <button
+                                onClick={() => setUsersSharedWithOverlay(false)}
+                                className="text-red-500 px-2 py-1 !border-none rounded-sm cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                            >
+                                <CloseIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {sharedWithUsers.length > 0 && (
+                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
+                                {sharedWithUsers.length} user
+                                {sharedWithUsers.length > 1 ? "s" : ""}
+                            </p>
+                        )}
+
+                        <div className="">
+                            {sharedWithUsers.map((user, index) => (
+                                <div
+                                    className={
+                                        "py-2 px-2 border-b first:border-t border-gray-200 dark:border-gray-700 text-lg flex items-center gap-2 justify-between"
+                                    }
+                                    key={index}
+                                >
+                                    <h4 className="text-lg">
+                                        {user.display_name}
+                                    </h4>
+                                    <button
+                                        onClick={() =>
+                                            handleRevokeShare(
+                                                listId,
+                                                user.ID,
+                                                userToken
+                                            )
+                                        }
+                                        className="text-gray-500 dark:text-gray-400 group hover:!border-red-500 duration-200 text-base transition-colors hover:!text-red-500 px-2 py-1 rounded-sm cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-3"
+                                    >
+                                        Revoke Share
+                                        <MinusIcon
+                                            className="w-5 h-5 group-hover:text-red-500 duration-200 transition-colors"
+                                            strokeWidth={2}
+                                        />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </>
     );
 };
 
