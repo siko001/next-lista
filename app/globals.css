@@ -44,6 +44,14 @@
     --filters-wrapper: var(--color-white);
     --user-settings: var(--color-gray-200);
     --share-bg: var(--color-white);
+    --ai-chat-text: var(--color-gray-800);
+    --ai-chat-message-bg: var(--color-gray-200);
+    --ai-chat-message-text: var(--color-gray-900);
+    --ai-chat-help-text: var(--color-gray-600);
+    --ai-chat-border: var(--color-gray-300);
+    --ai-chat-input-bg: var(--color-white);
+    --ai-chat-input-text: var(--color-gray-900);
+    --ai-chat-input-placeholder: var(--color-gray-600);
 }
 
 /* Dark theme */
@@ -71,6 +79,14 @@
     --chat-widget-hover: var(--color-primary);
     --user-settings: var(--color-gray-900);
     --share-bg: var(--color-black);
+    --ai-chat-text: var(--color-white);
+    --ai-chat-message-bg: var(--color-gray-800);
+    --ai-chat-message-text: var(--color-gray-100);
+    --ai-chat-help-text: var(--color-gray-400);
+    --ai-chat-border: var(--color-gray-700);
+    --ai-chat-input-bg: var(--color-black);
+    --ai-chat-input-text: var(--color-gray-100);
+    --ai-chat-input-placeholder: var(--color-gray-500);
 }
 
 /* Smooth transitions for theme changes */
@@ -144,6 +160,7 @@ html:not(.theme-loading) {
 
 .ai-chat {
     background-color: var(--ai-chat);
+    border-color: var(--ai-chat-border);
 }
 
 input.chatbot-input:not(.chatbot-input:focus) {
@@ -352,6 +369,48 @@ select:-moz-autofill {
 
 .chat-widget:hover {
     border: 2px solid var(--chat-widget-hover) !important;
+}
+
+.ai-chat-text {
+    color: var(--ai-chat-text);
+}
+
+.ai-chat-message-bg {
+    background-color: var(--ai-chat-message-bg);
+    color: var(--ai-chat-message-text);
+}
+
+.ai-chat-help-text {
+    color: var(--ai-chat-help-text);
+}
+
+.ai-chat-button {
+    transition: all 0.2s ease;
+}
+
+.ai-chat-button:hover {
+    opacity: 0.8;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ai-chat-button-blue {
+    transition: all 0.2s ease;
+}
+
+.ai-chat-button-blue:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(33, 186, 156, 0.3);
+}
+
+.ai-chat-input {
+    background-color: var(--ai-chat-input-bg);
+    color: var(--ai-chat-input-text);
+}
+
+.ai-chat-input::placeholder {
+    color: var(--ai-chat-input-placeholder);
 }
 
 .tools .tool,
