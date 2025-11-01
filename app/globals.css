@@ -33,7 +33,7 @@
     --tools: var(--color-gray-200);
     --product-item: var(--color-gray-100);
     --product-item-hover: var(--color-gray-300);
-    --ai-chat: var(--color-gray-600);
+    --ai-chat: var(--color-gray-400);
     --drag-opage: oklch(92.8% 0.006 264.531 / 0.7);
     --menu-bg: var(--color-gray-400);
     --menu-bg-hover: var(--color-gray-500);
@@ -43,6 +43,7 @@
     --filters-text: var(--color-gray-700);
     --filters-wrapper: var(--color-white);
     --user-settings: var(--color-gray-200);
+    --share-bg: var(--color-white);
 }
 
 /* Dark theme */
@@ -69,6 +70,7 @@
     --filters-wrapper: var(--color-gray-900);
     --chat-widget-hover: var(--color-primary);
     --user-settings: var(--color-gray-900);
+    --share-bg: var(--color-black);
 }
 
 /* Smooth transitions for theme changes */
@@ -149,11 +151,12 @@ input.chatbot-input:not(.chatbot-input:focus) {
 }
 
 .share-overlay {
-    background-color: var(--drag-opage);
+    background-color: var(--share-bg);
 }
 
 .share-dialog {
-    background-color: var(--ai-chat);
+    background-color: var(--user-settings);
+    color: var(--custom-text-color);
 }
 
 .close-product-overlay {
@@ -349,4 +352,17 @@ select:-moz-autofill {
 
 .chat-widget:hover {
     border: 2px solid var(--chat-widget-hover) !important;
+}
+
+.tools .tool,
+.tools .tool-danger {
+    border: 1px solid transparent;
+}
+
+.tools .tool:hover {
+    border: 1px solid currentColor !important;
+}
+
+.tools .tool-danger:hover {
+    border: 1px solid red !important;
 }

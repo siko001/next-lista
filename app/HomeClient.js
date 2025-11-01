@@ -514,7 +514,7 @@ const HomeClient = ({
                                                                             userData?.id
                                                                         );
                                                                     }}
-                                                                    className="px-3 py-1 cursor-pointer   text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                                    className="px-3 py-1 cursor-pointer tool-danger  text-left duration-200 transition-colors text-red-500 rounded-sm"
                                                                 >
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Delete
@@ -534,7 +534,7 @@ const HomeClient = ({
                                                                             userData?.id
                                                                         );
                                                                     }}
-                                                                    className="px-3 py-1 cursor-pointer text-red-500 text-left duration-200 transition-colors text-red-500 rounded-sm"
+                                                                    className="px-3 py-1 cursor-pointer tool-danger text-red-500 text-left duration-200 transition-colors text-red-500 rounded-sm"
                                                                 >
                                                                     <TrashIcon className="w-4 h-4 inline-block mr-1" />
                                                                     Remove

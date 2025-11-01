@@ -1034,7 +1034,7 @@ export default function ShoppingList({
                                                                 listId
                                                             );
                                                         }}
-                                                        className="px-1 py-1  cursor-pointer items-center flex text-left duration-200 transition-colors text-red-600 rounded-sm"
+                                                        className="px-1 py-1 tool-danger cursor-pointer items-center flex text-left duration-200 transition-colors text-red-600 rounded-sm"
                                                     >
                                                         <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
                                                         Remove All Items
@@ -1162,7 +1162,7 @@ export default function ShoppingList({
                                                                 listId
                                                             );
                                                         }}
-                                                        className="px-1 py-1 cursor-pointer items-center flex  text-left duration-200 transition-colors text-red-600 rounded-sm"
+                                                        className="px-1 py-1 cursor-pointer tool-danger items-center flex  text-left duration-200 transition-colors text-red-600 rounded-sm"
                                                     >
                                                         <XBagIcon className="w-5 h-5 inline-block mr-1 text-red-700" />
                                                         Remove All Items
