@@ -8,6 +8,7 @@ import {LoadingProvider} from "./contexts/LoadingContext";
 import {ProductProvider} from "./contexts/ProductContext";
 import "./globals.css";
 import {Quicksand, Saira} from "next/font/google";
+import {AuthProvider} from "./hooks/useAuth";
 
 const quicksand = Quicksand({
     subsets: ["latin"],
@@ -116,21 +117,23 @@ export default function RootLayout({children}) {
             <body
                 className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${quicksand.variable} font-saira antialiased bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-200`}
             >
-                <LoadingProvider>
-                    <NotificationProvider>
-                        <ListProvider>
-                            <UserProvider>
-                                <ProductProvider>
-                                    <ValidationProvider>
-                                        <OverlayProvider>
-                                            {children}
-                                        </OverlayProvider>
-                                    </ValidationProvider>
-                                </ProductProvider>
-                            </UserProvider>
-                        </ListProvider>
-                    </NotificationProvider>
-                </LoadingProvider>
+                <AuthProvider>
+                    <LoadingProvider>
+                        <NotificationProvider>
+                            <ListProvider>
+                                <UserProvider>
+                                    <ProductProvider>
+                                        <ValidationProvider>
+                                            <OverlayProvider>
+                                                {children}
+                                            </OverlayProvider>
+                                        </ValidationProvider>
+                                    </ProductProvider>
+                                </UserProvider>
+                            </ListProvider>
+                        </NotificationProvider>
+                    </LoadingProvider>
+                </AuthProvider>
 
                 <a
                     href="https://neilmallia.com"
