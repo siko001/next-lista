@@ -314,6 +314,10 @@ body {
     }
 }
 
+.skiptranslate {
+    display: none !important;
+}
+
 .new-list {
     @apply duration-200 ease-in-out border-2 border-green-500;
     animation: slideDown 0.5s ease-out;
