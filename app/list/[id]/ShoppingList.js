@@ -985,7 +985,11 @@ export default function ShoppingList({
 
                 <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32">
                     {/* bg-[#f8f8ff] dark:bg-[#0a0a0a] */}
-                    <div className="flex items-center justify-between sticky top-24 hidden-bg z-20 px-4 pt-4 pb-2">
+                    <div
+                        className={`flex items-center justify-between sticky top-24 hidden-bg z-20 px-4 pt-4 pb-2 ${
+                            checkedProducts?.length === 0 ? "hidden" : ""
+                        }`}
+                    >
                         {checkedProducts && checkedProducts?.length !== 0 && (
                             <>
                                 <div className="hidden-bg h-10 blur-lg z-10 w-full  absolute -bottom-2.5  left-0"></div>
@@ -1047,7 +1051,14 @@ export default function ShoppingList({
                             </>
                         )}
                     </div>
-                    <div className="checked-products-container flex flex-col gap-4">
+                    <div
+                        className={`checked-products-container flex flex-col gap-4 ${
+                            checkedProducts?.length === 0 &&
+                            baggedProducts?.length !== 0
+                                ? "hidden"
+                                : ""
+                        }`}
+                    >
                         {checkedProducts?.length === 0 &&
                         baggedProducts?.length === 0 ? (
                             <div className="w-full font-quicksand mt-28 flex items-center justify-center text-gray-900/60 dark:text-gray-400/60 text-lg md:text-2xl font-normal relative z-30 pointer-events-auto">
@@ -1100,12 +1111,19 @@ export default function ShoppingList({
 
                     <div
                         className={`flex items-center justify-between sticky top-24 ${
-                            checkedProducts?.length !== 0
+                            checkedProducts?.length !== 0 ||
+                            baggedProducts?.length !== 0
                                 ? "hidden-bg"
                                 : "bg-transparent"
                         }
                             z-20 px-4 pt-4 pb-2 
-                         ${checkedProducts?.length !== 0 ? "mt-10" : "-mt-16"}
+                         ${
+                             checkedProducts?.length !== 0
+                                 ? "mt-10"
+                                 : baggedProducts?.length !== 0
+                                 ? "mt-0"
+                                 : "-mt-16"
+                         }
                              py-2 z-20 px-4 
                          `}
                     >

@@ -355,9 +355,9 @@ const ChatWidget = forwardRef(function ChatWidget(
         [recipeMap]
     );
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e, overrideText = null) => {
         e?.preventDefault?.();
-        const text = input.trim();
+        const text = (overrideText || input).trim();
         if (!text) return;
         if (typing || loading) return;
 
@@ -2634,7 +2634,7 @@ const ChatWidget = forwardRef(function ChatWidget(
                                         onClick={() => {
                                             const ex = "I plan to make lasagna";
                                             setInput(ex);
-                                            setTimeout(() => handleSubmit(), 0);
+                                            handleSubmit(null, ex);
                                         }}
                                         className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
@@ -2645,7 +2645,7 @@ const ChatWidget = forwardRef(function ChatWidget(
                                         onClick={() => {
                                             const ex = "Recipe for pancakes";
                                             setInput(ex);
-                                            setTimeout(() => handleSubmit(), 0);
+                                            handleSubmit(null, ex);
                                         }}
                                         className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
@@ -2656,7 +2656,7 @@ const ChatWidget = forwardRef(function ChatWidget(
                                         onClick={() => {
                                             const ex = "I'm cooking salad";
                                             setInput(ex);
-                                            setTimeout(() => handleSubmit(), 0);
+                                            handleSubmit(null, ex);
                                         }}
                                         className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                                     >
