@@ -25,7 +25,6 @@ export const decryptToken = (encryptedToken) => {
 
         return cleanToken;
     } catch (error) {
-        console.error("Failed to decrypt token:", error);
         return null;
     }
 };
@@ -78,7 +77,6 @@ export const getShoppingList = async (userId, encryptedToken) => {
         filteredLists.sort((a, b) => a.menu_order - b.menu_order);
         return filteredLists;
     } catch (error) {
-        console.error("Failed to fetch lists:", error);
         return [];
     }
 };
@@ -101,7 +99,6 @@ export const getListDetails = async (listId, encryptedToken) => {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error("Failed to fetch list details:", error);
         return null;
     }
 };
@@ -124,7 +121,6 @@ export const getAllProducts = async (encryptedToken) => {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error("Failed to fetch all products:", error);
         return [];
     }
 };
@@ -147,7 +143,6 @@ export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error("Failed to fetch linked products:", error);
         return [];
     }
 };
@@ -238,7 +233,6 @@ export const getFavourites = async (token) => {
         });
         return await res.json();
     } catch (error) {
-        console.error("Error fetching favourites:", error);
         return {success: false, favourites: []};
     }
 };
