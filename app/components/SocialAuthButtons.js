@@ -40,12 +40,18 @@ const FacebookIcon = () => (
 );
 
 export default function SocialAuthButtons() {
-    const handleSocialLogin = (e, provider) => {
-        e.preventDefault(); // Prevent form submission
-        e.stopPropagation(); // Stop event bubbling
-        signIn(provider);
+    const handleGoogleSignIn = async (e) => {
+        e.preventDefault();
+        try {
+            // Use redirect: true to let NextAuth handle the redirect
+            await signIn("google", {
+                callbackUrl: window.location.origin,
+                redirect: true,
+            });
+        } catch (error) {
+            
+        }
     };
-
     return (
         <div className="space-x-6 w-full">
             {/* <button
@@ -57,7 +63,7 @@ export default function SocialAuthButtons() {
             </button> */}
 
             <button
-                onClick={(e) => handleSocialLogin(e, "google")}
+                onClick={(e) => handleGoogleSignIn(e)}
                 className=" rounded-full hover:scale-115 duration-300 transition-all cursor-pointer"
                 aria-label="Login with Google"
             >

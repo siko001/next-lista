@@ -1,6 +1,4 @@
-// app/auth/options.js
 import GoogleProvider from "next-auth/providers/google";
-import FacebookProvider from "next-auth/providers/facebook";
 
 export const authOptions = {
     providers: [
@@ -8,25 +6,54 @@ export const authOptions = {
             clientId: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         }),
-        FacebookProvider({
-            clientId: process.env.FACEBOOK_CLIENT_ID,
-            clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
-        }),
     ],
     callbacks: {
-        async jwt({token, user}) {
-            if (user) {
-                token.id = user.id;
+        async signIn({user, account, profile, cookies}) {
+            // Allow sign in; WordPress integration happens client-side after login
+            return true;
+        },
+        async jwt({token, user, account, trigger}) {
+            // Initial sign in
+            if (account && user) {
+                return {
+                    ...token,
+                    accessToken: account.access_token,
+                    wpJwt: user.wpJwt,
+                    user: {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                        image: user.image,
+                        isLoggedIn: true,
+                        wpUser: user.wpUser,
+                    },
+                };
             }
             return token;
         },
         async session({session, token}) {
-            session.user.id = token.id;
+            // Add user data from token to session
+            session.user = {
+                ...session.user,
+                id: token.sub || token.id,
+                isLoggedIn: true,
+                wpUser: token.user?.wpUser,
+            };
+
+            if (token.accessToken) {
+                session.accessToken = token.accessToken;
+            }
+
+            if (token.wpJwt) {
+                session.wpJwt = token.wpJwt;
+            }
             return session;
         },
     },
     pages: {
         signIn: "/login",
+        error: "/login",
     },
     secret: process.env.NEXTAUTH_SECRET,
+    debug: process.env.NODE_ENV === "development",
 };
