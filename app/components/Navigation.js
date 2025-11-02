@@ -20,6 +20,9 @@ export default function Navigation(props) {
 
     useEffect(() => {
         setMounted(true);
+        console.log("Navigation mounted");
+        console.log("User data:", userData);
+        console.log("Loading:", loading);
     }, [userData, loading]);
 
     return (

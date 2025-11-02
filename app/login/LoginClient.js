@@ -331,7 +331,7 @@ const LoginClient = () => {
                         </button>
                     </div>
 
-                    <SocialAuthButtons />
+                    {/* <SocialAuthButtons /> */}
 
                     <a
                         href="/password-reset"

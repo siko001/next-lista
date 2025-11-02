@@ -42,14 +42,21 @@ const FacebookIcon = () => (
 export default function SocialAuthButtons() {
     const handleGoogleSignIn = async (e) => {
         e.preventDefault();
+        console.log("Initiating Google sign in...");
         try {
-            // Use redirect: true to let NextAuth handle the redirect
-            await signIn("google", {
-                callbackUrl: window.location.origin,
-                redirect: true,
+            const result = await signIn("google", {
+                callbackUrl: "/login",
+                redirect: false,
             });
+            console.log("SignIn Result:", result);
+            if (result?.error) {
+                console.error("Sign in error:", result.error);
+                // Handle error (show toast/notification)
+            } else {
+                window.location.href = result?.url || "/login";
+            }
         } catch (error) {
-            
+            console.error("Sign in failed:", error);
         }
     };
     return (
