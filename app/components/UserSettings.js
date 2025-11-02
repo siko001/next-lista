@@ -63,6 +63,7 @@ export default function UserSettings({isOpen, onClose}) {
             setCurrentLanguage(newLanguage);
             localStorage.setItem("preferredLanguage", newLanguage);
         } catch (error) {
+            console.error("Failed to change language:", error);
             alert("Failed to change language. Please try again.");
         }
     };
@@ -75,7 +76,7 @@ export default function UserSettings({isOpen, onClose}) {
 
         // Apply the theme
         const applyThemeToDOM = (themeToApply) => {
-            
+            console.log("Applying theme:", themeToApply);
 
             // Remove all theme-related classes
             document.documentElement.classList.remove(
@@ -116,6 +117,7 @@ export default function UserSettings({isOpen, onClose}) {
         // Listen for system theme changes if using system preference
         const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
         const handleSystemThemeChange = () => {
+            console.log("System theme changed");
             if (theme === "system") {
                 applyThemeToDOM("system");
             }

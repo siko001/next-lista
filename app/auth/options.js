@@ -8,45 +8,57 @@ export const authOptions = {
         }),
     ],
     callbacks: {
-        async signIn({user, account, profile, cookies}) {
-            // Allow sign in; WordPress integration happens client-side after login
-            return true;
+        async signIn({user, account, profile}) {
+            try {
+                // Exchange Google token for your WordPress JWT
+                const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/jwt-auth/v1/token`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            email: user.email,
+                            username: user.email.split("@")[0],
+                            password: account.id_token, // Using ID token as a password
+                        }),
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.error("JWT Auth failed:", data);
+                    return false;
+                }
+
+                // Store the WordPress JWT in the user object
+                user.wpJwt = data.token;
+                user.wpUser = data.user;
+
+                return true;
+            } catch (error) {
+                console.error("Auth error:", error);
+                return false;
+            }
         },
-        async jwt({token, user, account, trigger}) {
+        async jwt({token, user, account}) {
             // Initial sign in
             if (account && user) {
                 return {
                     ...token,
                     accessToken: account.access_token,
                     wpJwt: user.wpJwt,
-                    user: {
-                        id: user.id,
-                        email: user.email,
-                        name: user.name,
-                        image: user.image,
-                        isLoggedIn: true,
-                        wpUser: user.wpUser,
-                    },
+                    user: user.wpUser,
                 };
             }
             return token;
         },
         async session({session, token}) {
-            // Add user data from token to session
-            session.user = {
-                ...session.user,
-                id: token.sub || token.id,
-                isLoggedIn: true,
-                wpUser: token.user?.wpUser,
-            };
-
-            if (token.accessToken) {
-                session.accessToken = token.accessToken;
-            }
-
-            if (token.wpJwt) {
-                session.wpJwt = token.wpJwt;
-            }
+            session.wpJwt = token.wpJwt;
+            session.user = token.user;
+            session.accessToken = token.accessToken;
             return session;
         },
     },
