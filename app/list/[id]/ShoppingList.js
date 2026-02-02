@@ -54,11 +54,11 @@ export default function ShoppingList({
 
     // general products
     const [allLinkedProducts, setAllLinkedProducts] = useState(
-        currentList?.acf?.linked_products
+        currentList?.acf?.linked_products,
     );
     const [checkedProducts, setCheckedProducts] = useState(checkedProductList);
     const [baggedProducts, setBaggedProducts] = useState(
-        baggedItems.baggedProducts
+        baggedItems.baggedProducts,
     );
 
     // custom products
@@ -68,25 +68,25 @@ export default function ShoppingList({
     const [originalCheckedProducts, setOriginalCheckedProducts] =
         useState(checkedProductList);
     const [originalBaggedProducts, setOriginalBaggedProducts] = useState(
-        baggedItems.baggedProducts
+        baggedItems.baggedProducts,
     );
 
     const [allProducts, setAllProducts] = useState(AllProducts);
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
     const [checklistSettings, setChecklistSettings] = useState(false);
     const [sharedWithUsers, setSharedWithUsers] = useState(
-        currentList?.acf?.shared_with_users || []
+        currentList?.acf?.shared_with_users || [],
     );
     const [baggedSettings, setBaggedSettings] = useState(false);
 
     const [totalProductCount, setTotalProductCount] = useState(
-        Number(currentList?.acf?.product_count) || 0
+        Number(currentList?.acf?.product_count) || 0,
     );
     const [baggedProductCount, setBaggedProductCount] = useState(
-        Number(currentList?.acf?.bagged_product_count) || 0
+        Number(currentList?.acf?.bagged_product_count) || 0,
     );
     const [progress, setProgress] = useState(
-        calculateProgress(totalProductCount, baggedProductCount) || 0
+        calculateProgress(totalProductCount, baggedProductCount) || 0,
     );
     const {setIsInnerList, isInInnerList, setUserLists} = useListContext();
 
@@ -152,12 +152,12 @@ export default function ShoppingList({
 
     const fuseChecked = useMemo(
         () => new Fuse(originalCheckedProducts, fuseCheckedOptions),
-        [originalCheckedProducts]
+        [originalCheckedProducts],
         // eslint-disable-next-line react-hooks/exhaustive-deps
     );
     const fuseBagged = useMemo(
         () => new Fuse(originalBaggedProducts, fuseCheckedOptions),
-        [originalBaggedProducts]
+        [originalBaggedProducts],
         // eslint-disable-next-line react-hooks/exhaustive-deps
     );
 
@@ -238,7 +238,7 @@ export default function ShoppingList({
             if (typeof window !== "undefined") {
                 window.removeEventListener(
                     "lista:items-added",
-                    handleItemsAdded
+                    handleItemsAdded,
                 );
             }
         };
@@ -313,7 +313,7 @@ export default function ShoppingList({
         const handleClickOutside = (event) => {
             const target = event.target;
             const insideChecklistToggle = !!target.closest(
-                ".checklist-settings"
+                ".checklist-settings",
             );
             const insideBaggedToggle = !!target.closest(".bagged-settings");
             const insideChecklistMenu = checklistSettings
@@ -368,7 +368,7 @@ export default function ShoppingList({
             if (event.key === "Escape") {
                 if (checklistSettings) {
                     const el = document.querySelector(
-                        "#checklist-settings-menu"
+                        "#checklist-settings-menu",
                     );
                     if (el) {
                         gsap.killTweensOf(el);
@@ -461,7 +461,7 @@ export default function ShoppingList({
         if (baggedProductCount === 0) setProgress(0);
         const newProgress = calculateProgress(
             totalProductCount,
-            baggedProductCount
+            baggedProductCount,
         );
         setProgress(newProgress);
     }, [
@@ -529,15 +529,15 @@ export default function ShoppingList({
                             baggedProducts: baggedProducts,
                             action: "bag",
                         }),
-                    }
+                    },
                 );
             } catch (error) {
                 console.error("Bagging error:", error);
                 // Revert state on error
                 setBaggedProducts((prev) =>
                     prev.filter(
-                        (p) => !checkedProducts.some((cp) => cp.id === p.id)
-                    )
+                        (p) => !checkedProducts.some((cp) => cp.id === p.id),
+                    ),
                 );
                 setCheckedProducts((prev) => [...prev, ...checkedProducts]);
                 setBaggedProductCount((prev) => prev - checkedProducts.length);
@@ -599,15 +599,15 @@ export default function ShoppingList({
                             baggedProducts: productsToUnbag,
                             action: "unbag",
                         }),
-                    }
+                    },
                 );
             } catch (error) {
                 console.error("Unbagging error:", error);
                 // Revert state on error
                 setCheckedProducts((prev) =>
                     prev.filter(
-                        (p) => !baggedProducts.some((bp) => bp.id === p.id)
-                    )
+                        (p) => !baggedProducts.some((bp) => bp.id === p.id),
+                    ),
                 );
                 setBaggedProducts((prev) => [...prev, ...baggedProducts]);
                 setBaggedProductCount(baggedProducts.length);
@@ -640,7 +640,9 @@ export default function ShoppingList({
             setCheckedProducts([]);
             setTotalProductCount((prev) => prev - productsToRemove.length);
             setAllLinkedProducts((prev) =>
-                prev.filter((p) => !productsToRemove.some((r) => r.id === p.ID))
+                prev.filter(
+                    (p) => !productsToRemove.some((r) => r.id === p.ID),
+                ),
             );
 
             // Also update original checked products if not searching
@@ -651,7 +653,7 @@ export default function ShoppingList({
             // Also remove from bagged if any were bagged
             setBaggedProducts((prev) => {
                 const newBagged = prev.filter(
-                    (p) => !productsToRemove.some((r) => r.id === p.id)
+                    (p) => !productsToRemove.some((r) => r.id === p.id),
                 );
                 setBaggedProductCount(newBagged.length);
                 return newBagged;
@@ -661,8 +663,8 @@ export default function ShoppingList({
             if (!isSearching) {
                 setOriginalBaggedProducts((prev) =>
                     prev.filter(
-                        (p) => !productsToRemove.some((r) => r.id === p.id)
-                    )
+                        (p) => !productsToRemove.some((r) => r.id === p.id),
+                    ),
                 );
             }
 
@@ -675,7 +677,7 @@ export default function ShoppingList({
                     window.dispatchEvent(
                         new CustomEvent("lista:list-emptied", {
                             detail: {listId},
-                        })
+                        }),
                     );
                 }
             } catch {}
@@ -697,7 +699,7 @@ export default function ShoppingList({
                             productsToRemove: productsToRemove,
                             action: "remove",
                         }),
-                    }
+                    },
                 );
 
                 const data = await res.json();
@@ -736,7 +738,9 @@ export default function ShoppingList({
             setBaggedProductCount(0);
             setTotalProductCount((prev) => prev - productsToRemove.length);
             setAllLinkedProducts((prev) =>
-                prev.filter((p) => !productsToRemove.some((r) => r.id === p.ID))
+                prev.filter(
+                    (p) => !productsToRemove.some((r) => r.id === p.ID),
+                ),
             );
 
             // Update original bagged products if not searching
@@ -753,7 +757,7 @@ export default function ShoppingList({
                     window.dispatchEvent(
                         new CustomEvent("lista:list-emptied", {
                             detail: {listId},
-                        })
+                        }),
                     );
                 }
             } catch {}
@@ -775,7 +779,7 @@ export default function ShoppingList({
                             productsToRemove: productsToRemove,
                             action: "remove",
                         }),
-                    }
+                    },
                 );
 
                 const data = await res.json();
@@ -800,7 +804,7 @@ export default function ShoppingList({
                     ...product,
                     id: product.ID || product.id, // Ensure both ID and id exist
                     ID: product.ID || product.id,
-                })
+                }),
             );
             setAllLinkedProducts(normalizedLinkedProducts);
         }
@@ -812,7 +816,7 @@ export default function ShoppingList({
                     ...product,
                     id: product.ID || product.id,
                     ID: product.ID || product.id,
-                })
+                }),
             );
             setCheckedProducts(normalizedCheckedProducts);
         }
@@ -861,7 +865,7 @@ export default function ShoppingList({
                     try {
                         return (
                             sessionStorage.getItem(
-                                "suppressSelfRemovalToast"
+                                "suppressSelfRemovalToast",
                             ) === "1"
                         );
                     } catch {
@@ -874,7 +878,7 @@ export default function ShoppingList({
                     selfRemoved
                         ? "List removed successfully"
                         : "The list owner has removed you from this list",
-                    selfRemoved ? "success" : "info"
+                    selfRemoved ? "success" : "info",
                 );
                 try {
                     sessionStorage.removeItem("suppressSelfRemovalToast");
@@ -887,7 +891,7 @@ export default function ShoppingList({
                 };
                 sessionStorage.setItem(
                     "removeListData",
-                    JSON.stringify(removeData)
+                    JSON.stringify(removeData),
                 );
                 window.location.href = "/";
             }
@@ -922,8 +926,8 @@ export default function ShoppingList({
                                       shared_with_users: updatedUsers,
                                   },
                               }
-                            : l
-                    )
+                            : l,
+                    ),
                 );
 
                 // Notify owner/shared users inside inner list
@@ -934,7 +938,7 @@ export default function ShoppingList({
                     someoneLeft
                         ? `${name} left the list`
                         : `${name} was removed from the list`,
-                    someoneLeft ? "info" : "warning"
+                    someoneLeft ? "info" : "warning",
                 );
             }
         });
@@ -983,7 +987,7 @@ export default function ShoppingList({
                     allLinkedProducts={allLinkedProducts}
                 />
 
-                <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32">
+                <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32 ">
                     {/* bg-[#f8f8ff] dark:bg-[#0a0a0a] */}
                     <div
                         className={`flex items-center justify-between sticky top-24 hidden-bg z-20 px-4 pt-4 pb-2 ${
@@ -1024,7 +1028,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() =>
                                                             handleBagAllItems(
-                                                                listId
+                                                                listId,
                                                             )
                                                         }
                                                         className="px-1 py-1 items-center flex tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
@@ -1035,7 +1039,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() => {
                                                             handleRemoveCheckedItems(
-                                                                listId
+                                                                listId,
                                                             );
                                                         }}
                                                         className="px-1 py-1 tool-danger cursor-pointer items-center flex text-left duration-200 transition-colors text-red-600 rounded-sm"
@@ -1104,7 +1108,7 @@ export default function ShoppingList({
                                         product={product}
                                         key={index}
                                     />
-                                )
+                                ),
                             )
                         )}
                     </div>
@@ -1121,8 +1125,8 @@ export default function ShoppingList({
                              checkedProducts?.length !== 0
                                  ? "mt-10"
                                  : baggedProducts?.length !== 0
-                                 ? "mt-0"
-                                 : "-mt-16"
+                                   ? "mt-0"
+                                   : "-mt-16"
                          }
                              py-2 z-20 px-4 
                          `}
@@ -1166,7 +1170,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() => {
                                                             handleUnbagAllProducts(
-                                                                listId
+                                                                listId,
                                                             );
                                                         }}
                                                         className="px-1 py-1 items-center flex tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
@@ -1177,7 +1181,7 @@ export default function ShoppingList({
                                                     <button
                                                         onClick={() => {
                                                             handleRemoveBaggedItems(
-                                                                listId
+                                                                listId,
                                                             );
                                                         }}
                                                         className="px-1 py-1 cursor-pointer tool-danger items-center flex  text-left duration-200 transition-colors text-red-600 rounded-sm"
@@ -1194,7 +1198,9 @@ export default function ShoppingList({
                         )}
                     </div>
 
-                    <div className="bagged-products-container flex flex-col gap-4">
+                    <div
+                        className={`bagged-products-container flex flex-col gap-4 ${baggedProducts?.length === 0 ? "mb-2" : "mb-24"}`}
+                    >
                         {baggedProducts?.map((product, index) =>
                             product === 0 ? null : (
                                 <Product
@@ -1213,7 +1219,7 @@ export default function ShoppingList({
                                     product={product}
                                     key={index}
                                 />
-                            )
+                            ),
                         )}
                     </div>
                 </div>
