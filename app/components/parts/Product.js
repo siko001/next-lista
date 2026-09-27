@@ -1,10 +1,9 @@
 "use client";
 import {useParams} from "next/navigation";
 import {decryptToken, WP_API_BASE, decodeHtmlEntities} from "../../lib/helpers";
-import {useRef, useEffect} from "react";
-import gsap from "gsap";
-import {set} from "react-hook-form";
-import CloseIcon from "../svgs/CloseIcon";
+import {useRef} from "react";
+import {animateProductExit} from "../../lib/productMotion";
+import {Check, X} from "lucide-react";
 import {useNotificationContext} from "../../contexts/NotificationContext";
 
 export default function Product({
@@ -14,6 +13,7 @@ export default function Product({
     progress,
     setAllLinkedProducts,
     product,
+    index = 0,
     token,
     isBagged,
     setCheckedProducts,
@@ -23,16 +23,8 @@ export default function Product({
 }) {
     const shoppingListId = useParams().id;
     const itemRef = useRef(null);
-    const animationRef = useRef(null);
+    const isMovingRef = useRef(false);
     const {showNotification} = useNotificationContext();
-
-    // Function to cleanup animations
-    const killAnimation = () => {
-        if (animationRef.current) {
-            animationRef.current.kill();
-            animationRef.current = null;
-        }
-    };
 
     const updateProductStatus = async (action) => {
         if (!shoppingListId || !token) return;
@@ -82,13 +74,14 @@ export default function Product({
 
             const data = await response.json();
 
-            if (data.error) {
+            if (!response.ok || data.error) {
                 // Handle error
                 if (action === "bag") {
                     setCheckedProducts((prev) => [...prev, product]);
                     setBaggedProducts((prev) =>
                         prev.filter((p) => p.id !== product.id)
                     );
+                    setBaggedProductCount((prev) => prev - 1);
                     setProgress((prev) => {
                         const newProgress =
                             prev - (1 / totalProductCount) * 100;
@@ -99,6 +92,7 @@ export default function Product({
                     setCheckedProducts((prev) =>
                         prev.filter((p) => p.id !== product.id)
                     );
+                    setBaggedProductCount((prev) => prev + 1);
                     setProgress((prev) => {
                         const newProgress =
                             prev + (1 / totalProductCount) * 100;
@@ -115,6 +109,7 @@ export default function Product({
                 setBaggedProducts((prev) =>
                     prev.filter((p) => p.id !== product.id)
                 );
+                setBaggedProductCount((prev) => prev - 1);
                 setProgress((prev) => {
                     const newProgress = prev - (1 / totalProductCount) * 100;
                     return newProgress < 0 ? 0 : newProgress;
@@ -124,6 +119,7 @@ export default function Product({
                 setCheckedProducts((prev) =>
                     prev.filter((p) => p.id !== product.id)
                 );
+                setBaggedProductCount((prev) => prev + 1);
                 setProgress((prev) => {
                     const newProgress = prev + (1 / totalProductCount) * 100;
                     return newProgress > 100 ? 100 : newProgress;
@@ -132,137 +128,10 @@ export default function Product({
         }
     };
 
-    const animateToBagged = async () => {
-        return new Promise((resolve) => {
-            killAnimation();
-            animationRef.current = gsap.to(itemRef.current, {
-                scale: 1.06,
-                duration: 0.15,
-                onComplete: () => {
-                    animationRef.current = gsap.to(itemRef.current, {
-                        y: 20,
-                        opacity: 0,
-                        zIndex: 1,
-                        duration: 0.22,
-                        onComplete: () => {
-                            animationRef.current = null;
-                            gsap.set(itemRef.current, {clearProps: "all"});
-                            resolve();
-                        },
-                    });
-                },
-            });
-        });
-    };
-
-    const animateToChecked = async () => {
-        return new Promise((resolve) => {
-            killAnimation();
-            animationRef.current = gsap.to(itemRef.current, {
-                scale: 1.06,
-                duration: 0.15,
-                onComplete: () => {
-                    animationRef.current = gsap.to(itemRef.current, {
-                        y: -20,
-                        opacity: 0,
-                        zIndex: 1,
-                        duration: 0.22,
-                        onComplete: () => {
-                            animationRef.current = null;
-                            gsap.set(itemRef.current, {clearProps: "all"});
-                            resolve();
-                        },
-                    });
-                },
-            });
-        });
-    };
-
-    const animateAppearInBagged = () => {
-        killAnimation();
-        animationRef.current = gsap.fromTo(
-            itemRef.current,
-            {y: 20, opacity: 0},
-            {
-                y: 0,
-                opacity: 1,
-                backgroundColor: "#14532d",
-                duration: 0.4,
-                onComplete: () => {
-                    animationRef.current = null;
-                    gsap.set(itemRef.current, {clearProps: "backgroundColor"});
-                },
-            }
-        );
-    };
-
-    const animateAppearInChecked = () => {
-        killAnimation();
-        animationRef.current = gsap.fromTo(
-            itemRef.current,
-            {y: -20, opacity: 0},
-            {
-                y: 0,
-                opacity: 1,
-                backgroundColor: "#1f2937",
-                duration: 0.4,
-                onComplete: () => {
-                    animationRef.current = null;
-                    gsap.set(itemRef.current, {clearProps: "backgroundColor"});
-                },
-            }
-        );
-    };
-
-    const animateToRemove = async (productId) => {
-        return new Promise((resolve) => {
-            killAnimation();
-            const el = itemRef.current;
-            if (!el) return resolve();
-
-            gsap.set(el, {zIndex: 2, willChange: "opacity,transform"});
-            animationRef.current = gsap.to(el, {
-                scale: 1.06,
-                duration: 0.15,
-                ease: "power1.out",
-                onComplete: () => {
-                    animationRef.current = gsap.to(el, {
-                        y: 20,
-                        opacity: 0,
-                        duration: 0.22,
-                        ease: "power1.inOut",
-                        onComplete: () => {
-                            // After visually gone, update state
-                            showNotification(
-                                "Product removed",
-                                "success",
-                                1200
-                            );
-                            setBaggedProducts((prev) =>
-                                prev.filter((p) => p.id !== productId)
-                            );
-                            setAllLinkedProducts((prev) =>
-                                prev.filter((p) => p.ID !== productId)
-                            );
-                            setBaggedProductCount((prev) => prev - 1);
-                            setTotalProductCount((prev) => prev - 1);
-                            setProgress((prev) => {
-                                const newProgress =
-                                    prev - (1 / totalProductCount) * 100;
-                                return newProgress < 0 ? 0 : newProgress;
-                            });
-
-                            animationRef.current = null;
-                            gsap.set(el, {clearProps: "all"});
-                            resolve();
-                        },
-                    });
-                },
-            });
-        });
-    };
+    const animateOut = (direction) => animateProductExit([itemRef.current], direction);
 
     const handleClick = async () => {
+        if (isMovingRef.current || !shoppingListId || !token) return;
         // Check if the product has a temporary ID (starts with 'temp-' or is a number that's too large to be a real ID)
         const isTemporaryProduct =
             typeof product.id === "string" && product.id.startsWith("temp-");
@@ -272,24 +141,29 @@ export default function Product({
             return;
         }
 
+        isMovingRef.current = true;
         if (isBagged) {
-            await animateToChecked();
-            updateProductStatus("unbag");
-            animateAppearInChecked();
+            await animateOut(-1);
+            void updateProductStatus("unbag");
         } else {
-            await animateToBagged();
-            updateProductStatus("bag");
-            animateAppearInBagged();
+            await animateOut(1);
+            void updateProductStatus("bag");
         }
     };
 
     // remove from linked and bagged
     const handleRemoveSingleProduct = async () => {
+        if (isMovingRef.current || !shoppingListId || !token) return;
+        isMovingRef.current = true;
         const decryptedToken = decryptToken(token);
         const productId = product.id;
-        if (!shoppingListId || !token) return;
-        // animate the removal
-        await animateToRemove(productId);
+        await animateOut(1);
+        setBaggedProducts((prev) => prev.filter((p) => p.id !== productId));
+        setAllLinkedProducts((prev) =>
+            prev.filter((p) => String(p.ID || p.id) !== String(productId))
+        );
+        setBaggedProductCount((prev) => prev - 1);
+        setTotalProductCount((prev) => prev - 1);
 
         try {
             const response = await fetch(
@@ -307,68 +181,48 @@ export default function Product({
                     }),
                 }
             );
-            await response.json();
+            const data = await response.json();
+            if (!response.ok || data.error) throw new Error(data.error || "Removal failed");
+            showNotification("Product removed", "success", 1200);
         } catch (error) {
             console.error("Error:", error);
             setBaggedProducts((prev) => [...prev, product]);
-            setAllLinkedProducts((prev) => [...prev, product]);
+            setAllLinkedProducts((prev) => [...prev, {...product, ID: productId}]);
             setBaggedProductCount((prev) => prev + 1);
             setTotalProductCount((prev) => prev + 1);
-            setProgress((prev) => {
-                const newProgress = prev + (1 / totalProductCount) * 100;
-                return newProgress > 100 ? 100 : newProgress;
-            });
+            showNotification("Could not remove product", "error", 1600);
         }
     };
 
     return (
         <div
-            onClick={(e) => {
-                e.stopPropagation();
-                handleClick();
-            }}
             ref={itemRef}
-            className={`flex text-center transition-colors group duration-200  w-full mx-auto items-center product-item justify-between gap-12 px-2 py-4 border rounded-lg cursor-pointer ${
-                isBagged && "border border-primary  bagged-product"
-            }`}
+            className={`list-product-row product-item ${isBagged ? "is-bagged bagged-product" : ""}`}
+            style={{"--list-row-index": Math.min(index, 8)}}
         >
-            <div className="flex items-center  w-full gap-4">
-                <h3 className="max-[376px]:text-base text-lg md:text-xl font-semibold pl-3 flex gap-1 items-center">
-                    <div className="checkbox-wrapper-28">
-                        {/* Use a unique id for the checkbox */}
-                        <input
-                            id={`checkbox-${product.id}`}
-                            type="checkbox"
-                            className="promoted-input-checkbox"
-                            checked={isBagged} // Synchronize with isBagged
-                            onChange={handleClick} // Handle change event
-                        />
-                        <svg className="absolute -z-0">
-                            <use href="#checkmark-28" />
-                        </svg>
-                        <label htmlFor={`checkbox-${product.id}`}></label>
-                        <svg xmlns="http://www.w3.org/2000/svg">
-                            <symbol id="checkmark-28" viewBox="0 0 24 24">
-                                <path
-                                    strokeLinecap="round"
-                                    strokeMiterlimit="10"
-                                    fill="none"
-                                    d="M22.9 3.7l-15.2 16.6-6.6-7.1"
-                                />
-                            </symbol>
-                        </svg>
-                    </div>
-                    {decodeHtmlEntities(product.title)}
-                </h3>
-            </div>
+            <button
+                type="button"
+                onClick={handleClick}
+                className="list-product-toggle"
+                aria-label={`${isBagged ? "Move" : "Bag"} ${decodeHtmlEntities(product.title)}${isBagged ? " back to checklist" : ""}`}
+                aria-pressed={isBagged}
+            >
+                <span className="list-product-check" aria-hidden="true">
+                    {isBagged && <Check size={18} strokeWidth={3} />}
+                </span>
+                <span className="list-product-title">{decodeHtmlEntities(product.title)}</span>
+                <span className="list-product-status">{isBagged ? "Bagged" : "To buy"}</span>
+            </button>
             {isBagged && (
-                <CloseIcon
-                    onClick={(e, product) => {
-                        e.stopPropagation();
-                        handleRemoveSingleProduct(product);
-                    }}
-                    className="group-hover:opacity-100 group-hover:visible mr-4 sm:invisible  sm:opacity-0 duration-200 transition-opcaity text-red-600 w-8 h-8"
-                />
+                <button
+                    type="button"
+                    onClick={handleRemoveSingleProduct}
+                    className="list-product-remove"
+                    aria-label={`Remove ${decodeHtmlEntities(product.title)} from list`}
+                    title="Remove from list"
+                >
+                    <X size={18} aria-hidden="true" />
+                </button>
             )}
         </div>
     );

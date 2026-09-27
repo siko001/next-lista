@@ -10,12 +10,12 @@ import {
     getFavourites,
 } from "../../lib/helpers";
 
-export default async function Page() {
+export default async function Page({params}) {
+    const {id: listId} = await params;
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
     const reg = cookieStore.get("registered")?.value;
     const userName = cookieStore.get("username")?.value;
-    const listId = cookieStore.get("listId")?.value;
     const userId = cookieStore.get("id")?.value;
 
     let isRegistered = false;

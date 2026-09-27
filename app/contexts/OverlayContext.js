@@ -5,12 +5,11 @@ import {createContext, useContext, useEffect, useState} from "react";
 import {useValidationContext} from "./ValidationContext";
 import {useLoadingContext} from "./LoadingContext";
 import SingleInput from "../components/parts/SingleInput";
-import {useListContext} from "./ListContext";
+import {decodeHtmlEntities} from "../lib/helpers";
 
 const OverlayContext = createContext();
 
 export const OverlayProvider = ({children}) => {
-    const {listName} = useListContext();
 
     const {setLoading} = useLoadingContext();
     const {setErrors, setHasTyped} = useValidationContext();
@@ -36,48 +35,34 @@ export const OverlayProvider = ({children}) => {
     const closeOverlay = () => {
         // Start closing animation
         setLoading(false);
-        gsap.to("#overlay-backdrop", {opacity: 0, duration: 0.1});
+        gsap.to("#overlay-backdrop", {opacity: 0, duration: 0.18});
         gsap.to("#overlay-content", {
-            scale: 0,
+            scale: 0.97,
+            y: 8,
             opacity: 0,
-            duration: 0.2,
-            delay: 0.25,
+            duration: 0.18,
+            ease: "power2.in",
             onComplete: () => {
                 setHasTyped(false);
                 setOverlay(false);
                 setOverlayContent(null);
-                setErrors(false);
+                setErrors({message: null});
             },
         });
     };
 
     const showVerbConfirmation = (list, token, verb, userId) => {
-        // Open a modal or dialog to confirm the action
-        const titlesToCheck = [
-            "list",
-            "shopping list",
-            "lista",
-            "list name",
-            "list name here",
-            "list name goes here",
-            "lista de compras",
-            "lista de compras aqui",
-            "lista de compras vai aqui",
-            "shopping list here",
-            "shopping list goes here",
-            "shopping list name",
-            "shopping list name here",
-            "shopping list name goes here",
-        ];
-
-        setOverlay((prev) => !prev);
-
+        const action = verb.toLowerCase();
+        const descriptions = {
+            delete: "This will remove the list and all of its products from your shopping lists.",
+            empty: "This will remove every product from this list. The list itself will stay.",
+            remove: "This will remove the shared list from your lists.",
+        };
+        setOverlay(true);
         setOverlayContent({
-            title: `Are you sure you want to ${verb.toLowerCase()} ${
-                !titlesToCheck.includes(list.title.toLowerCase())
-                    ? ("list " + listName && listName) || list.title
-                    : "this list"
-            }?`,
+            title: `${verb} this list?`,
+            listTitle: decodeHtmlEntities(list.title || "Shopping list"),
+            description: descriptions[action],
             action: `${verb}-a-list`,
             cta: `${verb} list`,
             cancelAction: true,

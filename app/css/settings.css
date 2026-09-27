@@ -1,0 +1,104 @@
+/* Account controls share the page buttons' size and corner radius. */
+.app-navigation { gap: 16px; }
+.app-account-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.app-account-button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+    min-height: 46px; max-width: 240px; padding: 5px 13px 5px 7px;
+    border: 1px solid #dce4ee; border-radius: 13px; background: #fff; color: #334155;
+    font: 700 14px/1.2 var(--font-quicksand), sans-serif; cursor: pointer;
+    transition: background-color .22s, border-color .22s, box-shadow .22s, transform .22s;
+}
+.app-account-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 9px; background: #21ba9c16; font-size: 19px; }
+.app-account-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-account-button > svg { flex: none; color: #64748b; transition: transform .25s; }
+.app-account-button[aria-expanded="true"] > svg { transform: rotate(180deg); }
+.app-account-button:hover { background: #f5f9fc; border-color: #21ba9c; box-shadow: 0 5px 16px #162e4910; transform: translateY(-2px); }
+.app-account-button:active { transform: translateY(0); }
+.app-account-button:focus-visible { outline: 2px solid #21ba9c; outline-offset: 3px; }
+.app-logout-button { gap: 8px; }
+:is(.dark, .dark-mode) .app-account-button { background: #151f2e; color: #f1f5fa; border-color: #344255; }
+:is(.dark, .dark-mode) .app-account-button:hover { background: #1c293a; border-color: #21ba9c; }
+:is(.dark, .dark-mode) .app-account-button > svg { color: #a7b5c8; }
+
+.settings-overlay {
+    --settings-panel: #fff; --settings-soft: #f5f7fb; --settings-border: #e1e7ef;
+    --settings-text: #1c293b; --settings-muted: #64748b; --settings-accent: #078574;
+    position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center;
+    padding: 24px; font-family: var(--font-quicksand), sans-serif; color: var(--settings-text);
+}
+:is(.dark, .dark-mode) .settings-overlay {
+    --settings-panel: #151f2e; --settings-soft: #1c293a; --settings-border: #344255;
+    --settings-text: #f1f5fa; --settings-muted: #a7b5c8; --settings-accent: #21ba9c;
+}
+.settings-backdrop { position: absolute; inset: 0; background: #060c16a6; backdrop-filter: blur(9px); opacity: 0; }
+.settings-dialog {
+    position: relative; width: min(100%, 540px); max-height: calc(100dvh - 48px);
+    display: flex; flex-direction: column; overflow: hidden; opacity: 0;
+    border: 1px solid var(--settings-border); border-radius: 24px;
+    background: var(--settings-panel); box-shadow: 0 28px 100px #0004;
+    transition: background-color .25s, border-color .25s, color .25s;
+}
+.settings-heading { position: relative; padding: 28px 30px 22px; flex: none; }
+.settings-emblem { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; color: var(--settings-accent); background: #21ba9c18; margin-bottom: 18px; }
+.settings-heading .settings-eyebrow { margin: 0 0 8px; color: var(--settings-accent); font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+.settings-heading h2 { margin: 0; font-size: clamp(25px, 4vw, 30px); line-height: 1.2; font-weight: 800; letter-spacing: -.025em; }
+.settings-heading > p:last-child { margin: 9px 0 0; font-size: 13px; line-height: 1.6; color: var(--settings-muted); }
+.settings-close { position: absolute; right: 20px; top: 20px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 11px; color: var(--settings-muted); background: transparent; cursor: pointer; transition: background-color .2s, color .2s, transform .2s; }
+.settings-close:hover { background: var(--settings-soft); color: var(--settings-text); transform: rotate(8deg); }
+.settings-scroll { overflow-y: auto; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--settings-border) transparent; }
+.settings-sections { padding: 0 30px 28px; }
+.settings-section + .settings-section { margin-top: 26px; padding-top: 23px; border-top: 1px solid var(--settings-border); }
+.settings-section h3, .settings-section > label { display: block; margin: 0; font-family: inherit; font-size: 15px; line-height: 1.4; font-weight: 800; color: var(--settings-text); }
+.settings-section > p { margin: 6px 0 15px; font-size: 12px; line-height: 1.6; color: var(--settings-muted); }
+.settings-themes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.settings-theme { padding: 8px; border: 1px solid var(--settings-border); border-radius: 14px; color: var(--settings-muted); background: var(--settings-soft); text-align: left; cursor: pointer; transition: border-color .24s, background-color .24s, color .24s, transform .24s, box-shadow .24s; }
+.settings-theme:hover { transform: translateY(-2px); border-color: var(--settings-accent); }
+.settings-theme.is-selected { border-color: var(--settings-accent); color: var(--settings-text); box-shadow: 0 0 0 2px #21ba9c15; background: #21ba9c0c; }
+.settings-theme-preview { position: relative; display: flex; flex-direction: column; gap: 6px; height: 63px; padding: 11px; border: 1px solid #dce4ee; border-radius: 8px; background: #f6f8fc; overflow: hidden; }
+.settings-theme-preview > span { height: 7px; background: #d8e1ee; border-radius: 3px; }
+.settings-theme-preview > span:first-child { width: 40%; background: #21ba9c; }
+.settings-theme-preview > span:last-child { width: 70%; }
+.preview-dark { background: #151f2e; border-color: #344255; }
+.preview-dark > span { background: #344255; }
+.preview-system { background: linear-gradient(90deg, #f6f8fc 50%, #151f2e 50%); }
+.preview-system > span:not(:first-child) { background: linear-gradient(90deg, #d8e1ee 50%, #344255 50%); }
+.settings-theme-label { display: flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 12px; font-weight: 700; }
+.settings-theme-check { margin-left: auto; color: var(--settings-accent); opacity: 0; transform: scale(.6); transition: opacity .22s, transform .22s; }
+.is-selected .settings-theme-check { opacity: 1; transform: scale(1); }
+.settings-language { display: flex; align-items: center; position: relative; border: 1px solid var(--settings-border); border-radius: 13px; background: var(--settings-soft); transition: border-color .2s, box-shadow .2s, background-color .25s; }
+.settings-language > svg { position: absolute; left: 15px; color: var(--settings-muted); pointer-events: none; }
+.settings-language > svg:last-child { left: auto; right: 15px; }
+.settings-language select { appearance: none; width: 100%; height: 48px; padding: 0 44px; border: 0; border-radius: inherit; outline: 0; font: 600 14px var(--font-quicksand), sans-serif; color: var(--settings-text); background: transparent; cursor: pointer; }
+.settings-language option { color: var(--settings-text); background: var(--settings-panel); }
+.settings-language:focus-within { border-color: var(--settings-accent); box-shadow: 0 0 0 3px #21ba9c20; }
+.settings-section .settings-error { color: #dc354b; }
+.settings-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 30px; border-top: 1px solid var(--settings-border); background: var(--settings-soft); flex: none; }
+.settings-footer > span { display: flex; align-items: center; gap: 6px; color: var(--settings-muted); font-size: 11px; }
+.settings-footer > span svg { color: var(--settings-accent); }
+.settings-footer > button { min-width: 100px; }
+.settings-dialog button:focus-visible { outline: 2px solid var(--settings-accent); outline-offset: 3px; }
+@media (max-width: 560px) {
+    .app-account-actions { gap: 8px; }
+    .app-account-button { max-width: 160px; padding-right: 9px; gap: 6px; }
+    .app-logout-button { padding-inline: 13px; }
+    .app-logout-button > svg { display: none; }
+    .settings-overlay { padding: 12px; }
+    .settings-dialog { max-height: calc(100dvh - 24px); border-radius: 20px; }
+    .settings-heading { padding: 24px 20px 20px; }
+    .settings-sections { padding: 0 20px 24px; }
+    .settings-footer { padding: 16px 20px; }
+    .settings-themes { gap: 7px; }
+    .settings-theme { padding: 7px; }
+    .settings-theme-label { gap: 4px; font-size: 11px; }
+}
+@media (max-height: 700px) { .settings-emblem { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+    .settings-overlay *, .app-account-button, .app-account-button > svg { transition: none !important; }
+    .settings-theme:hover, .settings-close:hover, .app-account-button:hover { transform: none; }
+}
+/* Keep legacy descendant button borders off the new control contents. */
+.settings-dialog button > span,
+.settings-dialog button svg,
+.app-account-button > span,
+.app-account-button > svg,
+.app-logout-button > * { border: 0 !important; }

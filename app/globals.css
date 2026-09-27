@@ -33,7 +33,10 @@
     --tools: var(--color-gray-200);
     --product-item: var(--color-gray-100);
     --product-item-hover: var(--color-gray-300);
-    --ai-chat: var(--color-gray-400);
+    --ai-chat: #ffffff;
+    --ai-chat-panel: #ffffff;
+    --ai-chat-body: #f8fafc;
+    --ai-chat-quiet: #f2f6fb;
     --drag-opage: oklch(92.8% 0.006 264.531 / 0.7);
     --menu-bg: var(--color-gray-400);
     --menu-bg-hover: var(--color-gray-500);
@@ -45,11 +48,11 @@
     --user-settings: var(--color-gray-200);
     --share-bg: var(--color-white);
     --ai-chat-text: var(--color-gray-800);
-    --ai-chat-message-bg: var(--color-gray-200);
+    --ai-chat-message-bg: #ffffff;
     --ai-chat-message-text: var(--color-gray-900);
     --ai-chat-help-text: var(--color-gray-600);
-    --ai-chat-border: var(--color-gray-300);
-    --ai-chat-input-bg: var(--color-white);
+    --ai-chat-border: #dfe6ef;
+    --ai-chat-input-bg: #f5f7fb;
     --ai-chat-input-text: var(--color-gray-900);
     --ai-chat-input-placeholder: var(--color-gray-600);
     --custom-product-input: var(--color-gray-400);
@@ -70,6 +73,9 @@
     --product-item: var(--color-gray-800);
     --product-item-hover: var(--color-gray-700);
     --ai-chat: var(--color-gray-900);
+    --ai-chat-panel: var(--color-gray-900);
+    --ai-chat-body: var(--color-gray-900);
+    --ai-chat-quiet: var(--color-gray-900);
     --drag-opage: oklch(21% 0.034 264.665 / 0.7);
     --menu-bg: var(--color-gray-900);
     --menu-bg-hover: var(--color-gray-600);
@@ -450,6 +456,16 @@ select:-moz-autofill {
 .ai-chat-input::placeholder {
     color: var(--ai-chat-input-placeholder);
 }
+
+.ai-chat-header, .ai-chat-tabs, .ai-chat-composer { background: var(--ai-chat-panel); }
+.ai-chat-body, .ai-chat-voice { background: var(--ai-chat-body); }
+.ai-chat .ai-chat-input { border: 1px solid var(--ai-chat-border); transition: border-color .2s ease, box-shadow .2s ease; }
+.ai-chat .ai-chat-input:focus { outline: none; border-color: #21ba9c; box-shadow: 0 0 0 3px #21ba9c20; }
+:is(.light, .light-mode) .ai-chat { box-shadow: 0 20px 60px #23385428; }
+:is(.light, .light-mode) .ai-chat-message-bg { box-shadow: 0 2px 10px #243b5210; border: 1px solid #e4eaf2; }
+:is(.light, .light-mode) .ai-chat [role="tab"][aria-selected="false"],
+:is(.light, .light-mode) .ai-chat-button { background: var(--ai-chat-quiet); color: var(--ai-chat-text); }
+:is(.light, .light-mode) .ai-chat-button:hover { background: #e8f1fa; opacity: 1; }
 
 .tools .tool,
 .tools .tool-danger {

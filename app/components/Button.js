@@ -10,13 +10,15 @@ import {useEffect} from "react";
 import gsap from "gsap";
 
 export default function Button(props) {
+    const modernAction = ["app-primary-action", "app-secondary-action", "app-danger-action"].includes(props.overrideDefaultClasses);
+    const Label = modernAction ? "span" : "p";
     const {setOverlay, setOverlayContent, closeOverlay} = useOverlayContext();
-    const {shoppingList, createShoppingList, getShoppingList, setUserLists} =
+    const {shoppingList, setShoppingList, createShoppingList, getShoppingList, setUserLists} =
         useListContext();
     const {userData, token} = useUserContext();
-    const {errors, setErrors, hasTyped} = useValidationContext();
+    const {setErrors, setHasTyped} = useValidationContext();
     const {showNotification} = useNotificationContext();
-    const {setLoading} = useLoadingContext();
+    const {loading, setLoading} = useLoadingContext();
 
     useEffect(() => {
         if (props.action === "add-product-overlay") {
@@ -48,7 +50,7 @@ export default function Button(props) {
     });
 
     const handleClick = async () => {
-        if (errors.message) return;
+        if (loading) return;
 
         const action = props.action.toLowerCase();
 
@@ -82,6 +84,9 @@ export default function Button(props) {
         }
 
         if (action === "create-list") {
+            setShoppingList((prev) => ({...prev, name: ""}));
+            setHasTyped(false);
+            setErrors({message: null});
             setOverlay((prev) => !prev);
             setOverlayContent({
                 title: "Create a new list",
@@ -148,13 +153,16 @@ export default function Button(props) {
 
         if (props.action === "create-a-list") {
             try {
-                if (!hasTyped)
-                    return setErrors({message: "List Name required"});
-                if (errors.message) return;
+                const name = shoppingList?.name?.trim() || "";
+                if (name.length < 3) {
+                    setErrors({message: name ? "Name must be at least 3 characters" : "List name required"});
+                    return;
+                }
+                setErrors({message: null});
                 setLoading(true);
 
                 const data = {
-                    name: shoppingList.name,
+                    name,
                     userId: userData.id,
                     token: token,
                 };
@@ -211,23 +219,31 @@ export default function Button(props) {
                     handleClick();
                 }
             }}
-            className={`relative  cursor-pointer z-20 group ${
+            className={`relative cursor-pointer z-20 group ${
                 props.overrideDefaultClasses
                     ? props.overrideDefaultClasses
                     : "bg-blue-800 text-primary"
-            }  px-6 py-3 md:px-8 md:py-4 rounded-md overflow-hidden`}
+            } ${
+                ["app-primary-action", "app-secondary-action", "app-danger-action"].includes(props.overrideDefaultClasses)
+                    ? ""
+                    : "px-6 py-3 md:px-8 md:py-4 rounded-md"
+            } overflow-hidden`}
         >
-            <p
-                className={`z-20 relative delay-75 capitalize font-bold  ${
+            <Label
+                className={`z-20 relative delay-75 capitalize font-bold ${modernAction ? "app-action-label" : ""} ${
                     props.hover && props.light
                         ? "group-hover:text-white"
                         : "group-hover:text-black"
-                } transition-colors duration-200   ${
+                } transition-colors duration-200 ${
+                    props.overrideDefaultClasses === "app-primary-action"
+                        ? "app-primary-action-label"
+                        : ""
+                } ${
                     props.textColorOverride && props.textColorOverride
                 }`}
             >
                 {props.cta}
-            </p>
+            </Label>
 
             {props.hover && props.hover === "inwards" && (
                 <>

@@ -7,8 +7,15 @@ import {ListProvider} from "./contexts/ListContext";
 import {LoadingProvider} from "./contexts/LoadingContext";
 import {ProductProvider} from "./contexts/ProductContext";
 import "./globals.css";
+import "./css/list-pages.css";
+import "./css/page-skeleton.css";
+import "./css/auth.css";
+import "./css/settings.css";
+import "./css/not-found.css";
 import {Quicksand, Saira} from "next/font/google";
 import {AuthProvider} from "./hooks/useAuth";
+import {cookies} from "next/headers";
+import AnimatedFavicon from "./components/AnimatedFavicon";
 
 const quicksand = Quicksand({
     subsets: ["latin"],
@@ -39,63 +46,37 @@ export const metadata = {
     title: "Lista - Your Only Shopping List",
     description:
         "Share your shopping list with your family and friends and they will receive real-time updates.",
-    icons: {
-        icon: "/favicon.png",
-    },
 };
 
 // This script runs before the page renders to prevent flash of incorrect theme
 const ThemeScript = () => {
     const themeScript = `
         (function() {
-            try {
-                // Function to get a cookie by name
-                function getCookie(name) {
-                    const value = '; ' + document.cookie;
-                    const parts = value.split('; ' + name + '=');
-                    if (parts.length === 2) return parts.pop().split(';').shift();
-                    return null;
-                }
-                
-                // Check if user is authenticated (has a token cookie)
-                const isAuthenticated = !!getCookie('token');
-                
-                // Only apply theme if user is authenticated
-                if (isAuthenticated) {
-                    // Get stored theme or default to 'system'
-                    const storedTheme = localStorage.getItem('theme') || 'system';
-                    
-                    // Check if the user has a saved theme preference
-                    if (storedTheme === 'dark' || storedTheme === 'light') {
-                        // If user has explicitly chosen a theme, apply it immediately
-                        document.documentElement.classList.add(storedTheme, storedTheme + '-mode');
-                    } else {
-                        // For system theme, check the preferred color scheme
-                        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                        if (isDark) {
-                            document.documentElement.classList.add('dark', 'dark-mode');
-                        } else {
-                            document.documentElement.classList.add('light', 'light-mode');
-                        }
-                    }
-                } else {
-                    // If not authenticated, ensure no theme classes are present
-                    const html = document.documentElement;
-                    ['dark', 'dark-mode', 'light', 'light-mode'].forEach(cls => html.classList.remove(cls));
-                    html.removeAttribute('data-theme');
-                }
-                
-                // Add a class to prevent transitions during initial load
-                document.documentElement.classList.add('theme-loading');
-                
-                // Remove the loading class after a short delay to prevent flash
-                setTimeout(() => {
-                    document.documentElement.classList.remove('theme-loading');
-                    document.documentElement.classList.add('theme-loaded');
-                }, 0);
-            } catch (e) {
-                console.error('Error applying theme:', e);
+            var html = document.documentElement;
+            html.classList.add('theme-loading');
+            var preference = 'system';
+            try { preference = localStorage.getItem('theme') || 'system'; } catch (_) {}
+            var dark = preference === 'dark' ||
+                (preference !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            var theme = dark ? 'dark' : 'light';
+            html.classList.remove('dark', 'dark-mode', 'light', 'light-mode');
+            html.classList.add(theme, theme + '-mode');
+            html.style.colorScheme = theme;
+            var favicon = document.getElementById('lista-favicon');
+            if (!favicon) {
+                favicon = document.createElement('link');
+                favicon.id = 'lista-favicon';
+                favicon.rel = 'icon';
+                favicon.type = 'image/svg+xml';
+                document.head.appendChild(favicon);
             }
+            favicon.href = dark ? '/favicon-dark.svg' : '/favicon-light.svg';
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                    html.classList.remove('theme-loading');
+                    html.classList.add('theme-loaded');
+                });
+            });
         })();
     `;
 
@@ -108,20 +89,25 @@ const ThemeScript = () => {
     );
 };
 
-export default function RootLayout({children}) {
+export default async function RootLayout({children}) {
+    const cookieStore = await cookies();
+    const initialRegistered = cookieStore.get("registered")?.value === "yes";
+    const initialUserName = cookieStore.get("username")?.value;
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
+                <noscript><link rel="icon" type="image/svg+xml" href="/favicon-light.svg" /></noscript>
                 <ThemeScript />
             </head>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${quicksand.variable} font-saira antialiased bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-200`}
+                className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${quicksand.variable} font-saira antialiased transition-colors duration-200`}
             >
+                <AnimatedFavicon />
                 <AuthProvider>
                     <LoadingProvider>
                         <NotificationProvider>
                             <ListProvider>
-                                <UserProvider>
+                                <UserProvider initialRegistered={initialRegistered} initialUserName={initialUserName}>
                                     <ProductProvider>
                                         <ValidationProvider>
                                             <OverlayProvider>

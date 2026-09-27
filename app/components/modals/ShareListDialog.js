@@ -1,5 +1,5 @@
 "use client";
-import {useState, useEffect} from "react";
+import {useState, useEffect, useRef} from "react";
 import WhatsAppIcon from "../svgs/WhatsappIcon";
 import MessengerIcon from "../svgs/MessengerIcon";
 import LinkIcon from "../svgs/LinkIcon";
@@ -25,9 +25,11 @@ const ShareListDialog = ({
     setSharedWithUsers,
     userId,
     list,
+    initialView = "share",
 }) => {
+    const dialogRef = useRef(null);
     const {showNotification} = useNotificationContext();
-    const {userLists, setUserLists} = useListContext();
+    const {userLists, setUserLists, lenis} = useListContext();
     const {token: userToken} = useUserContext();
 
     const [shareCode, setShareCode] = useState(null);
@@ -113,11 +115,30 @@ const ShareListDialog = ({
 
     const copyToClipboard = async () => {
         const code = await ensureShareCode("copy");
-        const url = code ? `${listUrlBase}?k=${code}` : listUrlBase;
-        navigator.clipboard.writeText(url);
-        showNotification("Link copied to clipboard!", "success", 3000);
-        onClose();
+        if (!code) return;
+        try {
+            await navigator.clipboard.writeText(`${listUrlBase}?k=${code}`);
+            showNotification("Link copied to clipboard!", "success", 3000);
+            onClose();
+        } catch {
+            showNotification("Could not copy link. Please try again.", "error");
+        }
     };
+
+    useEffect(() => {
+        const previousFocus = document.activeElement;
+        const previousOverflow = document.body.style.overflow;
+        const pageScroller = lenis?.current;
+        const wasStopped = pageScroller?.isStopped;
+        pageScroller?.stop();
+        document.body.style.overflow = "hidden";
+        dialogRef.current?.querySelector("button")?.focus({preventScroll: true});
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            if (!wasStopped) pageScroller?.start();
+            if (previousFocus?.isConnected) previousFocus.focus({preventScroll: true});
+        };
+    }, [lenis]);
 
     useEffect(() => {
         // close if clicked outside the modal
@@ -130,6 +151,19 @@ const ShareListDialog = ({
         const handleKeyDown = (event) => {
             if (event.key === "Escape") {
                 onClose();
+            }
+            if (event.key === "Tab") {
+                const controls = dialogRef.current?.querySelectorAll("button:not(:disabled), a[href]");
+                if (!controls?.length) return;
+                const first = controls[0];
+                const last = controls[controls.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
             }
         };
 
@@ -144,7 +178,7 @@ const ShareListDialog = ({
         };
     });
 
-    const [usersSharedWithOverlay, setUsersSharedWithOverlay] = useState(false);
+    const [usersSharedWithOverlay, setUsersSharedWithOverlay] = useState(initialView === "members");
     const handleSeeUsersSharedWith = () => {
         setUsersSharedWithOverlay(true);
     };
@@ -237,18 +271,22 @@ const ShareListDialog = ({
 
     return (
         <>
-            <div className="fixed inset-0 drag share-overlay blur-[50px]  bg-opacity-30 flex items-center justify-center z-50"></div>
-            <div className="fixed inset-0  flex items-center justify-center z-50">
+            <div className="app-dialog-backdrop fixed inset-0 z-50" />
+            <div className="app-dialog-layer fixed inset-0 grid place-items-center z-50" data-lenis-prevent>
                 {!usersSharedWithOverlay && (
-                    <div className=" share-dialog p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-sm">
-                        <h3 className="text-lg font-bold mb-4">Share List</h3>
-
-                        <div className="space-y-3">
+                    <section ref={dialogRef} className="app-dialog lista-share-dialog" role="dialog" aria-modal="true" aria-labelledby="share-list-title">
+                        <button type="button" className="app-dialog-close" onClick={onClose} aria-label="Close sharing dialog"><CloseIcon className="w-6 h-6" /></button>
+                        <div className="app-dialog-heading">
+                            <p className="app-dialog-eyebrow">SHOP TOGETHER</p>
+                            <h2 id="share-list-title">Share your list</h2>
+                            <p className="app-dialog-description">Send a link and keep your shopping in sync.</p>
+                        </div>
+                        <div className="share-options">
                             <a
                                 href={whatsappUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex cursor-pointer transition-colors duration-200 items-center px-4 py-2 bg-green-700 text-white rounded hover:bg-green-600 disabled:opacity-60"
+                                className="share-option share-option-whatsapp" aria-disabled={!!generatingTarget}
                                 onClick={async (e) => {
                                     e.preventDefault();
                                     const code = await ensureShareCode(
@@ -265,10 +303,8 @@ const ShareListDialog = ({
                                     );
                                 }}
                             >
-                                <WhatsAppIcon className={"w-7 h-7 mr-2"} />
-                                {generatingTarget === "whatsapp"
-                                    ? "Preparing link..."
-                                    : "Share via WhatsApp"}
+                                <span className="share-option-icon"><WhatsAppIcon /></span>
+                                <span className="share-option-text"><strong>{generatingTarget === "whatsapp" ? "Preparing link…" : "WhatsApp"}</strong><small>Send to a chat or group</small></span>
                             </a>
 
                             <button
@@ -277,85 +313,66 @@ const ShareListDialog = ({
                                     const code = await ensureShareCode(
                                         "messenger"
                                     );
-                                    const url = code
-                                        ? `${listUrlBase}?k=${code}`
-                                        : listUrlBase;
-                                    shareOnMessenger(url);
+                                    if (!code) return;
+                                    shareOnMessenger(`${listUrlBase}?k=${code}`);
                                 }}
-                                className="flex cursor-pointer transition-colors duration-200 w-full items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-60"
-                                disabled={generatingTarget === "messenger"}
+                                className="share-option share-option-messenger"
+                                disabled={!!generatingTarget}
                             >
-                                <MessengerIcon className={"w-8 h-8 mr-2"} />
-                                {generatingTarget === "messenger"
-                                    ? "Preparing link..."
-                                    : "Share via Messenger"}
+                                <span className="share-option-icon"><MessengerIcon /></span>
+                                <span className="share-option-text"><strong>{generatingTarget === "messenger" ? "Preparing link…" : "Messenger"}</strong><small>Share with your friends</small></span>
                             </button>
 
                             <button
                                 onClick={copyToClipboard}
-                                className="flex cursor-pointer transition-colors duration-200 items-center px-4 py-2 hover:text-white bg-gray-200 dark:bg-gray-400 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full disabled:opacity-60"
-                                disabled={generatingTarget === "copy"}
+                                className="share-option share-option-link"
+                                disabled={!!generatingTarget}
                             >
-                                <LinkIcon className="w-7 h-7 mr-3" />
-                                {generatingTarget === "copy"
-                                    ? "Preparing link..."
-                                    : "Copy Link"}
+                                <span className="share-option-icon"><LinkIcon /></span>
+                                <span className="share-option-text"><strong>{generatingTarget === "copy" ? "Preparing link…" : "Copy link"}</strong><small>Paste it wherever you like</small></span>
                             </button>
                             {sharedWithUsers?.length > 0 &&
                                 isListOwner(list, userId) && (
                                     <button
                                         onClick={handleSeeUsersSharedWith}
-                                        className="flex cursor-pointer transition-colors duration-200 items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 w-full"
+                                        className="share-option share-option-members"
                                     >
-                                        <BinocularIcon className="w-7 h-7 mr-3" />
-                                        See Users Shared With
+                                        <span className="share-option-icon"><BinocularIcon /></span>
+                                        <span className="share-option-text"><strong>Manage access</strong><small>{localSharedUsers.length} people sharing this list</small></span>
                                     </button>
                                 )}
                         </div>
 
-                        <div>
-                            <button
-                                onClick={onClose}
-                                className="mt-4  px-2 py-1 rounded-sm cursor-pointer hover:text-red-500 duration-200 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
+                        <div className="app-dialog-actions"><button type="button" onClick={onClose} className="app-secondary-action">Done</button></div>
+                    </section>
                 )}
 
                 {usersSharedWithOverlay && (
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg  w-full max-w-[90%] sm:max-w-lg">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-bold  dark:text-white">
-                                Shared With Users
-                            </h3>
+                    <div ref={dialogRef} className="app-dialog lista-share-dialog" role="dialog" aria-modal="true" aria-labelledby="share-members-title">
+                        <div className="app-dialog-heading">
+                            <p className="app-dialog-eyebrow">SHOP TOGETHER</p>
+                            <h2 id="share-members-title">Manage access</h2>
+                            <p className="app-dialog-description">People who can shop with you on this list.</p>
                             <button
-                                onClick={() => setUsersSharedWithOverlay(false)}
-                                className="text-red-500 px-2 py-1 !border-none rounded-sm cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
+                                type="button"
+                                onClick={initialView === "members" ? onClose : () => setUsersSharedWithOverlay(false)}
+                                className="app-dialog-close"
+                                aria-label={initialView === "members" ? "Close access manager" : "Back to sharing options"}
                             >
                                 <CloseIcon className="w-6 h-6" />
                             </button>
                         </div>
 
-                        {sharedWithUsers.length > 0 && (
-                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">
-                                {sharedWithUsers.length} user
-                                {sharedWithUsers.length > 1 ? "s" : ""}
-                            </p>
-                        )}
+                        <p className="share-members-count">{localSharedUsers.length} {localSharedUsers.length === 1 ? "person" : "people"} with access</p>
 
-                        <div className="">
-                            {sharedWithUsers.map((user, index) => (
+                        <div className="share-members-list">
+                            {localSharedUsers.map((user) => (
                                 <div
-                                    className={
-                                        "py-2 px-2 border-b first:border-t border-gray-200 dark:border-gray-700 text-lg flex items-center gap-2 justify-between"
-                                    }
-                                    key={index}
+                                    className="share-member-row"
+                                    key={user.ID}
                                 >
-                                    <h4 className="text-lg">
-                                        {user.display_name}
-                                    </h4>
+                                    <span className="share-member-avatar" aria-hidden="true">{(user.display_name || "?").trim().charAt(0).toUpperCase()}</span>
+                                    <div className="share-member-info"><h4>{user.display_name}</h4><span>Can view and edit</span></div>
                                     <button
                                         onClick={() =>
                                             handleRevokeShare(
@@ -364,9 +381,10 @@ const ShareListDialog = ({
                                                 userToken
                                             )
                                         }
-                                        className="text-gray-500 dark:text-gray-400 group hover:!border-red-500 duration-200 text-base transition-colors hover:!text-red-500 px-2 py-1 rounded-sm cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-3"
+                                        className="share-member-remove"
+                                        aria-label={`Remove ${user.display_name} from this list`}
                                     >
-                                        Revoke Share
+                                        Remove access
                                         <MinusIcon
                                             className="w-5 h-5 group-hover:text-red-500 duration-200 transition-colors"
                                             strokeWidth={2}
@@ -375,6 +393,7 @@ const ShareListDialog = ({
                                 </div>
                             ))}
                         </div>
+                        <p className="share-members-note">Changes to access take effect right away.</p>
                     </div>
                 )}
             </div>

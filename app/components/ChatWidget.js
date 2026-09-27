@@ -2230,7 +2230,7 @@ const ChatWidget = forwardRef(function ChatWidget(
           inert={!open}
           className="fixed right-3 bottom-3 sm:right-6 sm:bottom-6 z-[9999] w-[calc(100vw-1.5rem)] sm:w-[480px] lg:w-[560px] h-[min(90dvh,840px)] max-h-[calc(100dvh-1.5rem)] rounded-2xl border ai-chat ai-chat-text shadow-2xl overflow-hidden flex flex-col"
         >
-          <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5 border-b border-[var(--ai-chat-border)] shrink-0">
+          <div className="ai-chat-header flex items-center justify-between gap-3 px-4 py-4 sm:px-5 border-b border-[var(--ai-chat-border)] shrink-0">
             <div>
               <div className="text-lg font-bold font-saira leading-tight">
                 Lista Assistant
@@ -2274,7 +2274,7 @@ const ChatWidget = forwardRef(function ChatWidget(
           <div
             role="tablist"
             aria-label="Assistant modes"
-            className="grid grid-cols-2 gap-2 px-4 py-3 sm:px-5 border-b border-[var(--ai-chat-border)] shrink-0"
+            className="ai-chat-tabs grid grid-cols-2 gap-2 px-4 py-3 sm:px-5 border-b border-[var(--ai-chat-border)] shrink-0"
           >
             <button
               type="button"
@@ -2306,7 +2306,7 @@ const ChatWidget = forwardRef(function ChatWidget(
               id="lista-chat-scroll"
               data-lenis-prevent
               data-scroll-lock-scrollable
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 text-[15px] leading-relaxed"
+              className="ai-chat-body min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 text-[15px] leading-relaxed"
               style={{
                 WebkitOverflowScrolling: "touch",
                 touchAction: "pan-y",
@@ -2824,7 +2824,7 @@ const ChatWidget = forwardRef(function ChatWidget(
 
             <form
               onSubmit={handleSubmit}
-              className="flex chatbot-input items-center gap-2 p-4 sm:p-5 border-t border-[var(--ai-chat-border)] shrink-0"
+              className="ai-chat-composer flex chatbot-input items-center gap-2 p-4 sm:p-5 border-t border-[var(--ai-chat-border)] shrink-0"
             >
               <input
                 ref={inputRef}
@@ -2850,7 +2850,7 @@ const ChatWidget = forwardRef(function ChatWidget(
           </div>
 
           <div
-            className={`${activeTab === "voice" ? "flex" : "hidden"} min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5`}
+            className={`${activeTab === "voice" ? "flex" : "hidden"} ai-chat-voice min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5`}
             role="tabpanel"
             aria-label="Voice shopping list"
             data-lenis-prevent

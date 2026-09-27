@@ -2,14 +2,15 @@ import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
 import ResetPasswordClient from "./ResetPasswordClient";
 
-export default function ResetPasswordPage({searchParams}) {
-    const cookieStore = cookies();
+export default async function ResetPasswordPage({searchParams}) {
+    const cookieStore = await cookies();
+    const query = await searchParams;
     const cookieToken = cookieStore.get("token")?.value;
     const registered = cookieStore.get("registered")?.value;
 
-    const token = searchParams?.token || null;
-    const key = searchParams?.key || null;
-    const login = searchParams?.login || null;
+    const token = query?.token || null;
+    const key = query?.key || null;
+    const login = query?.login || null;
 
     // If no valid params are present, redirect to login
     if (!token && !(key && login)) {

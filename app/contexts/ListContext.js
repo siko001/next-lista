@@ -11,24 +11,17 @@ import {useNotificationContext} from "./NotificationContext";
 import {decryptToken, WP_API_BASE} from "../lib/helpers";
 import gsap from "gsap";
 const ListContext = createContext();
-import Lenis from "lenis";
+import {createSmoothScroller} from "../lib/smoothScroll";
 import "lenis/dist/lenis.css";
 
 export const ListProvider = ({children}) => {
     const lenis = useRef(null);
     useEffect(() => {
-        lenis.current = new Lenis({
-            duration: 2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            smooth: true,
-        });
-        const raf = (time) => {
-            lenis.current.raf(time);
-            requestAnimationFrame(raf);
-        };
-        requestAnimationFrame(raf);
+        const scroller = createSmoothScroller();
+        lenis.current = scroller.instance;
         return () => {
-            lenis.current.destroy();
+            scroller.destroy();
+            lenis.current = null;
         };
     }, []);
 
@@ -48,6 +41,8 @@ export const ListProvider = ({children}) => {
     const [startingInnerListName, setStartingInnerListName] = useState(null);
     const [userLists, setUserLists] = useState([]);
     const [listName, setListName] = useState();
+    const [listPreview, setListPreview] = useState(null);
+    const [listsLoaded, setListsLoaded] = useState(false);
 
     // Create List
     const createShoppingList = async (listData) => {
@@ -107,6 +102,7 @@ export const ListProvider = ({children}) => {
             filteredLists.sort((a, b) => a.menu_order - b.menu_order);
 
             setUserLists(filteredLists);
+            setListsLoaded(true);
             return filteredLists;
         } catch (error) {
             console.error("Failed to fetch lists:", error);
@@ -405,6 +401,9 @@ export const ListProvider = ({children}) => {
                 handleRenameList,
                 listName,
                 setListName,
+                listPreview,
+                setListPreview,
+                listsLoaded,
                 lenis,
                 isInInnerList,
                 setIsInnerList,

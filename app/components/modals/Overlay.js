@@ -4,11 +4,12 @@ import {useOverlayContext} from "../../contexts/OverlayContext";
 
 import CloseIcon from "../svgs/CloseIcon";
 import Button from "../Button";
-import {useListContext} from "../../contexts/ListContext";
 
 export default function Overlay({handleDeleteList, handleEmptyList}) {
     const {closeOverlay, overlayContent, convertContentToComponent} =
         useOverlayContext();
+    const isDestructive = ["delete-a-list", "empty-a-list", "remove-a-list"].includes(overlayContent?.action?.toLowerCase());
+    const isCreateList = overlayContent?.action === "create-a-list";
 
     useEffect(() => {
         // trigger gsap animation when overlay is opening
@@ -19,8 +20,8 @@ export default function Overlay({handleDeleteList, handleEmptyList}) {
         );
         gsap.fromTo(
             "#overlay-content",
-            {scale: 0, opacity: 0},
-            {scale: 1, opacity: 1, duration: 0.5, delay: 0.25}
+            {scale: 0.97, y: 12, opacity: 0},
+            {scale: 1, y: 0, opacity: 1, duration: 0.3, delay: 0.08, ease: "power2.out"}
         );
 
         const closeOnEsc = (e) => {
@@ -34,63 +35,66 @@ export default function Overlay({handleDeleteList, handleEmptyList}) {
 
     return (
         <div
-            className={
-                "w-full h-screen fixed z-50 inset-0 grid place-items-center overlay"
-            }
+            className="app-dialog-layer fixed z-50 inset-0 grid place-items-center overlay"
         >
             <div
                 id={"overlay-backdrop"}
-                className="absolute inset-0 opacity-0 w-full h-full backdrop-blur z-10"
+                className="app-dialog-backdrop absolute inset-0 opacity-0 w-full h-full z-10"
             ></div>
 
-            <div
+            <section
                 id={"overlay-content"}
-                className={
-                    "z-20 bg-white p-12 md:p-18 rounded-lg shadow-lg text-black flex flex-col gap-4 relative"
-                }
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="app-dialog-title"
+                className={`app-dialog z-20 relative ${isCreateList ? "app-dialog-create" : ""} ${isDestructive ? "app-dialog-confirm" : ""}`}
             >
-                <CloseIcon
-                    className={
-                        "text-red-500 absolute right-4 top-4 w-8 h-8 cursor-pointer hover:text-black duration-200 transition-colors"
-                    }
-                    onClick={closeOverlay}
-                />
+                <button type="button" className="app-dialog-close" onClick={closeOverlay} aria-label="Close dialog">
+                    <CloseIcon className="w-6 h-6" aria-hidden="true" />
+                </button>
 
-                {overlayContent.title && (
-                    <h2 className="text-3xl md:text-4xl max-w-[15ch] overflow-scroll font-bold text-blue-700">
-                        {overlayContent.title}
-                    </h2>
+                {overlayContent?.title && (
+                    <div className="app-dialog-heading">
+                        {isCreateList && <p className="app-dialog-eyebrow">YOUR SHOPPING LIST</p>}
+                        {isDestructive && <p className="app-dialog-eyebrow">CONFIRM ACTION</p>}
+                        <h2 id="app-dialog-title">{overlayContent.title}</h2>
+                        {isCreateList && <p className="app-dialog-description">Give your list a name to start adding products.</p>}
+                    </div>
                 )}
 
-                {overlayContent.content &&
+                {isDestructive && <>
+                    <div className="app-dialog-list-preview">
+                        <span>Shopping list</span>
+                        <strong>{overlayContent.listTitle}</strong>
+                    </div>
+                    <p className="app-dialog-confirm-description">{overlayContent.description}</p>
+                </>}
+
+                {overlayContent?.content &&
                     convertContentToComponent(overlayContent.content)}
 
-                <div className={"flex gap-4 justify-between mt-6"}>
-                    {overlayContent.action && (
+                <div className="app-dialog-actions">
+                    {overlayContent?.cancelAction && (
+                        <Button
+                            cta={"Cancel"}
+                            action={"close-overlay"}
+                            overrideDefaultClasses="app-secondary-action"
+                        />
+                    )}
+
+                    {overlayContent?.action && (
                         <Button
                             cta={overlayContent.cta}
                             action={overlayContent.action}
                             textColorOverride={"text-white"}
-                            color={"#000"}
-                            hover={"borders"}
+                            overrideDefaultClasses={isDestructive ? "app-danger-action" : "app-primary-action"}
                             handleEmptyList={handleEmptyList}
                             handleDeleteList={handleDeleteList}
                             data={overlayContent.data}
                         />
                     )}
-
-                    {overlayContent.cancelAction && (
-                        <Button
-                            cta={"Cancel"}
-                            action={"close-overlay"}
-                            color={"#fff"}
-                            textColorOverride={"text-white"}
-                            overrideDefaultClasses={"bg-red-500"}
-                            hover={"borders"}
-                        />
-                    )}
                 </div>
-            </div>
+            </section>
         </div>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 import {useEffect, useState} from "react";
-import Link from "next/link";
+import {useRouter} from "next/navigation";
 import SettingsIcon from "../svgs/SettingsIcon";
 import Progressbar from "./Progressbar";
 import BinocularIcon from "../svgs/BinocularIcon";
@@ -12,6 +12,7 @@ import {
 import {setCookie} from "cookies-next";
 import {useUserContext} from "../../contexts/UserContext";
 import {getListMetadata} from "../../actions/listActions";
+import {GripVertical, UserRound, UsersRound} from "lucide-react";
 
 // Contexts
 import {useListContext} from "../../contexts/ListContext";
@@ -27,6 +28,7 @@ export default function List({
     decoy,
     userId,
     listsMetadata,
+    onManageAccess,
 }) {
     const {
         listRenameRef,
@@ -35,12 +37,17 @@ export default function List({
         setListRename,
         handleRenameInput,
         startingValue,
+        setListPreview,
     } = useListContext();
     const {userData} = useUserContext();
+    const router = useRouter();
 
     // Prefer client user id when available, fallback to server-provided userId prop
     const effectiveUserId = (userData?.id ?? userId)?.toString();
     const isOwnerBasedOnId = list?.acf?.owner_id === effectiveUserId;
+    const sharedCount = Array.isArray(list?.acf?.shared_with_users)
+        ? list.acf.shared_with_users.length
+        : 0;
 
     // Only use metadata for non-owners
     const metadata = !isOwnerBasedOnId
@@ -65,7 +72,8 @@ export default function List({
             sameSite: "strict", // Prevent CSRF attacks
             maxAge: 60 * 60 * 24 * 7, // 1 week
         });
-        window.location.href = `/list/${listId}`;
+        setListPreview(list);
+        router.push(`/list/${listId}`);
     };
 
     const progress = calculateProgress(
@@ -79,21 +87,19 @@ export default function List({
             id={`list-${list.id}`}
             ref={provided?.innerRef}
             {...(provided?.draggableProps || {})}
-            {...(provided?.dragHandleProps || {})}
-            className={`shoppinglist-item ${
+            className={`shoppinglist-item home-list-card ${
                 list.isNew ? "new-list" : ""
-            } focus:border-primary outline-0  transition-colors hover:shadow-[#00000033] dark:shadow-[#ffffff02] hover:dark:shadow-[#ffffff05] hover:scale-[102%] flex flex-col gap-2 border hover:border-blue-600 dark:hover:border-blue-800  px-6 py-3 2xl:px-8 2xl:py-4 rounded-lg shadow-xl shadow-[#00000022]  min-w-full w-full md:min-w-[550px] lg:min-w-[850px] 2xl:min-w-[950px]  duration-200 shopping-list-hover mx-auto relative ${
+            } shopping-list-hover ${
                 snapshot?.isDragging
-                    ? "!scale-90  border-blue-800 drag md:scale-110 !left-0 md:!left-[50%] md:!-translate-x-[50%]"
-                    : "scale-100 "
+                    ? "is-dragging drag"
+                    : ""
             }`}
             style={{
-                touchAction: "none",
                 ...(provided?.draggableProps?.style || {}),
             }}
         >
-            <div className="flex justify-between w-full gap-3 shopping-list">
-                <div className="flex flex-col gap-1">
+            <div className="list-card-header shopping-list">
+                <div className="list-card-title-group">
                     {listRename && listRename === list.id ? (
                         <div className="relative w-full flex gap-2 items-center relative">
                             {/* Renaming */}
@@ -114,6 +120,7 @@ export default function List({
                                         handleRenameList(e.target.value, token);
                                     }
                                 }}
+                                onClick={(event) => event.stopPropagation()}
                                 onChange={handleRenameInput}
                             />
                             <div>
@@ -125,44 +132,56 @@ export default function List({
                         </div>
                     ) : (
                         <div className="flex flex-col">
-                            <p
+                            <button
+                                type="button"
+                                className="list-card-title"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    handleRenameList(list.id);
                                     setListRename(list.id);
                                     setTimeout(() => {
-                                        listRenameRef.current.focus();
-                                        setStartingValue(
-                                            listRenameRef.current.value.length
-                                        );
+                                        listRenameRef.current?.focus();
+                                        setStartingValue(listRenameRef.current?.value.length || 0);
                                     }, 0);
                                 }}
-                                className="font-bold text-sm md:text-lg whitespace-normal break-all"
+                                title="Rename list"
                             >
                                 {decodeHtmlEntities(list.title)}
-                            </p>
+                            </button>
 
                             {/* Only show owner name if we're definitely not the owner */}
                             {!isOwnerBasedOnId && metadata.ownerName && (
                                 <div
-                                    className={`w-full h-full text-[8px] whitespace-nowrap ${
+                                    className={`list-card-owner ${
                                         listRename === list.id ? "hidden" : ""
                                     }`}
                                 >
-                                    Owned by: {metadata.ownerName}
+                                    <UserRound size={13} aria-hidden="true" />
+                                    Owned by {metadata.ownerName}
                                 </div>
+                            )}
+                            {isOwnerBasedOnId && sharedCount > 0 && onManageAccess && listRename !== list.id && (
+                                <button
+                                    type="button"
+                                    className="list-card-shared"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        onManageAccess(list);
+                                    }}
+                                    aria-label={`Manage access to ${decodeHtmlEntities(list.title)}, shared with ${sharedCount} ${sharedCount === 1 ? "person" : "people"}`}
+                                >
+                                    <UsersRound size={14} aria-hidden="true" />
+                                    Shared with {sharedCount}
+                                </button>
                             )}
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-center gap-2 justify-between ">
-                    <div className="text-xs md:text-base 2xl:text-lg font-bold whitespace-pre text-gray-600 dark:text-gray-400 relative top-[1px]">
-                        {list?.acf?.product_count &&
-                            list?.acf?.product_count != 0 &&
-                            `${list?.acf?.bagged_product_count || 0} / ${
-                                list?.acf?.product_count
-                            }`}
+                <div className="list-card-actions">
+                    <div className="list-card-count">
+                        {list?.acf?.product_count > 0
+                            ? `${list?.acf?.bagged_product_count || 0} / ${list?.acf?.product_count} bagged`
+                            : "Empty list"}
                     </div>
 
                     {/* List Actions Button */}
@@ -171,7 +190,8 @@ export default function List({
                             e.stopPropagation();
                             handleListSettings(list.id);
                         }}
-                        className="relative !z-[9999]"
+                        className="list-card-action"
+                        aria-label={`Options for ${decodeHtmlEntities(list.title)}`}
                     >
                         <SettingsIcon
                             className={`w-6 h-6 settings-icon ${
@@ -181,6 +201,18 @@ export default function List({
                             }  duration-200 transition-colors  cursor-pointer`}
                         />
                     </button>
+                    {provided?.dragHandleProps && (
+                        <button
+                            type="button"
+                            {...provided.dragHandleProps}
+                            onClick={(event) => event.stopPropagation()}
+                            className="list-card-drag"
+                            aria-label={`Drag ${decodeHtmlEntities(list.title)} to reorder`}
+                            title="Drag to reorder"
+                        >
+                            <GripVertical size={20} aria-hidden="true" />
+                        </button>
+                    )}
                 </div>
             </div>
 

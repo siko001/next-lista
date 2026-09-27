@@ -1,6 +1,7 @@
 "use client";
 import {useState, useEffect, useRef} from "react";
 import {gsap} from "gsap";
+import {animateProductExit} from "../../lib/productMotion";
 import {
     decryptToken,
     WP_API_BASE,
@@ -30,6 +31,7 @@ export default function ShoppingListHeader({
     ownerName,
     title,
     totalProductCount,
+    baggedProductCount,
     handleSearchProducts,
     setBaggedProductCount,
     setTotalProductCount,
@@ -61,6 +63,9 @@ export default function ShoppingListHeader({
     const searchProductRef = useRef(null);
     const [searchValue, setSearchValue] = useState("");
     const [searchIsOpen, setSearchIsOpen] = useState(false);
+    const [isPinned, setIsPinned] = useState(false);
+    const stickySentinelRef = useRef(null);
+    const headerRef = useRef(null);
     const {overlay, showVerbConfirmation} = useOverlayContext();
     const {showNotification} = useNotificationContext();
     const [originalCheckedLength, setOriginalCheckedLength] = useState(
@@ -69,6 +74,28 @@ export default function ShoppingListHeader({
     const [originalBaggedLength, setOriginalBaggedLength] = useState(
         baggedProducts?.length || 0
     );
+
+    useEffect(() => {
+        const sentinel = stickySentinelRef.current;
+        if (!sentinel) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            setIsPinned(!entry.isIntersecting);
+        }, {threshold: 0});
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const header = headerRef.current;
+        if (!header) return;
+        const syncHeight = () => header.parentElement.style.setProperty(
+            "--list-header-height", `${header.getBoundingClientRect().height}px`
+        );
+        syncHeight();
+        const observer = new ResizeObserver(syncHeight);
+        observer.observe(header);
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         if (!searchIsOpen) {
@@ -87,10 +114,8 @@ export default function ShoppingListHeader({
             const el = document.querySelector("#header-settings-menu");
             if (el) {
                 gsap.killTweensOf(el);
-                const h = el.scrollHeight;
-                gsap.set(el, {height: h, overflow: "hidden"});
                 gsap.to(el, {
-                    height: 0,
+                    scale: 0.96,
                     opacity: 0,
                     y: -6,
                     duration: 0.3,
@@ -111,10 +136,8 @@ export default function ShoppingListHeader({
                     const el = document.querySelector("#header-settings-menu");
                     if (el) {
                         gsap.killTweensOf(el);
-                        const h = el.scrollHeight;
-                        gsap.set(el, {height: h, overflow: "hidden"});
                         gsap.to(el, {
-                            height: 0,
+                            scale: 0.96,
                             opacity: 0,
                             y: -6,
                             duration: 0.3,
@@ -133,10 +156,8 @@ export default function ShoppingListHeader({
                 const el = document.querySelector("#header-settings-menu");
                 if (el) {
                     gsap.killTweensOf(el);
-                    const h = el.scrollHeight;
-                    gsap.set(el, {height: h, overflow: "hidden"});
                     gsap.to(el, {
-                        height: 0,
+                        scale: 0.96,
                         opacity: 0,
                         y: -6,
                         duration: 0.3,
@@ -162,14 +183,13 @@ export default function ShoppingListHeader({
         const el = document.querySelector("#header-settings-menu");
         if (!el) return;
         gsap.killTweensOf(el);
-        gsap.set(el, {height: 0, opacity: 0, y: -6, overflow: "hidden"});
+        gsap.set(el, {opacity: 0, y: -8, scale: 0.96, transformOrigin: "top right", overflow: "visible"});
         gsap.to(el, {
-            height: "auto",
+            scale: 1,
             opacity: 1,
             y: 0,
-            duration: 0.5,
+            duration: 0.32,
             ease: "power2.out",
-            onComplete: () => gsap.set(el, {clearProps: "height"}),
         });
     }, [openSettings]);
 
@@ -236,54 +256,33 @@ export default function ShoppingListHeader({
             showNotification("List emptied successfully", "success", 1000);
         };
 
-        const baggedContainer = document.querySelector(
-            ".bagged-products-container"
-        );
-        const checkedContainer = document.querySelector(
-            ".checked-products-container"
-        );
+        await animateProductExit(document.querySelectorAll(
+            ".checked-products-container .list-product-row, .bagged-products-container .list-product-row"
+        ));
+        updateStates();
 
-        if (checkedContainer || baggedContainer) {
-            if (checkedContainer) {
-                gsap.to(checkedContainer.children, {
-                    opacity: 0,
-                    y: 60,
-                    duration: 0.3,
-                    backgroundColor: "#ff0000",
-                    stagger: 0.05,
-                    onComplete: () => updateStates(),
-                });
+        try {
+            const decryptedToken = decryptToken(token);
+            const res = await fetch(`${WP_API_BASE}/custom/v1/empty/${id}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${decryptedToken}`,
+                },
+                shoppingListId: id,
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success || data.code === "jwt_auth_invalid_token") {
+                throw new Error("Could not empty list");
             }
-            if (baggedContainer) {
-                gsap.to(baggedContainer.children, {
-                    opacity: 0,
-                    y: 60,
-                    duration: 0.3,
-                    backgroundColor: "#ff0000",
-                    stagger: 0.05,
-                    onComplete: () => updateStates(),
-                });
-            }
-        } else {
-            updateStates();
-        }
-
-        const decryptedToken = decryptToken(token);
-        const res = await fetch(`${WP_API_BASE}/custom/v1/empty/${id}`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${decryptedToken}`,
-            },
-            shoppingListId: id,
-        });
-        const data = await res.json();
-
-        if (!data.success || data.code == "jwt_auth_invalid_token") {
+        } catch (error) {
             setAllLinkedProducts(allLinkedProducts);
             setCheckedProducts(checkedProducts);
             setBaggedProducts(baggedProducts);
+            setTotalProductCount(totalProductCount);
+            setBaggedProductCount(baggedProducts.length);
             setProgress(progress);
+            showNotification("Could not empty list. Please try again.", "error");
         }
     };
 
@@ -304,10 +303,12 @@ export default function ShoppingListHeader({
 
     return (
         <>
+            <div ref={stickySentinelRef} className="list-header-sentinel" aria-hidden="true" />
             <div
+                ref={headerRef}
                 className={`w-full  flex flex-col ${
                     isListOwner(list, userId) ? "gap-6" : "gap-2"
-                }  rounded-b-3xl md:min-w-[550px] py-4 px-6 max-w-[750px] border dark:border-transparent shopping-list-header min-h-[100px] md:h-[100px] mx-auto sticky top-0 z-40`}
+                } list-detail-header ${isPinned ? "is-pinned" : ""} py-4 px-6 border shopping-list-header min-h-[100px] mx-auto sticky top-0 z-40`}
             >
                 {/* list name */}
                 <div className="flex items-center justify-between  px-2">
@@ -368,23 +369,24 @@ export default function ShoppingListHeader({
                         </div>
                     )}
 
-                    <div className="flex gap-6 items-center">
+                    <div className="list-header-actions flex gap-6 items-center">
                         {(originalCheckedLength > 0 ||
                             originalBaggedLength > 0) && (
                             <div
                                 onClick={handleSearchProduct}
-                                className="flex items-center gap-2 group relative"
+                                className={`list-header-search flex items-center group relative ${searchIsOpen ? "is-open" : ""}`}
                             >
                                 {/*  dark:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-800 bg-gray-200 */}
-                                <div className="flex items-center pr-1 relative overflow-hidden max-w-[400px]">
+                                <div className="list-header-search-field flex items-center relative overflow-hidden max-w-[400px]">
                                     <input
                                         ref={searchProductRef}
                                         type="text"
                                         placeholder="Search"
+                                        aria-label="Search products in this list"
                                         value={searchValue}
                                         onChange={handleInputChange}
                                         onBlur={handleBlurSearchProduct}
-                                        className="w-0 transition-all !outline-0 !border-0 peer duration-700 pl-2 outline-none text-lg font-bold"
+                                        className="list-header-search-input w-0 transition-all !outline-0 !border-0 peer duration-700 pl-2 outline-none text-lg font-bold"
                                     />
                                     {searchValue && (
                                         <CloseIcon
@@ -394,7 +396,7 @@ export default function ShoppingListHeader({
                                     )}
                                 </div>
                                 <SearchIcon
-                                    className={`w-6 h-6 md:w-8 md:h-8 ${
+                                    className={`list-header-search-icon w-6 h-6 md:w-8 md:h-8 ${
                                         searchIsOpen
                                             ? "text-primary"
                                             : "dark:text-gray-600 text-gray-800 hover:text-gray-400"
@@ -409,7 +411,7 @@ export default function ShoppingListHeader({
                             {openSettings && (
                                 <div
                                     id="header-settings-menu"
-                                    className="absolute right-6 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
+                                    className="list-detail-menu tools"
                                 >
                                     <div className="flex flex-col gap-0.5 font-quicksand font-[500]">
                                         <button
@@ -435,7 +437,7 @@ export default function ShoppingListHeader({
                                                 onClick={() =>
                                                     totalProductCount > 0 &&
                                                     showVerbConfirmation(
-                                                        list,
+                                                        {...list, title: listName || title || list.title},
                                                         token,
                                                         "Empty"
                                                     )
@@ -452,7 +454,7 @@ export default function ShoppingListHeader({
                                             <button
                                                 onClick={() =>
                                                     showVerbConfirmation(
-                                                        list,
+                                                        {...list, title: listName || title || list.title},
                                                         token,
                                                         "Delete"
                                                     )
@@ -469,7 +471,7 @@ export default function ShoppingListHeader({
                                             <button
                                                 onClick={() =>
                                                     showVerbConfirmation(
-                                                        list,
+                                                        {...list, title: listName || title || list.title},
                                                         token,
                                                         "Remove",
                                                         userId
@@ -485,7 +487,7 @@ export default function ShoppingListHeader({
                                 </div>
                             )}
                             <SettingsIcon
-                                className={`w-6 h-6 md:w-8 md:h-8 ${
+                                className={`settings-icon w-6 h-6 md:w-8 md:h-8 ${
                                     openSettings
                                         ? "text-primary"
                                         : "dark:text-gray-600 text-gray-800 hover:text-gray-400"
@@ -494,7 +496,12 @@ export default function ShoppingListHeader({
                         </div>
                     </div>
                 </div>
-                <Progressbar progress={progress} />
+                <div className="list-header-progress">
+                    <Progressbar progress={progress} />
+                    <span className="list-header-count" aria-label={`${baggedProductCount || 0} of ${totalProductCount || 0} products bagged`}>
+                        {baggedProductCount || 0} / {totalProductCount || 0}
+                    </span>
+                </div>
             </div>
 
             {overlay && (

@@ -1,9 +1,10 @@
 "use client";
-import Button from "../../components/Button";
 import gsap from "gsap";
-import {useEffect, useRef, useState, useMemo} from "react";
+import {useCallback, useEffect, useRef, useState, useMemo} from "react";
 import Fuse from "fuse.js";
-import SearchIcon from "../svgs/SearchIcon";
+import {createSmoothScroller} from "../../lib/smoothScroll";
+import {useListContext} from "../../contexts/ListContext";
+import {Check, Flame, Grid2X2, Heart, Plus, Search, Star, Trash2, X} from "lucide-react";
 import {
     decryptToken,
     WP_API_BASE,
@@ -12,14 +13,8 @@ import {
 } from "../../lib/helpers";
 
 import {INGREDIENT_NAME_MAX_LENGTH} from "../../lib/config";
-import "../../css/checkbox.css";
-import CloseIcon from "../svgs/CloseIcon";
+import "../../css/product-picker.css";
 import {useParams} from "next/navigation";
-import Lenis from "lenis";
-import {useListContext} from "../../contexts/ListContext";
-import ErrorIcon from "../svgs/ErrorIcon";
-import TrashIcon from "../svgs/TranshIcon";
-import StarIcon from "../svgs/StarIcon";
 import CategoryFilter from "../CategoryFilter";
 
 // Contexts
@@ -45,53 +40,33 @@ export default function AddProduct({
     setCustomProducts,
     categories,
 }) {
-    const [products, setProducts] = useState(allProducts);
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState(allProducts);
     const [favouriteProducts, setFavouriteProducts] = useState(favourites);
-    const [initialCustomProducts, setInitialCustomProducts] =
-        useState(customProducts);
     const [searchResults, setSearchResults] = useState(null);
     const [popularSearchResults, setPopularSearchResults] = useState(null);
     const [favouriteSearchResults, setFavouriteSearchResults] = useState(null);
     const customProductInputRef = useRef(null);
     const [customProductLength, setCustomProductLength] = useState(0);
-    const [savingProductId, setSavingProductId] = useState(null); // Track which product is being saved
-    const [savingProduct, setSavingProduct] = useState(null); // Track which product is being saved
     const maxLength = INGREDIENT_NAME_MAX_LENGTH;
 
     const {showNotification} = useNotificationContext();
 
-    const [originalProducts] = useState(allProducts);
-    const searchRef = useRef();
     const productListRef = useRef();
+    const productScrollerRef = useRef(null);
+    const {lenis} = useListContext();
     const shoppingListId = useParams().id;
-    const {lenis: globalLenis} = useListContext();
-    const lenisRef = useRef(null);
-    const rafIdRef = useRef(null);
 
     const [selectedProductsSection, setSelectedProductsSection] =
         useState("popular");
     const overlayRef = useRef(null);
     const panelRef = useRef(null);
 
-    // Create Fuse instance for fuzzy search
     const fuseOptions = {
         keys: ["title"],
         threshold: 0.3,
         distance: 100,
     };
-
-    const fuse = useMemo(
-        () => new Fuse(originalProducts, fuseOptions),
-        [originalProducts]
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    );
-
-    // Update initialCustomProducts when customProducts prop changes
-    useEffect(() => {
-        setInitialCustomProducts(customProducts);
-    }, [customProducts]);
 
     const updateProductInShoppingList = async (productId, isAdding, token) => {
         if (!shoppingListId || !token) return;
@@ -101,7 +76,7 @@ export default function AddProduct({
         );
         //
         const productTitle =
-            products.find((product) => product.id === productId)?.title ||
+            allProducts.find((product) => product.id === productId)?.title ||
             customProducts.find((product) => product.id === productId)?.title;
         if (isAdding) {
             setCheckedProducts((prev) => {
@@ -180,15 +155,6 @@ export default function AddProduct({
         });
     };
 
-    useEffect(() => {
-        gsap.set(".close-product-overlay-btn", {y: 200, opacity: 1});
-        gsap.to(".close-product-overlay-btn", {
-            y: 0,
-            duration: 0.5,
-            ease: "power2.out",
-        });
-    }, []);
-
     // Slide-up + fade for the full-screen AddProduct modal
     useEffect(() => {
         const overlay = overlayRef.current;
@@ -229,11 +195,10 @@ export default function AddProduct({
             );
     }, []);
 
-    const closeOverlay = () => {
+    const closeOverlay = useCallback(() => {
         const overlay = overlayRef.current;
         const panel = panelRef.current;
         if (!overlay || !panel) {
-            document.body.style.overflow = "auto";
             setProductOverlay(false);
             return;
         }
@@ -244,7 +209,6 @@ export default function AddProduct({
         gsap.killTweensOf([overlay, panel]);
         gsap.timeline({
             onComplete: () => {
-                document.body.style.overflow = "auto";
                 setProductOverlay(false);
             },
         })
@@ -268,7 +232,7 @@ export default function AddProduct({
                 },
                 0.05
             );
-    };
+    }, [setProductOverlay]);
 
     // Search functionality with fuzzy search
     const [searchValue, setSearchValue] = useState("");
@@ -358,63 +322,37 @@ export default function AddProduct({
         window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            document.body.style.overflow = "auto";
             window.removeEventListener("click", handleOutsideClick);
             window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [setProductOverlay]);
+    }, [closeOverlay]);
 
     useEffect(() => {
-        window.scrollTo({top: 0});
-        if (globalLenis?.current) {
-            globalLenis.current.stop();
-        }
-
-        if (productListRef.current) {
-            lenisRef.current = new Lenis({
-                wrapper: productListRef.current,
-                content: productListRef.current.querySelector(
-                    ".product-list-content"
-                ),
-                lerp: 0.1,
-                smoothWheel: true,
-                touchMultiplier: 2, // Add this for better touch handling
-                smoothTouch: true, // Enable smooth scrolling for touch devices
-                infinite: false,
-            });
-
-            const raf = (time) => {
-                if (lenisRef.current) {
-                    lenisRef.current.raf(time);
-                    rafIdRef.current = requestAnimationFrame(raf);
-                }
-            };
-            rafIdRef.current = requestAnimationFrame(raf);
-            productListRef.current.style.touchAction = "pan-y";
-        }
+        const pageScroller = lenis.current;
+        pageScroller?.stop();
+        const scroller = createSmoothScroller({
+            wrapper: productListRef.current,
+            content: productListRef.current.firstElementChild,
+            overscroll: false,
+        });
+        productScrollerRef.current = scroller.instance;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
 
         return () => {
-            if (rafIdRef.current) {
-                cancelAnimationFrame(rafIdRef.current);
-                rafIdRef.current = null;
-            }
-
-            if (globalLenis?.current) {
-                globalLenis.current.start();
-            }
-            if (lenisRef.current) {
-                lenisRef.current.destroy();
-                lenisRef.current = null;
-            }
+            document.body.style.overflow = previousOverflow;
+            scroller.destroy();
+            productScrollerRef.current = null;
+            pageScroller?.start();
         };
-    }, [globalLenis]);
+    }, [lenis]);
 
     // Create Custom Product
     const [error, setError] = useState(null);
     const handleCreateCustomProduct = async () => {
         if (
-            customProductInputRef.current.value.trim() === "" ||
-            !customProductInputRef.current
+            !customProductInputRef.current ||
+            customProductInputRef.current.value.trim() === ""
         ) {
             setError("Please enter a product name");
             setTimeout(() => {
@@ -437,9 +375,6 @@ export default function AddProduct({
                 isTemporary: true, // Add a flag to identify temporary products
                 isSaving: true, // Add a flag to show loading state
             };
-
-            // Set the currently saving product ID
-            setSavingProductId(tempId);
 
             // Animate only the newly added item once it is rendered
             requestAnimationFrame(() => {
@@ -494,7 +429,13 @@ export default function AddProduct({
         const data = await res.json();
         const fetchedCustomProducts = await getAllCustomProducts(token);
         setCustomProducts(fetchedCustomProducts);
-        setSavingProductId(null); // Clear saving state
+        if (searchValue) {
+            setSearchResults(
+                new Fuse(fetchedCustomProducts, fuseOptions)
+                    .search(searchValue)
+                    .map((result) => result.item)
+            );
+        }
     };
 
     // Delete custom product
@@ -589,7 +530,7 @@ export default function AddProduct({
     const handleAddToFavourites = async (productId, token) => {
         // title
         const productTitle =
-            products.find((product) => product.id === productId)?.title ||
+            allProducts.find((product) => product.id === productId)?.title ||
             customProducts.find((product) => product.id === productId)?.title;
 
         // if already in favourites, remove it
@@ -672,209 +613,101 @@ export default function AddProduct({
         }
     };
 
-    // Reusable NoProductsFound component
-    function NoProductsFound({mtClass = "mt-28"}) {
-        return (
-            <div
-                className={`w-full font-quicksand uppercase ${mtClass} flex items-center justify-center text-gray-400 text-2xl font-bold`}
-            >
-                No products found
-            </div>
-        );
-    }
-
-    // Handle category toggle
     const handleCategoryToggle = (category) => {
         if (category === "all") {
             setSelectedCategories([]);
             return;
         }
-
-        setSelectedCategories((prev) => {
-            if (prev.includes(category)) {
-                return prev.filter((c) => c !== category);
-            } else {
-                return [...prev, category];
-            }
-        });
+        setSelectedCategories((previous) =>
+            previous.includes(category)
+                ? previous.filter((item) => item !== category)
+                : [...previous, category]
+        );
     };
 
-    // Filter products based on selected categories and search term
     useEffect(() => {
         let filtered = allProducts;
-
-        // Apply category filter (normalize/decoded to handle &amp; vs & and case)
         if (selectedCategories.length > 0) {
-            const norm = (s) =>
-                decodeHtmlEntities(String(s || ""))
-                    .trim()
-                    .toLowerCase();
-            const selectedNorm = selectedCategories.map(norm);
-            filtered = allProducts.filter((product) =>
-                product.categories?.some((category) =>
-                    selectedNorm.includes(norm(category))
-                )
+            const normalize = (value) =>
+                decodeHtmlEntities(String(value || "")).trim().toLowerCase();
+            const selected = selectedCategories.map(normalize);
+            filtered = filtered.filter((product) =>
+                product.categories?.some((category) => selected.includes(normalize(category)))
             );
         }
-
-        // Apply search filter if there's a search term
         if (searchValue) {
-            const fuse = new Fuse(filtered, fuseOptions);
-            const results = fuse.search(searchValue);
-            filtered = results.map((result) => result.item);
+            filtered = new Fuse(filtered, fuseOptions)
+                .search(searchValue)
+                .map((result) => result.item);
         }
-
         setFilteredProducts(filtered);
-        setProducts(filtered);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedCategories, allProducts, searchValue]);
 
+    const sections = [
+        {id: "popular", label: "Popular", icon: Flame},
+        {id: "categories", label: "Categories", icon: Grid2X2},
+        {id: "custom", label: "Custom", icon: Plus},
+        {id: "favourite", label: "Favourites", icon: Heart},
+    ];
+    const sectionCopy = {
+        popular: "Browse products",
+        categories: "Explore by category",
+        custom: "Your custom products",
+        favourite: "Your favourites",
+    };
+    const visibleProducts = selectedProductsSection === "categories"
+        ? filteredProducts
+        : displayedProducts;
+    const selectedCount = allLinkedProducts?.length || 0;
+
     const renderProductItem = (product, index) => {
-        const isTemporaryProduct =
-            typeof product.id === "string" && product.id.startsWith("temp-");
-
-        const handleClick = (e) => {
-            if (isTemporaryProduct) return; // Prevent interaction with temporary products
-            e.stopPropagation();
-            handleCheckboxChange(product.id, token);
-        };
-
-        const handleCheckboxClick = (e) => {
-            if (isTemporaryProduct) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-            e.stopPropagation();
-            handleCheckboxChange(product.id, token);
-        };
-
-        const handleFavouriteClick = (e) => {
-            if (isTemporaryProduct) {
-                e.preventDefault();
-                e.stopPropagation();
-                return;
-            }
-            e.stopPropagation();
-            handleAddToFavourites(product.id, token);
-        };
+        const isTemporaryProduct = typeof product.id === "string" && product.id.startsWith("temp-");
+        const isSelected = !!allLinkedProducts?.some((item) => item.ID === product.id);
+        const isFavourite = !!favouriteProducts?.some((item) => item.id === product.id);
+        const title = decodeHtmlEntities(product.title);
 
         return (
             <div
-                onClick={handleClick}
                 key={product.id || index}
                 data-product-id={product.id}
-                className={`product-card border ml-4 px-4 py-3 rounded-md text-black duration-200 ease-linear transition-colors dark:text-white flex items-center justify-between gap-2 group ${
-                    allLinkedProducts?.some((p) => p.ID === product.id)
-                        ? "border-primary"
-                        : ""
-                } ${
-                    isTemporaryProduct
-                        ? "opacity-50 cursor-not-allowed"
-                        : "cursor-pointer"
-                }`}
+                className={`product-card picker-product ${isSelected ? "is-selected" : ""} ${isTemporaryProduct ? "is-saving" : ""}`}
             >
-                <div className="flex items-center gap-2 font-bold text-xl checkbox-wrapper-28">
-                    <div className="checkbox-wrapper-28">
-                        <input
-                            id={`checkbox-${product.id}`}
-                            type="checkbox"
-                            className={`promoted-input-checkbox peer ${
-                                isTemporaryProduct ? "cursor-not-allowed" : ""
-                            }`}
-                            checked={
-                                !!allLinkedProducts?.some(
-                                    (p) => p.ID === product.id
-                                )
-                            }
-                            onChange={handleCheckboxClick}
-                            disabled={isTemporaryProduct}
-                        />
-                        <label
-                            htmlFor={`checkbox-${product.id}`}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                if (isTemporaryProduct) return;
-                                handleCheckboxChange(product.id, token);
-                            }}
-                            className={
-                                isTemporaryProduct ? "cursor-not-allowed" : ""
-                            }
-                        ></label>
-                        <svg viewBox="0 0 24 24">
-                            <polyline points="20 6 9 17 4 12" fill="none" />
-                        </svg>
-                    </div>
-                    {decodeHtmlEntities(product.title)}
-                    {isTemporaryProduct && (
-                        <span className="text-xs text-gray-400 ml-2">
-                            Saving...
-                        </span>
-                    )}
-                </div>
-                <div className="flex items-center gap-2 md:gap-6">
-                    <div
-                        onClick={handleFavouriteClick}
-                        className={`text-sm font-bold text-gray-400 block ${
-                            favouriteProducts?.some((p) => p.id === product.id)
-                                ? "opacity-100"
-                                : isTemporaryProduct
-                                ? "opacity-50"
-                                : "sm:opacity-0 group-hover:opacity-100"
-                        } transition-opacity duration-200 ${
-                            isTemporaryProduct ? "cursor-not-allowed" : ""
-                        }`}
+                <label className="picker-product-main" htmlFor={`picker-product-${product.id}`}>
+                    <input
+                        id={`picker-product-${product.id}`}
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={isTemporaryProduct}
+                        onChange={() => handleCheckboxChange(product.id, token)}
+                    />
+                    <span className="picker-product-check" aria-hidden="true">
+                        {isSelected && <Check size={17} strokeWidth={3} />}
+                    </span>
+                    <span className="picker-product-name">{title}</span>
+                    {isTemporaryProduct && <span className="picker-product-saving">Saving…</span>}
+                </label>
+                <div className="picker-product-actions">
+                    <button
+                        type="button"
+                        className={`picker-icon-button picker-favourite ${isFavourite ? "is-favourite" : ""}`}
+                        onClick={() => handleAddToFavourites(product.id, token)}
+                        disabled={isTemporaryProduct}
+                        aria-label={`${isFavourite ? "Remove" : "Add"} ${title} ${isFavourite ? "from" : "to"} favourites`}
+                        title={isFavourite ? "Remove from favourites" : "Add to favourites"}
                     >
-                        <StarIcon
-                            className={`w-6 h-6 transition-colors duration-200 ${
-                                isTemporaryProduct
-                                    ? "text-gray-400 cursor-not-allowed"
-                                    : "hover:text-yellow-500 cursor-pointer"
-                            } ${
-                                favouriteProducts?.some(
-                                    (p) => p.id === product.id
-                                )
-                                    ? "fill-yellow-500 text-yellow-500 hover:opacity-50 transition-opacity"
-                                    : ""
-                            }`}
-                        />
-                    </div>
-
-                    {allLinkedProducts?.some((p) => p.ID === product.id) && (
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                updateProductInShoppingList(
-                                    product.id,
-                                    false,
-                                    token
-                                );
-                            }}
-                            className="rounded-full text-red-500 !border-transparent cursor-pointer hover:border-transparent transition-colors duration-200"
-                            aria-label="Remove from list"
-                            title="Remove from list"
-                        >
-                            <CloseIcon className="w-6 h-6" />
-                        </button>
-                    )}
-
+                        <Star size={20} fill={isFavourite ? "currentColor" : "none"} aria-hidden="true" />
+                    </button>
                     {selectedProductsSection === "custom" && (
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteCustomProduct(
-                                    product.id,
-                                    token,
-                                    shoppingListId,
-                                    customProducts
-                                );
-                            }}
-                            className="text-red-500 hover:text-red-400 cursor-pointer transition-colors duration-200 border-none hover:border-none focus:border-none outline-none focus:outline-none ring-0 focus:ring-0 focus:ring-offset-0"
-                            style={{WebkitTapHighlightColor: "transparent"}}
-                            aria-label="Delete custom product"
+                            type="button"
+                            className="picker-icon-button picker-delete"
+                            onClick={() => handleDeleteCustomProduct(product.id, token, shoppingListId, customProducts)}
+                            disabled={isTemporaryProduct}
+                            aria-label={`Delete ${title}`}
                             title="Delete custom product"
                         >
-                            <TrashIcon className="w-6 h-6" />
+                            <Trash2 size={19} aria-hidden="true" />
                         </button>
                     )}
                 </div>
@@ -883,227 +716,146 @@ export default function AddProduct({
     };
 
     return (
-        <div className="w-full absolute top-0">
-            <div className="fixed lg:block hidden top-4 right-6 w-10 h-10 z-[100]">
-                <CloseIcon
-                    className="sticky top-4 right-4 w-8 h-8 text-red-500 cursor-pointer"
-                    onClick={() => {
-                        closeOverlay();
-                    }}
-                />
-            </div>
-            <div
-                ref={overlayRef}
-                className="fixed top-0 z-[99] inset-0 w-full h-full  blur-sm close-product-overlay"
-            ></div>
-            <div className="relative top-0 ">
+        <div className="product-picker-root">
+            <div ref={overlayRef} className="picker-backdrop close-product-overlay" />
+            <section
+                ref={panelRef}
+                className="product-picker"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Add products to list"
+            >
+                <header className="picker-header">
+                    <div className="picker-heading">
+                        <div>
+                            <p className="picker-eyebrow">YOUR SHOPPING LIST</p>
+                            <h2>Add products</h2>
+                        </div>
+                        <button type="button" className="picker-close" onClick={closeOverlay} aria-label="Close products">
+                            <X size={22} aria-hidden="true" />
+                        </button>
+                    </div>
+                    <div className="picker-search">
+                        <Search size={20} aria-hidden="true" />
+                        <input
+                            value={searchValue}
+                            onChange={handleSearchProduct}
+                            type="search"
+                            placeholder="Search products"
+                            aria-label="Search products"
+                        />
+                        {searchValue && (
+                            <button
+                                type="button"
+                                onClick={() => handleSearchProduct({target: {value: ""}})}
+                                aria-label="Clear search"
+                            >
+                                <X size={17} aria-hidden="true" />
+                            </button>
+                        )}
+                    </div>
+                    <nav className="picker-tabs" aria-label="Product sections">
+                        {sections.map(({id, label, icon: Icon}) => (
+                            <button
+                                type="button"
+                                key={id}
+                                className={`picker-tab ${selectedProductsSection === id ? "is-active" : ""}`}
+                                onClick={() => {
+                                    setSelectedProductsSection(id);
+                                    productScrollerRef.current?.scrollTo(0);
+                                }}
+                                aria-current={selectedProductsSection === id ? "page" : undefined}
+                            >
+                                <Icon size={17} aria-hidden="true" />
+                                <span>{label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                </header>
+
+                <div className="picker-controls">
+                    {selectedProductsSection === "custom" && (
+                        <form
+                            className="picker-custom-form"
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                handleCreateCustomProduct();
+                            }}
+                        >
+                            <div className="picker-custom-field">
+                                <input
+                                    ref={customProductInputRef}
+                                    type="text"
+                                    placeholder="Name a product"
+                                    aria-label="Custom product name"
+                                    maxLength={maxLength}
+                                    onChange={(event) => setCustomProductLength(event.target.value.length)}
+                                />
+                                <span>{customProductLength}/{maxLength}</span>
+                            </div>
+                            <button type="submit" className="picker-add-button">
+                                <Plus size={18} aria-hidden="true" />
+                                <span>Add</span>
+                            </button>
+                            {error && <p className="picker-form-error" role="alert">{error}</p>}
+                        </form>
+                    )}
+                </div>
+
                 <div
-                    ref={panelRef}
-                    className="absolute top-0 z-[100]  inset-x-0  gap-4 left-1/2 -translate-x-1/2 w-[90%] md:w-1/2 sm:min-w-[550px] max-w-[750px] md:min-w-[750px] lg:min-w-[830px] lg:max-w-[875px] xl:min-w-[900px] xl:max-w-[900px] flex flex-col items-center mt-3 mb-8 md:my-6"
+                    ref={productListRef}
+                    className="picker-scroll-region"
+                    data-lenis-prevent
+                    style={{WebkitOverflowScrolling: "touch", overscrollBehavior: "contain"}}
                 >
-                    <div className="w-full bg-gray-300 dark:bg-gray-700 sticky top-0 z-20 rounded-md">
-                        <div className="relative flex items-center">
-                            <input
-                                value={searchValue}
-                                onChange={handleSearchProduct}
-                                ref={searchRef}
-                                placeholder="Search for a Product..."
-                                className="w-full rounded-md border-2 transition-colors duration-200 search-input border-transparent focus:border-primary outline-0 placeholder:text-2xl md:placeholder:font-medium h-full peer py-3 px-2 text-2xl pr-10 focus:pr-2"
-                            />
-                            <div className="absolute right-2 h-full grid place-items-center peer-focus:opacity-0 transition-opacity duration-200">
-                                <SearchIcon className="w-8 h-8 brand-color" />
+                    <div className="product-list-content picker-scroll-content">
+                    {selectedProductsSection === "categories" && (
+                        <CategoryFilter
+                            categories={categories}
+                            selectedCategories={selectedCategories}
+                            onCategoryToggle={handleCategoryToggle}
+                        />
+                    )}
+
+                        <div className="picker-list-heading">
+                            <div>
+                                <h3>{sectionCopy[selectedProductsSection]}</h3>
+                                <p>
+                                    {selectedProductsSection === "categories" && selectedCategories.length > 0
+                                        ? `${selectedCategories.length} active ${selectedCategories.length === 1 ? "filter" : "filters"}`
+                                        : selectedProductsSection === "custom"
+                                        ? "Products you have added"
+                                        : selectedProductsSection === "favourite"
+                                        ? "Products you saved for later"
+                                        : "Tap a product to add it to your list"}
+                                </p>
                             </div>
+                            <span className="picker-result-count">{visibleProducts.length} {visibleProducts.length === 1 ? "product" : "products"}</span>
                         </div>
-                    </div>
-
-                    <div
-                        ref={productListRef}
-                        className="w-full search-input pb-16 md:pb-0 rounded-md h-[85vh] mb-20 sm:mb-12 overflow-y-auto touch-pan-y"
-                        style={{
-                            WebkitOverflowScrolling: "touch",
-                            overscrollBehavior: "contain",
-                        }}
-                    >
-                        <div className="product-list-content flex flex-col gap-3 pr-4 pb-4 relative">
-                            <div className=" w-full overflow-x-auto !scrollbar-hide scrollbar-w-0 scrollbar-h-0 mb-4 sticky -left-4 top-0 z-20">
-                                <div className="inline-flex whitespace-nowrap font-bold relative  font-quicksand ">
-                                    <div
-                                        onClick={() =>
-                                            setSelectedProductsSection(
-                                                "popular"
-                                            )
-                                        }
-                                        className={`py-2 pl-5 pr-4 ${
-                                            selectedProductsSection ===
-                                            "popular"
-                                                ? "menu-selected"
-                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
-                                        }`}
-                                    >
-                                        Popular
-                                    </div>
-
-                                    <div
-                                        onClick={() =>
-                                            setSelectedProductsSection(
-                                                "categories"
-                                            )
-                                        }
-                                        className={`py-2 pl-5 pr-4 ${
-                                            selectedProductsSection ===
-                                            "categories"
-                                                ? "menu-selected"
-                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
-                                        }`}
-                                    >
-                                        Categories
-                                    </div>
-
-                                    <div
-                                        onClick={() =>
-                                            setSelectedProductsSection("custom")
-                                        }
-                                        className={`py-2 px-4  ${
-                                            selectedProductsSection === "custom"
-                                                ? "menu-selected"
-                                                : "menu cursor-pointer duration-200 ease-in transition-colors"
-                                        }`}
-                                    >
-                                        Custom
-                                    </div>
-                                    <div
-                                        onClick={() =>
-                                            setSelectedProductsSection(
-                                                "favourite"
-                                            )
-                                        }
-                                        className={`py-2 px-4  ${
-                                            selectedProductsSection ===
-                                            "favourite"
-                                                ? "menu-selected rounded-br-xl"
-                                                : "menu cursor-pointer rounded-br-xl"
-                                        }`}
-                                    >
-                                        Favourites
-                                    </div>
-                                </div>
+                        {visibleProducts.length > 0 ? (
+                            <div className="picker-product-grid">
+                                {visibleProducts.map(renderProductItem)}
                             </div>
-                            {/* Navigation tabs (scrollable only on this row) */}
-
-                            {/* Custom Products Input */}
-                            {selectedProductsSection === "custom" && (
-                                <div className="mb-4 ml-4">
-                                    <div className="w-full flex items-stretch text-gray-400 text-lg font-bold group relative ">
-                                        <div className="w-full relative flex items-center">
-                                            <input
-                                                ref={customProductInputRef}
-                                                placeholder="Input Product"
-                                                maxLength={maxLength}
-                                                onChange={(e) => {
-                                                    const value =
-                                                        e.target.value.slice(
-                                                            0,
-                                                            maxLength
-                                                        );
-                                                    e.target.value = value;
-                                                    setCustomProductLength(
-                                                        value.length
-                                                    );
-                                                }}
-                                                className="w-full px-3 py-[9.5px] pr-12 sm:pr-14 md:pr-16 peer group-hover:!border-primary rounded-l-md !text-[#171717] dark:!text-white custom-product-input !border-r-0 placeholder:!text-[#171717] placeholder:!opacity-60 dark:placeholder:!text-gray-300 dark:placeholder:!opacity-100 !border-blue-800 focus:!border-primary"
-                                            />
-                                            <div className="opacity-0 custom-product-input-text transition-all duration-300 ease peer-focus:opacity-100 text-xs sm:text-sm md:text-base absolute right-2 top-[50%] -translate-y-1/2">
-                                                <span>
-                                                    {customProductLength}
-                                                </span>
-                                                &nbsp;/&nbsp;{maxLength}
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={handleCreateCustomProduct}
-                                            className="whitespace-pre px-3 py-[9.5px] !border-blue-800 peer group-hover:!border-primary peer-focus:!border-primary cursor-pointer hover:!border-primary rounded-r-md bg-blue-800 text-white flex items-center"
-                                        >
-                                            Add product
-                                        </button>
-                                    </div>
-
-                                    {error && (
-                                        <p className="w-min mt-2 whitespace-pre ml-1 py-2 px-2 bg-red-400 rounded-sm text-white flex gap-1 items-center text-xs">
-                                            <ErrorIcon className={"h-5 w-5"} />
-                                            {error}
-                                        </p>
-                                    )}
+                        ) : (
+                            <div className="picker-empty-state">
+                                <div className="picker-empty-icon">
+                                    {selectedProductsSection === "favourite" ? <Heart size={25} /> : <Search size={25} />}
                                 </div>
-                            )}
-
-                            {selectedProductsSection === "categories" && (
-                                <>
-                                    <CategoryFilter
-                                        categories={categories}
-                                        selectedCategories={selectedCategories}
-                                        onCategoryToggle={handleCategoryToggle}
-                                    />
-                                    {filteredProducts.length === 0 ? (
-                                        <div className=" w-full font-quicksand text-center uppercase mt-6 flex items-center justify-center text-gray-400 text-2xl font-bold">
-                                            {selectedCategories.length > 0
-                                                ? "No products matched these filters"
-                                                : "No products found"}
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                                            {filteredProducts.map(
-                                                renderProductItem
-                                            )}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
-                            {selectedProductsSection === "popular" &&
-                                (displayedProducts?.length > 0 ? (
-                                    displayedProducts.map((product, index) =>
-                                        renderProductItem(product, index)
-                                    )
-                                ) : (
-                                    <NoProductsFound />
-                                ))}
-
-                            {selectedProductsSection === "custom" &&
-                                (displayedProducts?.length > 0 ? (
-                                    displayedProducts.map((product, index) =>
-                                        renderProductItem(product, index)
-                                    )
-                                ) : (
-                                    <NoProductsFound
-                                        mtClass={
-                                            searchValue ? "mt-28" : "mt-14"
-                                        }
-                                    />
-                                ))}
-
-                            {selectedProductsSection === "favourite" &&
-                                (displayedProducts?.length > 0 ? (
-                                    displayedProducts.map((product, index) =>
-                                        renderProductItem(product, index)
-                                    )
-                                ) : (
-                                    <NoProductsFound />
-                                ))}
-                        </div>
+                                <h3>{searchValue ? "No matching products" : selectedProductsSection === "favourite" ? "No favourites yet" : selectedProductsSection === "custom" ? "No custom products yet" : "No products found"}</h3>
+                                <p>{searchValue ? "Try another search term or choose a different section." : selectedProductsSection === "favourite" ? "Tap the star on a product to keep it here." : selectedProductsSection === "custom" ? "Add your own product using the field above." : "Try a different category."}</p>
+                            </div>
+                        )}
                     </div>
                 </div>
-                <div className="fixed bottom-4 lg:hidden w-full mx-auto justify-center flex gap-2 opacity-0 z-[100] close-product-overlay-btn">
-                    <Button
-                        cta="Close Products List"
-                        color="#82181a"
-                        hover="inwards"
-                        action="close-product-overlay"
-                        overrideDefaultClasses="bg-red-500 whitespace-nowrap text-black text-sm md:text-base"
-                        light={true}
-                        setProductOverlay={closeOverlay}
-                    />
-                </div>
-            </div>
+
+                <footer className="picker-footer">
+                    <div className="picker-selection-summary">
+                        <strong>{selectedCount}</strong>
+                        <span>{selectedCount === 1 ? "product" : "products"} in your list</span>
+                    </div>
+                    <button type="button" className="picker-done" onClick={closeOverlay}>Done</button>
+                </footer>
+            </section>
         </div>
     );
 }

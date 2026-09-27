@@ -30,6 +30,7 @@ import ShareIcon from "./components/svgs/ShareIcon";
 import TrashIcon from "./components/svgs/TranshIcon";
 import RenameIcon from "./components/svgs/RenameIcon";
 import ListLoader from "./components/loaders/ListLoader";
+import {ListCardsSkeleton} from "./components/loaders/PageSkeleton";
 import List from "./components/parts/List";
 import ChatWidget from "./components/ChatWidget";
 
@@ -42,10 +43,11 @@ const HomeClient = ({
     metadata,
 }) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
+    const [shareDialogView, setShareDialogView] = useState("share");
     const [sharedWithUsers, setSharedWithUsers] = useState(null);
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const {loading} = useLoadingContext();
-    const {userData, token, error} = useUserContext();
+    const {userData, token, error, loading: userLoading} = useUserContext();
     const {
         userLists,
         getShoppingList,
@@ -58,6 +60,8 @@ const HomeClient = ({
         setListSettings,
         handleRenameList,
         setIsInnerList,
+        shoppingList,
+        lenis,
     } = useListContext();
     const {overlay, showVerbConfirmation} = useOverlayContext();
     const {showNotification} = useNotificationContext();
@@ -67,12 +71,16 @@ const HomeClient = ({
     useEffect(() => {
         setListsMetadata(metadata);
         setIsInnerList(false);
+        let active = true;
         if (userData && userData.id && token) {
-            getShoppingList(userData.id, token).then(() => {
-                setInitialLoadComplete(true);
+            getShoppingList(userData.id, token).finally(() => {
+                if (active) setInitialLoadComplete(true);
             });
+        } else if (!userLoading && !token) {
+            setInitialLoadComplete(true);
         }
-    }, [userData, token]);
+        return () => { active = false; };
+    }, [userData, token, userLoading]);
 
     useEffect(() => {
         const removeListData = sessionStorage.getItem("removeListData");
@@ -114,7 +122,7 @@ const HomeClient = ({
                         {
                             opacity: 1,
                             border: "1px solid #ff0000",
-                            duration: 0.5,
+                            duration: 0.32,
                         },
                         {
                             opacity: 0,
@@ -146,30 +154,31 @@ const HomeClient = ({
             typeof document !== "undefined" && document.querySelector(sel);
         if (!el) return;
         gsap.killTweensOf(el);
-        gsap.set(el, {height: 0, opacity: 0, y: -6, overflow: "hidden"});
+        gsap.set(el, {opacity: 0, y: -8, scale: 0.96, transformOrigin: "top right", overflow: "visible"});
         gsap.to(el, {
-            height: "auto",
+            scale: 1,
             opacity: 1,
             y: 0,
-            duration: 0.5,
+            duration: 0.32,
             ease: "power2.out",
-            onComplete: () => gsap.set(el, {clearProps: "height"}),
         });
     }, [listSettings]);
 
     const handleDragEnd = async (result) => {
-        if (!result.destination) return;
+        if (lenis.current) lenis.current.options.smoothWheel = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (!result.destination || result.source.index === result.destination.index) return;
         const items = Array.from(userLists);
         const [reorderedItem] = items.splice(result.source.index, 1);
         items.splice(result.destination.index, 0, reorderedItem);
-        setUserLists(items);
+        const orderedItems = items.map((item, index) => ({...item, menu_order: index + 1}));
+        setUserLists(orderedItems);
         const updates = items.map((item, index) => ({
             id: item.id,
             menu_order: index + 1,
         }));
 
         try {
-            await fetch(`${WP_API_BASE}/wp/v2/shopping-list/order`, {
+            const response = await fetch(`${WP_API_BASE}/wp/v2/shopping-list/order`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -177,6 +186,7 @@ const HomeClient = ({
                 },
                 body: JSON.stringify({orders: updates}),
             });
+            if (!response.ok) throw new Error("Could not save list order");
         } catch (error) {
             console.error("Reorder failed:", error);
             setUserLists(userLists);
@@ -195,10 +205,8 @@ const HomeClient = ({
                 typeof document !== "undefined" && document.querySelector(sel);
             if (el) {
                 gsap.killTweensOf(el);
-                const currentH = el.scrollHeight;
-                gsap.set(el, {height: currentH, overflow: "hidden"});
                 gsap.to(el, {
-                    height: 0,
+                    scale: 0.96,
                     opacity: 0,
                     y: -6,
                     duration: 0.3,
@@ -213,6 +221,13 @@ const HomeClient = ({
         }
     };
 
+    const openShareDialog = (list, view = "share") => {
+        setListSettings(false);
+        setSharedWithUsers(Array.isArray(list?.acf?.shared_with_users) ? list.acf.shared_with_users : []);
+        setShareDialogView(view);
+        setShareDialogOpen(list.id);
+    };
+
     const handleDeleteList = async (id, token, state) => {
         deleteList(id, token, state);
     };
@@ -221,7 +236,7 @@ const HomeClient = ({
     useEffect(() => {
         const handleClickOutside = (event) => {
             const target = event.target;
-            const isSettingsIcon = target.closest(".settings-icon");
+            const isSettingsIcon = target.closest(".list-card-action");
             const openMenuSel = listSettings ? `#menu-${listSettings}` : null;
             const isInsideMenu = openMenuSel
                 ? target.closest(openMenuSel)
@@ -379,32 +394,35 @@ const HomeClient = ({
 
     if (error) return <div>Error: {error}</div>;
     return (
-        <main className=" transition-all duration-300">
+        <main className="home-page transition-all duration-300">
             <Header isRegistered={headerRegistered} userName={headerUserName} />
 
-            <div
-                className={
-                    " flex flex-col gap-16 md:gap-36 py-12 md:py-24 px-8 "
-                }
-            >
-                <div
-                    className={
-                        "mx-auto flex flex-col items-center  w-full  md:w-fit  "
-                    }
-                >
+            <div className="home-content">
+                <div className="home-lists">
+                    <div className="home-lists-heading">
+                        <div>
+                            <p className="home-eyebrow">YOUR SPACE</p>
+                            <h1>Shopping lists</h1>
+                            <p>Keep every shop organised in one place.</p>
+                        </div>
                     <Button
-                        cta={"Create a new list"}
+                        cta={"Create list"}
                         content={"single-input"}
                         action={"create-list"}
                         cancelAction={"true"}
-                        color={"#21ba9c"}
-                        hover={"inwards"}
                         textColorOverride={"text-white"}
+                        overrideDefaultClasses="app-primary-action"
                     />
+                    </div>
 
                     {/* Actual List */}
                     {userLists && userLists.length > 0 ? (
                         <DragDropContext
+                            onBeforeCapture={() => {
+                                if (!lenis.current) return;
+                                lenis.current.scrollTo(lenis.current.actualScroll, {immediate: true});
+                                lenis.current.options.smoothWheel = false;
+                            }}
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
                         >
@@ -413,34 +431,33 @@ const HomeClient = ({
                                     <div
                                         {...provided.droppableProps}
                                         ref={provided.innerRef}
-                                        className="mt-8 flex flex-col gap-6 w-full group  "
+                                        className="home-list-stack home-list-draggable-stack group"
                                     >
                                         {userLists.map((list, index) => (
-                                            // List Wrapper
-                                            <div
+                                            <Draggable
                                                 key={list.id}
-                                                className="relative"
+                                                draggableId={String(list.id)}
+                                                index={index}
                                             >
-                                                {/* Draggable Item */}
-                                                <Draggable
-                                                    key={list.id}
-                                                    draggableId={String(
-                                                        list.id
-                                                    )}
-                                                    index={index}
-                                                >
-                                                    {(provided, snapshot) => (
+                                                {(provided, snapshot) => (
+                                                    <div
+                                                        ref={provided.innerRef}
+                                                        {...provided.draggableProps}
+                                                        className="relative home-list-slot"
+                                                        style={provided.draggableProps.style}
+                                                    >
                                                         <List
                                                             listSettings={
                                                                 listSettings
                                                             }
                                                             token={serverToken}
                                                             list={list}
-                                                            provided={provided}
+                                                            provided={{dragHandleProps: provided.dragHandleProps}}
                                                             snapshot={snapshot}
                                                             handleListSettings={
                                                                 handleListSettings
                                                             }
+                                                            onManageAccess={(selectedList) => openShareDialog(selectedList, "members")}
                                                             handleRenameList={
                                                                 handleRenameList
                                                             }
@@ -454,14 +471,12 @@ const HomeClient = ({
                                                                 ]
                                                             }
                                                         />
-                                                    )}
-                                                </Draggable>
 
                                                 {/*  List Actions (out for z-index over other lists. closes on drag) */}
                                                 {listSettings === list.id && (
                                                     <div
                                                         id={`menu-${list.id}`}
-                                                        className="absolute right-12 top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
+                                                        className="home-list-menu tools"
                                                     >
                                                         <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                             <button
@@ -487,15 +502,7 @@ const HomeClient = ({
                                                                 Copy
                                                             </button>
                                                             <button
-                                                                onClick={() => {
-                                                                    setShareDialogOpen(
-                                                                        list.id
-                                                                    );
-                                                                    setSharedWithUsers(
-                                                                        list.acf
-                                                                            .shared_with_users
-                                                                    );
-                                                                }}
+                                                                onClick={() => openShareDialog(list)}
                                                                 className="px-3 py-1 tool cursor-pointer  text-left duration-200 transition-colors dark:text-white rounded-sm"
                                                             >
                                                                 <ShareIcon className="w-4 h-4 inline-block mr-1" />
@@ -543,7 +550,9 @@ const HomeClient = ({
                                                         </div>
                                                     </div>
                                                 )}
-                                            </div>
+                                                    </div>
+                                                )}
+                                            </Draggable>
                                         ))}
 
                                         {provided.placeholder}
@@ -555,7 +564,7 @@ const HomeClient = ({
                       !hasDeletedLists &&
                       lists &&
                       lists.length > 0 ? (
-                        <div className="mt-8 flex flex-col gap-6 w-full">
+                        <div className="home-list-stack">
                             {lists.map((list) => (
                                 <List
                                     token={token}
@@ -569,40 +578,38 @@ const HomeClient = ({
                                 />
                             ))}
                         </div>
+                    ) : !initialLoadComplete ? (
+                        <ListCardsSkeleton count={userLists?.length || lists?.length || 0} />
                     ) : (
                         // No lists found
-                        <p className="mt-12 text-xl font-black text-center">
-                            No shopping lists found.
-                        </p>
+                        <div className="home-empty-state">
+                            <h2>No shopping lists yet</h2>
+                            <p>Create a list to get started.</p>
+                        </div>
                     )}
                 </div>
 
-                <div className={"text-center "}>
-                    <p className={"text-xl md:text-2xl"}>
-                        <strong>Let&#39;s plan your shopping list!</strong>
-                    </p>
-                    <p className={"mt-2 md:text-md text-gray-400"}>
+                <div className="home-prompt-card">
+                    <p>Need a hand planning?</p>
+                    <span>
                         <span
                             onClick={() =>
                                 chatWidgetRef.current?.openWidget?.()
                             }
                             className="font-quicksand font-black brand-color hover:text-primary duration-200 transition-colors cursor-pointer"
                         >
-                            Prompt{" "}
+                            Ask Lista{" "}
                         </span>
-                        to create lists & add ingredents
-                    </p>
-                    {/* <p className={"mt-2 md:text-md text-gray-400"}>
-                        Use the button to start a new list
-                    </p> */}
+                        to create lists and add ingredients.
+                    </span>
                 </div>
             </div>
 
             {overlay && <Overlay handleDeleteList={handleDeleteList} />}
 
             {loading && (
-                <div className="fixed z-[9999] top-0 left-0 w-full h-full bg-[#00000055] flex items-center justify-center text-xl text-white">
-                    <ListLoader />
+                <div className="fixed z-[9999] inset-0 w-full min-h-dvh bg-[#07101fd9] backdrop-blur-sm flex items-center justify-center">
+                    <ListLoader name={shoppingList?.name} />
                 </div>
             )}
 
@@ -617,7 +624,11 @@ const HomeClient = ({
                     list={userLists.find((list) => list.id === shareDialogOpen)}
                     listId={shareDialogOpen}
                     sharedWithUsers={sharedWithUsers}
-                    onClose={() => setShareDialogOpen(null)}
+                    initialView={shareDialogView}
+                    onClose={() => {
+                        setShareDialogOpen(null);
+                        setShareDialogView("share");
+                    }}
                     setSharedWithUsers={setSharedWithUsers}
                 />
             )}

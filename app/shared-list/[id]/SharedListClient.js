@@ -4,15 +4,19 @@ import {useEffect, useMemo, useRef, useState} from "react";
 import {getSharedList} from "../../lib/api";
 import {decryptToken, WP_API_BASE} from "../../lib/helpers";
 import {useUserContext} from "../../contexts/UserContext";
+import SharedListStatus from "./SharedListStatus";
 
 export default function SharedListPage({token, userId, listId}) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const {userData, token: ctxToken, loading: ctxLoading} = useUserContext();
+    const [phase, setPhase] = useState("loading");
+    const {userData, token: ctxToken} = useUserContext();
 
     const startedRef = useRef(false);
+    const redirectRef = useRef(null);
+
+    useEffect(() => () => clearTimeout(redirectRef.current), []);
 
     const effectiveToken = useMemo(() => token || ctxToken, [token, ctxToken]);
     const effectiveUserId = useMemo(
@@ -24,11 +28,13 @@ export default function SharedListPage({token, userId, listId}) {
     useEffect(() => {
         if (token && userId) return; // SSR cookies present
         if (effectiveToken && effectiveUserId) return; // context resolved
-        const already = sessionStorage.getItem("shared_list_auto_refresh");
         const t = setTimeout(() => {
             if (!sessionStorage.getItem("shared_list_auto_refresh")) {
                 sessionStorage.setItem("shared_list_auto_refresh", "1");
                 window.location.reload();
+            } else {
+                setError("Sign in, then open this share link again to join the list.");
+                setPhase("error");
             }
         }, 5000);
         return () => clearTimeout(t);
@@ -39,7 +45,7 @@ export default function SharedListPage({token, userId, listId}) {
         const code = searchParams?.get("k");
         if (!code) {
             setError("This share link is invalid or missing a code.");
-            setLoading(false);
+            setPhase("error");
             return;
         }
 
@@ -84,12 +90,11 @@ export default function SharedListPage({token, userId, listId}) {
                     console.error("Failed to accept share:", err);
                     throw err;
                 }
-                // 4. Redirect to the main lists page
-                router.replace("/");
+                setPhase("success");
+                redirectRef.current = setTimeout(() => router.replace("/"), 950);
             } catch (err) {
                 setError(err.message || "Failed to process shared list");
-            } finally {
-                setLoading(false);
+                setPhase("error");
             }
         };
 
@@ -97,27 +102,5 @@ export default function SharedListPage({token, userId, listId}) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [listId, effectiveToken, effectiveUserId]);
 
-    if (loading)
-        return (
-            <div className="flex flex-col items-center justify-center h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-                <p>Adding shared list to your account...</p>
-            </div>
-        );
-
-    if (error)
-        return (
-            <div className="flex flex-col items-center justify-center h-screen">
-                <div className="text-red-500 text-xl mb-4">Error</div>
-                <p className="text-center max-w-md">{error}</p>
-                <button
-                    onClick={() => router.push("/")}
-                    className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                    Back to My Lists
-                </button>
-            </div>
-        );
-
-    return null; // This component doesn't render any content
+    return <SharedListStatus phase={phase} error={error} />;
 }

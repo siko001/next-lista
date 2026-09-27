@@ -1,5 +1,6 @@
 "use client";
 import gsap from "gsap";
+import {animateProductExit} from "../../lib/productMotion";
 import {useEffect, useState, useMemo, useRef} from "react";
 import {useLoading} from "../../contexts/LoadingContext";
 import Fuse from "fuse.js";
@@ -88,7 +89,7 @@ export default function ShoppingList({
     const [progress, setProgress] = useState(
         calculateProgress(totalProductCount, baggedProductCount) || 0,
     );
-    const {setIsInnerList, isInInnerList, setUserLists} = useListContext();
+    const {setIsInnerList, isInInnerList, setUserLists, setListPreview} = useListContext();
 
     // Get Categories
     const [categories, setCategories] = useState([]);
@@ -423,7 +424,7 @@ export default function ShoppingList({
             opacity: 0,
             y: -6,
             scaleY: 0.96,
-            transformOrigin: "top left",
+            transformOrigin: "top right",
         });
         gsap.to(el, {
             opacity: 1,
@@ -444,7 +445,7 @@ export default function ShoppingList({
             opacity: 0,
             y: -6,
             scaleY: 0.96,
-            transformOrigin: "top left",
+            transformOrigin: "top right",
         });
         gsap.to(el, {
             opacity: 1,
@@ -471,23 +472,18 @@ export default function ShoppingList({
         baggedProducts,
     ]);
 
+    const bulkActionInFlightRef = useRef(false);
+    const animateBulkRowsOut = (selector, direction) =>
+        animateProductExit(document.querySelector(selector)?.querySelectorAll(".list-product-row"), direction);
+
     // Bag All Products
     const handleBagAllItems = async (listId) => {
-        const container = document.querySelector(".checked-products-container");
-
-        // Add fade-out animation to all checked products
-        if (container) {
-            gsap.to(container.children, {
-                opacity: 0,
-                y: 60,
-                duration: 0.3,
-                stagger: 0.05,
-                onComplete: updateStates,
-            });
-            showNotification("Products Bagged", "success", 1000);
-        } else {
-            updateStates();
-        }
+        if (bulkActionInFlightRef.current || checkedProducts.length === 0) return;
+        bulkActionInFlightRef.current = true;
+        await animateBulkRowsOut(".checked-products-container", 1);
+        updateStates();
+        bulkActionInFlightRef.current = false;
+        showNotification("Products Bagged", "success", 1000);
 
         function updateStates() {
             const baggedProducts = checkedProducts.map((product) => ({
@@ -546,20 +542,12 @@ export default function ShoppingList({
     };
 
     const handleUnbagAllProducts = async (listId) => {
-        const container = document.querySelector(".bagged-products-container");
-        // Add fade-out animation to all bagged products
-        if (container) {
-            gsap.to(container.children, {
-                opacity: 0,
-                y: -60,
-                duration: 0.3,
-                stagger: 0.05,
-                onComplete: updateStates,
-            });
-            showNotification("Products Unbagged", "success", 1000);
-        } else {
-            updateStates();
-        }
+        if (bulkActionInFlightRef.current || baggedProducts.length === 0) return;
+        bulkActionInFlightRef.current = true;
+        await animateBulkRowsOut(".bagged-products-container", -1);
+        updateStates();
+        bulkActionInFlightRef.current = false;
+        showNotification("Products Unbagged", "success", 1000);
 
         function updateStates() {
             // Get all currently bagged products
@@ -617,23 +605,13 @@ export default function ShoppingList({
 
     // REMOVE ALL CHECKED AND LINKED PRODUCTS
     const handleRemoveCheckedItems = async (listId) => {
-        const container = document.querySelector(".checked-products-container");
+        if (bulkActionInFlightRef.current || checkedProducts.length === 0) return;
+        bulkActionInFlightRef.current = true;
         const productsToRemove = [...checkedProducts]; // Create a copy of checked products
-
-        // Add fade-out animation to all checked products
-        if (container) {
-            gsap.to(container.children, {
-                opacity: 0,
-                y: 60,
-                duration: 0.3,
-                backgroundColor: "#ff0000",
-                stagger: 0.05,
-                onComplete: () => updateStates(productsToRemove),
-            });
-            showNotification("Products Removed", "success", 1000);
-        } else {
-            updateStates(productsToRemove);
-        }
+        await animateBulkRowsOut(".checked-products-container", 1);
+        updateStates(productsToRemove);
+        bulkActionInFlightRef.current = false;
+        showNotification("Products Removed", "success", 1000);
 
         function updateStates(productsToRemove) {
             // Update state - remove all checked products
@@ -714,23 +692,13 @@ export default function ShoppingList({
 
     // REMOVE ALL BAGGED PRODUCTS
     const handleRemoveBaggedItems = async (listId) => {
-        const container = document.querySelector(".bagged-products-container");
+        if (bulkActionInFlightRef.current || baggedProducts.length === 0) return;
+        bulkActionInFlightRef.current = true;
         const productsToRemove = [...baggedProducts];
-
-        // Add fade-out animation to all bagged products
-        if (container) {
-            gsap.to(container.children, {
-                opacity: 0,
-                y: 60,
-                duration: 0.3,
-                backgroundColor: "#ff0000",
-                stagger: 0.05,
-                onComplete: () => updateStates(productsToRemove),
-            });
-            showNotification("Products Removed", "success", 1000);
-        } else {
-            updateStates(productsToRemove);
-        }
+        await animateBulkRowsOut(".bagged-products-container", 1);
+        updateStates(productsToRemove);
+        bulkActionInFlightRef.current = false;
+        showNotification("Products Removed", "success", 1000);
 
         function updateStates(productsToRemove) {
             // Update state - remove all bagged products
@@ -958,18 +926,35 @@ export default function ShoppingList({
     }, [currentList?.acf?.shared_with_users]);
 
     const [listTitle, setListTitle] = useState(currentList.title);
+
+    // Keep navigation previews current after adding, bagging, or removing items.
+    useEffect(() => {
+        const preview = {
+            ...currentList,
+            id: listId,
+            title: listTitle,
+            acf: {...currentList.acf, product_count: totalProductCount, bagged_product_count: baggedProductCount},
+        };
+        setListPreview(preview);
+        setUserLists((previous) => previous?.map((item) =>
+            String(item.id) === String(listId)
+                ? {...item, title: listTitle, acf: {...item.acf, product_count: totalProductCount, bagged_product_count: baggedProductCount}}
+                : item
+        ));
+    }, [currentList, listId, listTitle, totalProductCount, baggedProductCount, setListPreview, setUserLists]);
     useRealtimeRename(userId, setListTitle, isInInnerList);
     useRealtimeListDelete(listId, userId, showNotification);
 
     return (
-        <main>
+        <main className={`list-detail-page ${checkedProducts?.length === 0 && baggedProducts?.length === 0 ? "is-empty" : ""}`}>
             <Header isRegistered={isRegistered} userName={userName} />
 
-            <div className="relatve px-4">
+            <div className="list-detail-shell">
                 <ShoppingListHeader
                     ownerName={ownerName}
                     setProgress={setProgress}
                     totalProductCount={totalProductCount}
+                    baggedProductCount={baggedProductCount}
                     setAllLinkedProducts={setAllLinkedProducts}
                     setCheckedProducts={setCheckedProducts}
                     setBaggedProducts={setBaggedProducts}
@@ -987,10 +972,10 @@ export default function ShoppingList({
                     allLinkedProducts={allLinkedProducts}
                 />
 
-                <div className="flex flex-col gap-4 w-full max-w-[740px] z-10 relative mx-auto mt-4 px-4 mb-32 ">
+                <div className="list-detail-content flex flex-col gap-4 w-full z-10 relative mx-auto">
                     {/* bg-[#f8f8ff] dark:bg-[#0a0a0a] */}
                     <div
-                        className={`flex items-center justify-between sticky top-24 hidden-bg z-20 px-4 pt-4 pb-2 ${
+                        className={`list-section-heading flex items-center justify-between sticky top-24 hidden-bg z-20 px-4 pt-4 pb-2 ${
                             checkedProducts?.length === 0 ? "hidden" : ""
                         }`}
                     >
@@ -1002,7 +987,7 @@ export default function ShoppingList({
                                     className="flex cursor-pointer relative z-20  gap-1 checklist-settings"
                                 >
                                     <SettingsIcon
-                                        className={`w-7 h-7  ${
+                                        className={`settings-icon w-7 h-7  ${
                                             checklistSettings
                                                 ? "text-primary"
                                                 : "text-gray-500 hover:text-gray-700"
@@ -1022,7 +1007,7 @@ export default function ShoppingList({
                                             <div
                                                 id="checklist-settings-menu"
                                                 ref={checkedListSettings}
-                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
+                                                className="list-detail-menu tools"
                                             >
                                                 <div className="flex font-quicksand font-[500] flex-col gap-0.5">
                                                     <button
@@ -1065,7 +1050,7 @@ export default function ShoppingList({
                     >
                         {checkedProducts?.length === 0 &&
                         baggedProducts?.length === 0 ? (
-                            <div className="w-full font-quicksand mt-28 flex items-center justify-center text-gray-900/60 dark:text-gray-400/60 text-lg md:text-2xl font-normal relative z-30 pointer-events-auto">
+                            <div className="list-empty-state">
                                 {isSearching ? (
                                     "No results found"
                                 ) : (
@@ -1106,7 +1091,8 @@ export default function ShoppingList({
                                         setBaggedProducts={setBaggedProducts}
                                         token={token}
                                         product={product}
-                                        key={index}
+                                        index={index}
+                                        key={product.id}
                                     />
                                 ),
                             )
@@ -1114,7 +1100,7 @@ export default function ShoppingList({
                     </div>
 
                     <div
-                        className={`flex items-center justify-between sticky top-24 ${
+                        className={`list-section-heading flex items-center justify-between sticky top-24 ${
                             checkedProducts?.length !== 0 ||
                             baggedProducts?.length !== 0
                                 ? "hidden-bg"
@@ -1139,7 +1125,7 @@ export default function ShoppingList({
                                     className={`flex cursor-pointer relative z-20  gap-1 bagged-settings`}
                                 >
                                     <SettingsIcon
-                                        className={`w-7 h-7   ${
+                                        className={`settings-icon w-7 h-7   ${
                                             baggedSettings
                                                 ? "text-primary"
                                                 : "text-gray-500 hover:text-gray-700"
@@ -1164,7 +1150,7 @@ export default function ShoppingList({
                                             <div
                                                 id="bagged-settings-menu"
                                                 ref={baggedListSettings}
-                                                className="absolute left-7 -top-2 mt-1  text-xs whitespace-nowrap py-1.5 px-1 shadow-[#00000055] rounded-sm tools shadow-md z-30 overflow-hidden"
+                                                className="list-detail-menu tools"
                                             >
                                                 <div className="flex flex-col font-quicksand font-[500] gap-0.5">
                                                     <button
@@ -1217,7 +1203,8 @@ export default function ShoppingList({
                                     isBagged={true}
                                     token={token}
                                     product={product}
-                                    key={index}
+                                    index={index}
+                                    key={product.id}
                                 />
                             ),
                         )}
@@ -1252,16 +1239,12 @@ export default function ShoppingList({
 
             <ChatWidget context="list" listId={listId} token={token} />
 
-            <div className="open-product-overlay opacity-0 fixed bottom-8 left-[50%] translate-x-[-50%] z-50">
+            <div className="open-product-overlay opacity-0 fixed bottom-6 left-[50%] translate-x-[-50%] z-50">
                 <Button
                     cta="Add Products"
-                    color="#21ba9c"
-                    hover="inwards"
                     action="add-product-overlay"
                     textColorOverride={"text-white"}
-                    overrideDefaultClasses={
-                        "bg-blue-800 text-black text-sm md:text-base"
-                    }
+                    overrideDefaultClasses="app-primary-action"
                     setProductOverlay={setProductOverlay}
                 />
             </div>

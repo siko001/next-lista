@@ -1,0 +1,29 @@
+.shared-join-page { display: flex; flex-direction: column; }
+.shared-join-content { margin-block: auto; padding-block: 28px; }
+.shared-join-nav-label { display: inline-flex; align-items: center; gap: 8px; color: var(--auth-muted); font-size: 12px; font-weight: 800; }
+.shared-join-nav-label svg { color: #159e84; }
+.shared-join-card { padding: 38px 34px; text-align: center; }
+.shared-join-mark { position: relative; display: grid; place-items: center; width: 72px; height: 72px; margin: 0 auto 27px; border: 1px solid rgb(33 186 156 / 25%); border-radius: 23px; background: linear-gradient(145deg, rgb(33 186 156 / 16%), rgb(59 130 246 / 8%)); color: #159e84; transform: rotate(-5deg); }
+.shared-join-mark > span { position: absolute; right: -11px; bottom: -8px; display: grid; place-items: center; width: 34px; height: 34px; border: 3px solid var(--auth-panel); border-radius: 12px; background: #2453dc; color: #fff; transform: rotate(5deg); }
+.shared-join-mark.is-complete > span { background: #159e84; }
+.shared-join-mark.has-error > span { background: #d4475b; }
+.shared-join-eyebrow { margin: 0 0 7px; color: #159e84; font-size: 10px; font-weight: 800; letter-spacing: .15em; }
+.shared-join-card h1 { margin: 0; color: var(--auth-text); font-size: clamp(25px, 5vw, 31px); font-weight: 800; letter-spacing: -.025em; line-height: 1.2; }
+.shared-join-description { max-width: 325px; margin: 12px auto 0; color: var(--auth-muted); font-size: 13px; font-weight: 600; line-height: 1.65; }
+.shared-join-progress { margin: 33px auto 0; max-width: 285px; }
+.shared-join-progress-label { display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 14px; color: var(--auth-text); font-size: 12px; font-weight: 800; }
+.shared-join-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #21ba9c; animation: shared-join-breathe 1.8s ease-in-out infinite; }
+.shared-join-progress-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgb(33 186 156 / 16%); }
+.shared-join-progress-track > span { display: block; width: 40%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #21ba9c, #3b82f6); animation: shared-join-slide 1.9s cubic-bezier(.45,0,.55,1) infinite; }
+.shared-join-result { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 32px; color: #159e84; font-size: 13px; font-weight: 800; }
+.shared-join-error { margin: 24px 0 0; padding: 12px 14px; border: 1px solid rgb(212 71 91 / 25%); border-radius: 12px; background: rgb(212 71 91 / 8%); color: #be3049; font-size: 12px; font-weight: 700; line-height: 1.55; overflow-wrap: anywhere; }
+.shared-join-actions { display: flex; justify-content: center; margin-top: 24px; }
+.shared-join-actions .app-primary-action { gap: 8px; }
+.shared-join-page :is(a, button):focus-visible { outline: 2px solid #21ba9c; outline-offset: 4px; }
+:is(.dark, .dark-mode) .shared-join-eyebrow,
+:is(.dark, .dark-mode) .shared-join-result { color: #27c9aa; }
+:is(.dark, .dark-mode) .shared-join-error { color: #ff9cab; }
+@keyframes shared-join-breathe { 50% { opacity: .42; transform: scale(.76); } }
+@keyframes shared-join-slide { from { transform: translateX(-110%); } to { transform: translateX(360%); } }
+@media (max-width: 600px) { .shared-join-card { padding: 32px 23px; } .shared-join-nav-label { font-size: 0; } .shared-join-nav-label svg { width: 20px; height: 20px; } }
+@media (prefers-reduced-motion: reduce) { .shared-join-status-dot, .shared-join-progress-track > span { animation: none; } }

@@ -1,26 +1,20 @@
-'use client'
-import { useEffect } from "react";
-import { useUserContext } from "../contexts/UserContext";
+"use client";
+import {useEffect, useRef, useState} from "react";
+import {useUserContext} from "../contexts/UserContext";
+import LogoutScreen from "../components/auth/LogoutScreen";
 
 export default function LogoutClient() {
-    const { logout } = useUserContext();
-
+    const {logout} = useUserContext();
+    const logoutRef = useRef(logout);
+    logoutRef.current = logout;
+    const [leaving, setLeaving] = useState(false);
     useEffect(() => {
-        setTimeout(() => {
-            logout();
-            window.location.href = "/";
+        const fade = setTimeout(() => setLeaving(true), 1200);
+        const redirect = setTimeout(() => {
+            logoutRef.current();
+            window.location.replace("/");
         }, 1500);
-        return () => {
-            clearTimeout();
-        };
-    });
-    // Nicer logout page maybe spinner
-    return (
-        <main>
-            <div className="flex flex-col items-center justify-center h-screen">
-                <h1 className="text-3xl font-bold mb-4">Logging out...</h1>
-                <p className="text-lg">You will be redirected shortly.</p>
-            </div>
-        </main>
-    );
+        return () => { clearTimeout(fade); clearTimeout(redirect); };
+    }, []);
+    return <LogoutScreen leaving={leaving} />;
 }

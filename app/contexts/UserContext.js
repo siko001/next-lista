@@ -6,11 +6,12 @@ import {useListContext} from "./ListContext";
 import {WP_API_BASE, SECRET_KEY} from "../lib/helpers";
 const UserContext = createContext();
 
-export const UserProvider = ({children}) => {
+export const UserProvider = ({children, initialRegistered = false, initialUserName}) => {
     const [userData, setUserData] = useState(null);
     const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [registered, setRegistered] = useState(initialRegistered);
     const {setUserLists} = useListContext();
 
     // Function to encrypt data
@@ -80,38 +81,14 @@ export const UserProvider = ({children}) => {
 
     // Function to log out the user
     const logout = () => {
-        // Ensure we're in a browser environment
-        if (typeof document !== "undefined") {
-            // Remove all possible theme-related classes
-            const html = document.documentElement;
-            const themeClasses = ["dark", "dark-mode", "light", "light-mode"];
-
-            // Remove all theme classes
-            themeClasses.forEach((cls) => html.classList.remove(cls));
-
-            // Remove any data-theme attribute
-            html.removeAttribute("data-theme");
-
-            // Clear any stored theme preference
-            if (typeof window !== "undefined") {
-                localStorage.removeItem("theme");
-                sessionStorage.removeItem("theme");
-            }
-
-            // Log the current state for verification
-            console.log("After logout - HTML classes:", html.className);
-            console.log(
-                "After logout - data-theme:",
-                html.getAttribute("data-theme")
-            );
-        }
-
+        // Theme is a device preference; keep it consistent when signing out.
         // Clear authentication data
         deleteCookie("token");
         deleteCookie("registered");
         deleteCookie("id");
         deleteCookie("username");
         setUserData(null);
+        setRegistered(false);
         setToken(null);
         setUserLists(null);
     };
@@ -157,6 +134,7 @@ export const UserProvider = ({children}) => {
                 });
 
                 setUserData({
+                    registered: "no",
                     id: newUser.user_id,
                     username: newUser.username,
                     email: newUser.email,
@@ -166,9 +144,11 @@ export const UserProvider = ({children}) => {
                 setToken(tokenData.token);
             } else {
                 // Token exists? Fetch user data
-                fetchUserData(storedToken).then((data) => {
-                    setUserData(data);
-                });
+                const data = await fetchUserData(storedToken);
+                setUserData(data);
+                // The login session is already known from the server cookie.
+                // A delayed profile response must not turn its navigation into a guest view.
+                if (data.registered === "yes") setRegistered(true);
 
                 setToken(storedToken);
             }
@@ -188,6 +168,8 @@ export const UserProvider = ({children}) => {
         <UserContext.Provider
             value={{
                 userData,
+                isRegistered: registered || userData?.registered === "yes",
+                accountName: userData?.name || initialUserName,
                 setUserData,
                 token,
                 loading,
