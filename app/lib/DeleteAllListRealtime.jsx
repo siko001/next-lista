@@ -1,5 +1,5 @@
-import {useEffect, useRef} from "react";
-import Pusher from "pusher-js";
+import {useEffect} from "react";
+import {subscribePusherEvent} from "./pusherClient";
 import {invalidateListData} from "./dataCache.mjs";
 
 export default function useRealtimeAllListDelete(
@@ -8,49 +8,26 @@ export default function useRealtimeAllListDelete(
     userId,
     showNotification
 ) {
-    const pusherRef = useRef(null);
-    const channelsRef = useRef([]);
-
+    const listIds = Array.isArray(userLists)
+        ? userLists.map((list) => String(list.id)).sort().join(",")
+        : "";
     useEffect(() => {
-        if (!Array.isArray(userLists) || userLists.length === 0) return;
-
-        // Create Pusher client once
-        if (!pusherRef.current) {
-            pusherRef.current = new Pusher("a9f747a06cd5ec1d8c62", {
-                cluster: "eu",
-                forceTLS: true,
-                enableStats: false,
-            });
-        }
-
-        // Subscribe to each list's channel
-        channelsRef.current = userLists.map((list) => {
-            const channel = pusherRef.current.subscribe(
-                "shopping-list-" + list.id
-            );
-            channel.bind("list-deleted", (data) => {
+        if (!listIds) return;
+        const releases = listIds.split(",").map((id) =>
+            subscribePusherEvent("shopping-list-" + id, "list-deleted", (data) => {
                 invalidateListData(userId);
-                if (showNotification && data.sender_id !== userId) {
+                if (showNotification && String(data.sender_id) !== String(userId)) {
                     showNotification(
                         data.message || "A list was deleted by another user",
                         "info"
                     );
                 }
                 setUserLists((prev) =>
-                    prev.filter((l) => l.id !== data.list_id)
+                    prev.filter((l) => String(l.id) !== String(data.list_id))
                 );
-            });
-            return channel;
-        });
+            })
+        );
 
-        // Cleanup on unmount or when userLists changes
-        return () => {
-            channelsRef.current.forEach((channel) => {
-                channel.unbind_all();
-                channel.unsubscribe();
-            });
-            channelsRef.current = [];
-            // Do not disconnect the socket here to avoid closing while connecting
-        };
-    }, [userLists, setUserLists, userId, showNotification]);
+        return () => releases.forEach((release) => release());
+    }, [listIds, setUserLists, userId, showNotification]);
 }

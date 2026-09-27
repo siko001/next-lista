@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {ShoppingBag, Sparkles, ArrowRight, Mail, KeyRound} from "lucide-react";
+import {useState} from "react";
+import {ShoppingBag, Sparkles, ArrowRight, Mail, KeyRound, ChevronDown} from "lucide-react";
+import UserSettings from "../UserSettings";
+import SiteCredit from "../SiteCredit";
 
 const screens = {
     login: {id: "login-form", eyebrow: "GOOD TO SEE YOU AGAIN", title: "Welcome back", description: "Your lists are waiting. Let’s pick up where you left off.", prompt: "New around here?", href: "/register", link: "Create an account", icon: ShoppingBag},
@@ -11,6 +14,7 @@ const screens = {
 };
 
 export default function AuthShell({register = false, mode, loading = false, children}) {
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const screen = screens[mode || (register ? "register" : "login")];
     const Icon = screen.icon;
     const recovery = mode === "forgot" || mode === "reset";
@@ -18,8 +22,16 @@ export default function AuthShell({register = false, mode, loading = false, chil
         <main id={screen.id} className="auth-page">
             <nav className="auth-navigation" aria-label="Main navigation">
                 <Link href="/" className="auth-logo">LISTA</Link>
-                <Link href={recovery ? "/login" : "/"} className="app-primary-action">{recovery ? "Back to login" : "Home"}</Link>
+                <div className="app-account-actions">
+                    <button type="button" onClick={() => setIsSettingsOpen(true)} className="app-account-button is-guest" aria-label="Open account settings" aria-haspopup="dialog" aria-expanded={isSettingsOpen}>
+                        <span className="app-account-avatar" aria-hidden="true">👋</span>
+                        <span className="app-account-name">Guest</span>
+                        <ChevronDown size={15} aria-hidden="true" />
+                    </button>
+                    <Link href={recovery ? "/login" : "/"} className="app-primary-action">{recovery ? "Back to login" : "Home"}</Link>
+                </div>
             </nav>
+            <UserSettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
             <div className="auth-content">
                 <section className="auth-card" aria-labelledby="auth-title" aria-busy={loading || undefined}>
                     <div className="auth-mark" aria-hidden="true"><Icon /><Sparkles className="auth-sparkle" /></div>
@@ -35,6 +47,7 @@ export default function AuthShell({register = false, mode, loading = false, chil
                     </footer>
                 </section>
                 <p className="auth-footnote">Less remembering. More living.</p>
+                <footer className="auth-credit"><SiteCredit /></footer>
             </div>
         </main>
     );

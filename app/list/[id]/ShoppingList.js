@@ -1,10 +1,11 @@
 "use client";
 import gsap from "gsap";
 import {animateProductExit} from "../../lib/productMotion";
-import {useEffect, useState, useMemo, useRef} from "react";
+import {useEffect, useState, useRef} from "react";
 import {useLoading} from "../../contexts/LoadingContext";
-import Fuse from "fuse.js";
-import {calculateProgress, WP_API_BASE, decryptToken, getAllProducts, getAllCustomProducts, getFavourites} from "../../lib/helpers";
+import {calculateProgress, WP_API_BASE, decryptToken, getAllProducts, getAllCustomProducts, getFavourites, decodeHtmlEntities} from "../../lib/helpers";
+import {searchProductsInLanguage} from "../../lib/domTranslations.mjs";
+import useDomTranslations from "../../lib/useDomTranslations";
 import {invalidateCurrentLists, seedCache, cacheVersion, cacheKeys, CACHE_TTL} from "../../lib/dataCache.mjs";
 import {
     getUniqueCategories,
@@ -19,6 +20,7 @@ import {useListContext} from "../../contexts/ListContext";
 import useListaRealtimeUpdates from "../../lib/RealTimeUpdates";
 import useRealtimeRename from "../../lib/RealtimeRename";
 import useRealtimeListDelete from "../../lib/DeleteListRealtime";
+import {subscribePusherEvent} from "../../lib/pusherClient";
 
 // Components
 import Header from "../../components/Header";
@@ -29,6 +31,7 @@ import ShoppingListHeader from "../../components/parts/ShoppingListHeader";
 import Product from "../../components/parts/Product";
 import ShareListDialog from "../../components/modals/ShareListDialog";
 import ChatWidget from "../../components/ChatWidget";
+import SiteCredit from "../../components/SiteCredit";
 
 // Icons
 import SettingsIcon from "../../components/svgs/SettingsIcon";
@@ -36,7 +39,7 @@ import BagIcon from "../../components/svgs/BagIcon";
 import XBagIcon from "../../components/svgs/XBagIcon";
 import EmptyBagIcon from "../../components/svgs/EmptyBagIcon";
 
-const FUSE_CHECKED_OPTIONS = {keys: ["title"], threshold: 0.4, distance: 100};
+const FUSE_CHECKED_OPTIONS = {threshold: 0.4, distance: 100};
 
 export default function ShoppingList({
     listId,
@@ -54,7 +57,11 @@ export default function ShoppingList({
 }) {
     // const {stopLoading} = useLoading();
     const [productOverlay, setProductOverlay] = useState(false);
+    const {language, text, revision} = useDomTranslations();
+    const searchTermRef = useRef("");
     const [currentList, setCurrentList] = useState(initialList);
+    const currentListRef = useRef(currentList);
+    currentListRef.current = currentList;
 
     // general products
     const [allLinkedProducts, setAllLinkedProducts] = useState(
@@ -177,15 +184,6 @@ export default function ShoppingList({
     ]);
 
     const {showNotification} = useNotificationContext();
-    // Create Fuse instances for fuzzy search
-    const fuseChecked = useMemo(
-        () => new Fuse(originalCheckedProducts, FUSE_CHECKED_OPTIONS),
-        [originalCheckedProducts],
-    );
-    const fuseBagged = useMemo(
-        () => new Fuse(originalBaggedProducts, FUSE_CHECKED_OPTIONS),
-        [originalBaggedProducts],
-    );
 
     // Update original product lists when primary lists change (outside of search)
     useEffect(() => {
@@ -204,6 +202,13 @@ export default function ShoppingList({
 
     // Track if we're currently searching
     const [isSearching, setIsSearching] = useState(false);
+
+    // The visible list state is the source of truth for this count. Server
+    // summaries and realtime events can arrive after an optimistic move.
+    // Search temporarily filters rows, so keep the full count while searching.
+    useEffect(() => {
+        if (!isSearching) setBaggedProductCount(baggedProducts?.length || 0);
+    }, [baggedProducts, isSearching]);
 
     // Suppress realtime toasts while AI bulk-adding
     const suppressAiToastsRef = useRef(false);
@@ -273,6 +278,7 @@ export default function ShoppingList({
 
     // Handle search functionality with fuzzy matching
     const handleSearchProducts = (searchTerm) => {
+        searchTermRef.current = searchTerm;
         if (searchTerm === "") {
             // If search is cleared, restore original lists
             setCheckedProducts([...originalCheckedProducts]);
@@ -284,17 +290,20 @@ export default function ShoppingList({
         setIsSearching(true);
 
         // Use Fuse.js to perform fuzzy search on both lists
-        const filteredCheckedProducts = fuseChecked
-            .search(searchTerm)
-            .map((result) => result.item);
-        const filteredBaggedProducts = fuseBagged
-            .search(searchTerm)
-            .map((result) => result.item);
+        const filteredCheckedProducts = searchProductsInLanguage(originalCheckedProducts, searchTerm, language, FUSE_CHECKED_OPTIONS);
+        const filteredBaggedProducts = searchProductsInLanguage(originalBaggedProducts, searchTerm, language, FUSE_CHECKED_OPTIONS);
 
         // Update the state with filtered results
         setCheckedProducts(filteredCheckedProducts);
         setBaggedProducts(filteredBaggedProducts);
     };
+
+    useEffect(() => {
+        const query = searchTermRef.current;
+        if (!query) return;
+        setCheckedProducts(searchProductsInLanguage(originalCheckedProducts, query, language, FUSE_CHECKED_OPTIONS));
+        setBaggedProducts(searchProductsInLanguage(originalBaggedProducts, query, language, FUSE_CHECKED_OPTIONS));
+    }, [language, revision, originalCheckedProducts, originalBaggedProducts]);
 
     const handleOpenChecklistSettings = () => {
         if (checklistSettings) {
@@ -838,7 +847,9 @@ export default function ShoppingList({
         if (data.fields.product_count !== undefined) {
             setTotalProductCount(Number(data.fields.product_count));
         }
-        if (data.fields.bagged_product_count !== undefined) {
+        if (Array.isArray(data.fields.bagged_linked_products)) {
+            setBaggedProductCount(data.fields.bagged_linked_products.length);
+        } else if (data.fields.bagged_product_count !== undefined) {
             setBaggedProductCount(Number(data.fields.bagged_product_count));
         }
 
@@ -851,13 +862,7 @@ export default function ShoppingList({
     // Handle being removed from shared list and other share updates
     useEffect(() => {
         if (!userId) return;
-        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
-            cluster: "eu",
-        });
-
-        const channel = pusher.subscribe("user-lists-" + userId);
-
-        channel.bind("share-update", (data) => {
+        return subscribePusherEvent("user-lists-" + userId, "share-update", (data) => {
             invalidateCurrentLists();
             if (data.action === "add" && parseInt(data.listId) === parseInt(listId)) {
                 const addedUser = {ID: parseInt(data.userId), display_name: data.userName};
@@ -923,7 +928,7 @@ export default function ShoppingList({
             ) {
                 // Update shared users state
                 const updatedUsers = (
-                    currentList?.acf?.shared_with_users || []
+                    currentListRef.current?.acf?.shared_with_users || []
                 ).filter((user) => user.ID !== parseInt(data.userId));
 
                 // Update both the list and shared users state
@@ -963,13 +968,7 @@ export default function ShoppingList({
                 );
             }
         });
-
-        return () => {
-            channel.unbind_all();
-            pusher.unsubscribe("user-lists-" + userId);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userId, listId, token, currentList]);
+    }, [userId, listId, token, setUserLists, showNotification]);
 
     // Update sharedWithUsers when list changes
     useEffect(() => {
@@ -995,11 +994,20 @@ export default function ShoppingList({
                 : item
         ));
     }, [currentList, listId, listTitle, totalProductCount, baggedProductCount, setListPreview, setUserLists]);
-    useRealtimeRename(userId, setListTitle, isInInnerList);
+    useRealtimeRename(userId, listId, listTitle, setListTitle, isInInnerList);
     useRealtimeListDelete(listId, userId, showNotification);
 
     return (
         <main className={`list-detail-page ${checkedProducts?.length === 0 && baggedProducts?.length === 0 ? "is-empty" : ""}`}>
+            <div className="list-translation-seed" aria-hidden="true">
+                {["Checklist", "Bagged", "To buy", "product", "products"].map((copy) =>
+                    <span key={copy} data-lista-translate-key={`list-copy:${copy}`} data-lista-source={copy}>{copy}</span>
+                )}
+                {[...(originalCheckedProducts || []), ...(originalBaggedProducts || [])].map((product) => {
+                    const copy = decodeHtmlEntities(product.title);
+                    return <span key={product.id} data-lista-translate-key={`product:${product.id}`} data-lista-source={copy}>{copy}</span>;
+                })}
+            </div>
             <Header isRegistered={isRegistered} userName={userName} />
 
             <div className="list-detail-shell">
@@ -1053,10 +1061,10 @@ export default function ShoppingList({
                                     />
                                     <div className="">
                                         <span className="text-2xl font-bold">
-                                            Checklist{" "}
+                                            <span data-lista-translate-key="list-copy:Checklist" data-lista-source="Checklist" translate={text("list-copy:Checklist", "Checklist") !== "Checklist" ? "no" : undefined}>{text("list-copy:Checklist", "Checklist")}</span>{" "}
                                         </span>
                                         <span className="text-sm brand-color transition-colors duration-200 font-quicksand ml-2">
-                                            {checkedProducts?.length} products
+                                            {checkedProducts?.length} {checkedProducts?.length === 1 ? text("list-copy:product", "product") : text("list-copy:products", "products")}
                                         </span>
                                     </div>
 
@@ -1149,6 +1157,8 @@ export default function ShoppingList({
                                         setBaggedProducts={setBaggedProducts}
                                         token={token}
                                         product={product}
+                                        displayTitle={text(`product:${product.id}`, decodeHtmlEntities(product.title))}
+                                        statusLabel={text("list-copy:To buy", "To buy")}
                                         index={index}
                                         key={product.id}
                                     />
@@ -1191,7 +1201,7 @@ export default function ShoppingList({
                                     />
                                     <div>
                                         <span className="text-2xl font-bold">
-                                            Bagged
+                                            <span data-lista-translate-key="list-copy:Bagged" data-lista-source="Bagged" translate={text("list-copy:Bagged", "Bagged") !== "Bagged" ? "no" : undefined}>{text("list-copy:Bagged", "Bagged")}</span>
                                         </span>
                                         <span className="text-sm brand-color transition-colors duration-200 font-quicksand ml-2">
                                             {baggedProducts?.length !== 0
@@ -1199,7 +1209,7 @@ export default function ShoppingList({
                                                 : baggedItems.baggedCount !==
                                                       0 &&
                                                   baggedItems.baggedCount}{" "}
-                                            products
+                                            {" "}{baggedProducts?.length === 1 ? text("list-copy:product", "product") : text("list-copy:products", "products")}
                                         </span>
                                     </div>
 
@@ -1243,7 +1253,7 @@ export default function ShoppingList({
                     </div>
 
                     <div
-                        className={`bagged-products-container flex flex-col gap-4 ${baggedProducts?.length === 0 ? "mb-2" : "mb-24"}`}
+                        className="bagged-products-container flex flex-col gap-4 mb-2"
                     >
                         {baggedProducts?.map((product, index) =>
                             product === 0 ? null : (
@@ -1261,6 +1271,8 @@ export default function ShoppingList({
                                     isBagged={true}
                                     token={token}
                                     product={product}
+                                    displayTitle={text(`product:${product.id}`, decodeHtmlEntities(product.title))}
+                                    statusLabel={text("list-copy:Bagged", "Bagged")}
                                     index={index}
                                     key={product.id}
                                 />
@@ -1269,6 +1281,8 @@ export default function ShoppingList({
                     </div>
                 </div>
             </div>
+
+            <footer className="site-footer"><SiteCredit /></footer>
 
             {productOverlay && (
                 <AddProduct

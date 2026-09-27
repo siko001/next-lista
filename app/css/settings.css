@@ -45,7 +45,7 @@
 .settings-heading > p:last-child { margin: 9px 0 0; font-size: 13px; line-height: 1.6; color: var(--settings-muted); }
 .settings-close { position: absolute; right: 20px; top: 20px; width: 36px; height: 36px; display: grid; place-items: center; border: 0; border-radius: 11px; color: var(--settings-muted); background: transparent; cursor: pointer; transition: background-color .2s, color .2s, transform .2s; }
 .settings-close:hover { background: var(--settings-soft); color: var(--settings-text); transform: rotate(8deg); }
-.settings-scroll { overflow-y: auto; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--settings-border) transparent; }
+.settings-scroll { overflow-y: auto; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #2453dc transparent; }
 .settings-sections { padding: 0 30px 28px; }
 .settings-section + .settings-section { margin-top: 26px; padding-top: 23px; border-top: 1px solid var(--settings-border); }
 .settings-section h3, .settings-section > label { display: block; margin: 0; font-family: inherit; font-size: 15px; line-height: 1.4; font-weight: 800; color: var(--settings-text); }
@@ -90,6 +90,11 @@
     .settings-themes { gap: 7px; }
     .settings-theme { padding: 7px; }
     .settings-theme-label { gap: 4px; font-size: 11px; }
+}
+@media (max-width: 480px) {
+    .app-account-button.is-guest { width: 44px; min-width: 44px; padding: 5px; }
+    .app-account-button.is-guest .app-account-name,
+    .app-account-button.is-guest > svg { display: none; }
 }
 @media (max-height: 700px) { .settings-emblem { display: none; } }
 @media (prefers-reduced-motion: reduce) {

@@ -1,10 +1,11 @@
 <?php
 
-add_action('save_post_shopping-list', function($post_id, $post, $update) {
-    // Only run on updates, not on new posts (optional)
-    if (!$update) return;
-	// Only run if not trashing or deleting
-    if ($post->post_status === 'trash' || $post->post_status === 'auto-draft') return;
+add_action('post_updated', function($post_id, $post_after, $post_before) {
+    if ($post_after->post_type !== 'shopping-list') return;
+    if (in_array($post_after->post_status, ['trash', 'auto-draft'], true)) return;
+    // Reordering updates menu_order through wp_update_post. Only a changed title
+    // is a rename and should be sent to the owner or shared users.
+    if ($post_before->post_title === $post_after->post_title) return;
 
 
     // Get owner and shared users (reuse your robust logic)
@@ -23,7 +24,7 @@ add_action('save_post_shopping-list', function($post_id, $post, $update) {
     }));
 
     // Get summary info
-    $title = get_the_title($post_id);
+    $title = $post_after->post_title;
     $product_count = get_field('product_count', $post_id);
     $bagged_count = get_field('bagged_product_count', $post_id);
     $checked_count = get_field('checked_product_count', $post_id);

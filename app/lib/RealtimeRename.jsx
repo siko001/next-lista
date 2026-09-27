@@ -1,55 +1,25 @@
 import {useEffect, useRef} from "react";
-import {getPusher} from "./pusherClient";
+import {subscribePusherEvent} from "./pusherClient";
 import {useNotificationContext} from "../contexts/NotificationContext";
-import {useListContext} from "../contexts/ListContext";
 import {invalidateListData} from "./dataCache.mjs";
 
-export default function useRealtimeRename(userId, setListTitle, isInInnerList) {
+export default function useRealtimeRename(userId, listId, listTitle, setListTitle, isInInnerList) {
     const {showNotification} = useNotificationContext();
-    const pusherRef = useRef(null);
-    const channelRef = useRef(null);
+    const titleRef = useRef(listTitle);
+
+    useEffect(() => {
+        titleRef.current = listTitle;
+    }, [listTitle]);
 
     useEffect(() => {
         if (!userId) return;
 
-        // Create Pusher client once per hook instance
-        if (!pusherRef.current) {
-            pusherRef.current = getPusher();
-        }
-
-        // Subscribe to the user channel
-        const channel = pusherRef.current.subscribe("user-lists-" + userId);
-        channelRef.current = channel;
-
-        channel.bind("list-summary-updated", (data) => {
+        return subscribePusherEvent("user-lists-" + userId, "list-summary-updated", (data) => {
             invalidateListData(userId);
-            if (data.title && setListTitle) {
-                setListTitle(data.title);
-            }
-
-            if (
-                showNotification &&
-                data.sender_id !== userId &&
-                data.message &&
-                !isInInnerList
-            ) {
-                if (data.sender_id == userId) return;
-                showNotification(
-                    data.message || "List updated by other user",
-                    "info"
-                );
-            }
+            if (String(data.list_id) !== String(listId) || !data.title || data.title === titleRef.current) return;
+            titleRef.current = data.title;
+            setListTitle(data.title);
+            if (showNotification && !isInInnerList) showNotification("List renamed", "info");
         });
-
-        return () => {
-            // Unsubscribe handlers/channel but avoid disconnecting the socket while it's connecting
-            if (channelRef.current) {
-                channelRef.current.unbind_all();
-                channelRef.current.unsubscribe();
-                channelRef.current = null;
-            }
-            // Intentionally do not call pusher.disconnect() here to prevent
-            // 'WebSocket is closed before the connection is established' during rapid unmounts.
-        };
-    }, [userId, setListTitle, isInInnerList, showNotification]);
+    }, [userId, listId, setListTitle, isInInnerList, showNotification]);
 }

@@ -4,6 +4,8 @@
     --font-quicksand: "Quicksand", sans-serif;
     --font-saira: "Saira", sans-serif;
     --color-primary: #21ba9c;
+    scrollbar-color: #2453dc transparent;
+    scrollbar-width: thin;
 
     /* Prevent transitions during initial page load */
     html.theme-loading,
@@ -18,6 +20,11 @@
     --background: #f8f8ff;
     --foreground: #171717;
 }
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #2453dc; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: #1d4ed8; }
 
 /* Light theme */
 :root,
@@ -323,6 +330,41 @@ body {
 .skiptranslate {
     display: none !important;
 }
+
+.site-footer {
+    position: relative;
+    z-index: 60;
+    width: min(100% - 32px, 920px);
+    margin: 0 auto;
+    padding: 8px 0 max(28px, env(safe-area-inset-bottom));
+}
+body:has(.list-detail-page) .site-footer { padding-bottom: max(105px, env(safe-area-inset-bottom)); }
+body:has(.home-page) .site-footer { padding-top: 0; }
+body:has(.home-page) > .site-footer,
+body:has(.list-detail-page) > .site-footer { display: none; }
+body:has(.auth-page) > .site-footer { display: none; }
+@media (max-width: 680px) { .site-footer { width: min(100% - 28px, 920px); } }
+
+.site-credit {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 32px;
+    padding: 5px 10px;
+    border: 1px solid #dce4ee;
+    border-radius: 999px;
+    background: #fff;
+    color: #087f70;
+    font: 700 11px var(--font-quicksand), sans-serif;
+    text-decoration: none;
+    box-shadow: 0 5px 18px rgb(21 31 46 / 12%);
+    transition: border-color .2s, color .2s, transform .2s, box-shadow .2s;
+}
+.site-credit:hover { border-color: #21ba9c; color: #075d54; transform: translateY(-2px); box-shadow: 0 8px 20px rgb(21 31 46 / 18%); }
+.site-credit:focus-visible { outline: 2px solid #21ba9c; outline-offset: 3px; }
+.site-credit span:last-child { font-size: 15px; line-height: 1; }
+:is(.dark, .dark-mode) .site-credit { background: #151f2e; border-color: #344255; color: #26c8ae; }
+:is(.dark, .dark-mode) .site-credit:hover { border-color: #26c8ae; color: #8fead9; }
 
 .new-list {
     @apply duration-200 ease-in-out border-2 border-green-500;

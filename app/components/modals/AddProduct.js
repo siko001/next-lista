@@ -1,7 +1,8 @@
 "use client";
 import gsap from "gsap";
 import {useCallback, useEffect, useRef, useState, useMemo} from "react";
-import Fuse from "fuse.js";
+import {searchProductsInLanguage} from "../../lib/domTranslations.mjs";
+import useDomTranslations from "../../lib/useDomTranslations";
 import {createSmoothScroller} from "../../lib/smoothScroll";
 import {useListContext} from "../../contexts/ListContext";
 import {Check, Flame, Grid2X2, Heart, Plus, Search, Star, Trash2, X} from "lucide-react";
@@ -68,6 +69,7 @@ export default function AddProduct({
     const maxLength = INGREDIENT_NAME_MAX_LENGTH;
 
     const {showNotification} = useNotificationContext();
+    const {language, text, revision} = useDomTranslations();
 
     const productListRef = useRef();
     const productScrollerRef = useRef(null);
@@ -94,10 +96,11 @@ export default function AddProduct({
     }, [allLinkedProducts, baggedProducts, totalProductCount, baggedProductCount]);
 
     const fuseOptions = {
-        keys: ["title"],
         threshold: 0.3,
         distance: 100,
     };
+    const searchInCurrentLanguage = (products, query) =>
+        searchProductsInLanguage(products || [], query, language, fuseOptions);
 
     const applySelection = (productId, selected, {restoreBagged = false} = {}) => {
         const key = String(productId);
@@ -286,25 +289,24 @@ export default function AddProduct({
             setFavouriteSearchResults(null);
         } else {
             // Search in popular products
-            const popularFuse = new Fuse(allProducts, fuseOptions);
-            const popularResults = popularFuse.search(value);
-            setPopularSearchResults(
-                popularResults.map((result) => result.item)
-            );
+            setPopularSearchResults(searchInCurrentLanguage(allProducts, value));
 
             // Search in custom products
-            const customFuse = new Fuse(customProducts, fuseOptions);
-            const customResults = customFuse.search(value);
-            setSearchResults(customResults.map((result) => result.item));
+            setSearchResults(searchInCurrentLanguage(customProducts, value));
 
             // Search in favourite products
-            const favouriteFuse = new Fuse(favouriteProducts, fuseOptions);
-            const favouriteResults = favouriteFuse.search(value);
-            setFavouriteSearchResults(
-                favouriteResults.map((result) => result.item)
-            );
+            setFavouriteSearchResults(searchInCurrentLanguage(favouriteProducts, value));
         }
     };
+
+    useEffect(() => {
+        if (!searchValue) return;
+        setPopularSearchResults(searchInCurrentLanguage(allProducts, searchValue));
+        setSearchResults(searchInCurrentLanguage(customProducts, searchValue));
+        setFavouriteSearchResults(searchInCurrentLanguage(favouriteProducts, searchValue));
+        // Re-run when Google finishes translating visible names.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [language, revision, searchValue, allProducts, customProducts, favouriteProducts]);
 
     // Get the correct products to display based on the selected section
     const displayedProducts = useMemo(() => {
@@ -445,9 +447,7 @@ export default function AddProduct({
 
             // If searching, update the custom search results immediately
             if (searchValue) {
-                const customFuse = new Fuse(nextCustom, fuseOptions);
-                const customResults = customFuse.search(searchValue);
-                setSearchResults(customResults.map((r) => r.item));
+                setSearchResults(searchInCurrentLanguage(nextCustom, searchValue));
             }
         }
 
@@ -470,11 +470,7 @@ export default function AddProduct({
         const fetchedCustomProducts = await getAllCustomProducts(token);
         setCustomProducts(fetchedCustomProducts);
         if (searchValue) {
-            setSearchResults(
-                new Fuse(fetchedCustomProducts, fuseOptions)
-                    .search(searchValue)
-                    .map((result) => result.item)
-            );
+            setSearchResults(searchInCurrentLanguage(fetchedCustomProducts, searchValue));
         }
     };
 
@@ -513,9 +509,7 @@ export default function AddProduct({
             const nextFavs = prev?.filter((p) => p.id !== productId) || [];
             // If searching, update favourite search results immediately
             if (searchValue) {
-                const favFuse = new Fuse(nextFavs, fuseOptions);
-                const favResults = favFuse.search(searchValue);
-                setFavouriteSearchResults(favResults.map((r) => r.item));
+                setFavouriteSearchResults(searchInCurrentLanguage(nextFavs, searchValue));
             }
             return nextFavs;
         });
@@ -585,9 +579,7 @@ export default function AddProduct({
                 const nextFavs = prev?.filter((p) => p.id !== productId) || [];
                 // keep Favourites tab results in sync when searching
                 if (searchValue) {
-                    const favFuse = new Fuse(nextFavs, fuseOptions);
-                    const favResults = favFuse.search(searchValue);
-                    setFavouriteSearchResults(favResults.map((r) => r.item));
+                    setFavouriteSearchResults(searchInCurrentLanguage(nextFavs, searchValue));
                 } else if (selectedProductsSection === "favourite") {
                     // reflect immediately in the Favourites tab even without search
                     setFavouriteSearchResults(nextFavs);
@@ -625,9 +617,7 @@ export default function AddProduct({
                     {id: productId, title: productTitle},
                 ];
                 if (searchValue) {
-                    const favFuse = new Fuse(nextFavs, fuseOptions);
-                    const favResults = favFuse.search(searchValue);
-                    setFavouriteSearchResults(favResults.map((r) => r.item));
+                    setFavouriteSearchResults(searchInCurrentLanguage(nextFavs, searchValue));
                 } else if (selectedProductsSection === "favourite") {
                     setFavouriteSearchResults(nextFavs);
                 }
@@ -684,19 +674,17 @@ export default function AddProduct({
             );
         }
         if (searchValue) {
-            filtered = new Fuse(filtered, fuseOptions)
-                .search(searchValue)
-                .map((result) => result.item);
+            filtered = searchInCurrentLanguage(filtered, searchValue);
         }
         setFilteredProducts(filtered);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedCategories, allProducts, searchValue]);
+    }, [selectedCategories, allProducts, searchValue, language, revision]);
 
     const sections = [
         {id: "popular", label: "Popular", icon: Flame},
         {id: "categories", label: "Categories", icon: Grid2X2},
-        {id: "custom", label: "Custom", icon: Plus},
-        {id: "favourite", label: "Favourites", icon: Heart},
+        {id: "custom", label: "My products", icon: Plus},
+        {id: "favourite", label: "Saved products", icon: Heart},
     ];
     const sectionCopy = {
         popular: "Browse products",
@@ -708,6 +696,17 @@ export default function AddProduct({
         ? filteredProducts
         : displayedProducts;
     const selectedCount = allLinkedProducts?.length || 0;
+    const translationSeedProducts = useMemo(() => {
+        const byId = new Map();
+        [...(allProducts || []), ...(customProducts || []), ...(favouriteProducts || [])].forEach((product) => {
+            if (product?.id != null) byId.set(String(product.id), product);
+        });
+        return [...byId.values()];
+    }, [allProducts, customProducts, favouriteProducts]);
+    const translated = (key, source) => {
+        const value = text(key, source);
+        return <span data-lista-translate-key={key} data-lista-source={source} translate={value !== source ? "no" : undefined}>{value}</span>;
+    };
 
     const renderProductItem = (product, index) => {
         const isTemporaryProduct = typeof product.id === "string" && product.id.startsWith("temp-");
@@ -732,7 +731,7 @@ export default function AddProduct({
                     <span className="picker-product-check" aria-hidden="true">
                         {isSelected && <Check size={17} strokeWidth={3} />}
                     </span>
-                    <span className="picker-product-name">{title}</span>
+                    <span className="picker-product-name" data-lista-translate-key={`product:${product.id}`} data-lista-source={title} translate={text(`product:${product.id}`, title) !== title ? "no" : undefined}>{text(`product:${product.id}`, title)}</span>
                     {isTemporaryProduct && <span className="picker-product-saving">Saving…</span>}
                 </label>
                 <div className="picker-product-actions">
@@ -774,6 +773,24 @@ export default function AddProduct({
                 aria-label="Add products to list"
             >
                 <header className="picker-header">
+                    <div className="picker-translation-seed" aria-hidden="true">
+                        {Object.entries(sectionCopy).map(([key, copy]) => <span key={key} data-lista-translate-key={`picker-heading:${key}`} data-lista-source={copy}>{copy}</span>)}
+                        <span data-lista-translate-key="picker-hint:default" data-lista-source="Tap a product to add it to your list">Tap a product to add it to your list</span>
+                        <span data-lista-translate-key="picker-hint:custom" data-lista-source="Products you have added">Products you have added</span>
+                        <span data-lista-translate-key="picker-hint:favourite" data-lista-source="Products you saved for later">Products you saved for later</span>
+                        <span data-lista-translate-key="picker-validation:product-name" data-lista-source="Please enter a product name">Please enter a product name</span>
+                        {["All categories", "Clear filters", "Browse categories", "Done", "Name a product", "Add", "categories selected"].map((copy) =>
+                            <span key={copy} data-lista-translate-key={`picker-category:${copy}`} data-lista-source={copy}>{copy}</span>
+                        )}
+                        {(categories || []).map((category) => {
+                            const copy = decodeHtmlEntities(category);
+                            return <span key={copy} data-lista-translate-key={`picker-category:${copy}`} data-lista-source={copy}>{copy}</span>;
+                        })}
+                        {translationSeedProducts.map((product) => {
+                            const copy = decodeHtmlEntities(product.title);
+                            return <span key={product.id} data-lista-translate-key={`product:${product.id}`} data-lista-source={copy}>{copy}</span>;
+                        })}
+                    </div>
                     <div className="picker-heading">
                         <div>
                             <p className="picker-eyebrow">YOUR SHOPPING LIST</p>
@@ -815,7 +832,7 @@ export default function AddProduct({
                                 aria-current={selectedProductsSection === id ? "page" : undefined}
                             >
                                 <Icon size={17} aria-hidden="true" />
-                                <span>{label}</span>
+                                {translated(`picker-tab:${id}`, label)}
                             </button>
                         ))}
                     </nav>
@@ -834,7 +851,7 @@ export default function AddProduct({
                                 <input
                                     ref={customProductInputRef}
                                     type="text"
-                                    placeholder="Name a product"
+                                    placeholder={text("picker-category:Name a product", "Name a product")}
                                     aria-label="Custom product name"
                                     maxLength={maxLength}
                                     onChange={(event) => setCustomProductLength(event.target.value.length)}
@@ -843,9 +860,9 @@ export default function AddProduct({
                             </div>
                             <button type="submit" className="picker-add-button">
                                 <Plus size={18} aria-hidden="true" />
-                                <span>Add</span>
+                                {translated("picker-category:Add", "Add")}
                             </button>
-                            {error && <p className="picker-form-error" role="alert">{error}</p>}
+                            {error && <p className="picker-form-error" role="alert">{translated("picker-validation:product-name", error)}</p>}
                         </form>
                     )}
                 </div>
@@ -862,20 +879,21 @@ export default function AddProduct({
                             categories={categories}
                             selectedCategories={selectedCategories}
                             onCategoryToggle={handleCategoryToggle}
+                            translateText={translated}
                         />
                     )}
 
                         <div className="picker-list-heading">
                             <div>
-                                <h3>{sectionCopy[selectedProductsSection]}</h3>
+                                <h3>{translated(`picker-heading:${selectedProductsSection}`, sectionCopy[selectedProductsSection])}</h3>
                                 <p>
                                     {selectedProductsSection === "categories" && selectedCategories.length > 0
                                         ? `${selectedCategories.length} active ${selectedCategories.length === 1 ? "filter" : "filters"}`
                                         : selectedProductsSection === "custom"
-                                        ? "Products you have added"
+                                        ? translated("picker-hint:custom", "Products you have added")
                                         : selectedProductsSection === "favourite"
-                                        ? "Products you saved for later"
-                                        : "Tap a product to add it to your list"}
+                                        ? translated("picker-hint:favourite", "Products you saved for later")
+                                        : translated("picker-hint:default", "Tap a product to add it to your list")}
                                 </p>
                             </div>
                             <span className="picker-result-count">{visibleProducts.length} {visibleProducts.length === 1 ? "product" : "products"}</span>

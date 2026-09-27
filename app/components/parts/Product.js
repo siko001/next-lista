@@ -14,6 +14,8 @@ export default function Product({
     progress,
     setAllLinkedProducts,
     product,
+    displayTitle,
+    statusLabel,
     index = 0,
     token,
     isBagged,
@@ -202,6 +204,7 @@ export default function Product({
     return (
         <div
             ref={itemRef}
+            data-product-id={product.id}
             className={`list-product-row product-item ${isBagged ? "is-bagged bagged-product" : ""}`}
             style={{"--list-row-index": Math.min(index, 8)}}
         >
@@ -215,8 +218,8 @@ export default function Product({
                 <span className="list-product-check" aria-hidden="true">
                     {isBagged && <Check size={18} strokeWidth={3} />}
                 </span>
-                <span className="list-product-title">{decodeHtmlEntities(product.title)}</span>
-                <span className="list-product-status">{isBagged ? "Bagged" : "To buy"}</span>
+                <span className="list-product-title" data-lista-translate-key={`product:${product.id}`} data-lista-source={decodeHtmlEntities(product.title)} translate={displayTitle && displayTitle !== decodeHtmlEntities(product.title) ? "no" : undefined}>{displayTitle || decodeHtmlEntities(product.title)}</span>
+                <span className="list-product-status" data-lista-translate-key={`list-copy:${isBagged ? "Bagged" : "To buy"}`} data-lista-source={isBagged ? "Bagged" : "To buy"} translate={statusLabel && statusLabel !== (isBagged ? "Bagged" : "To buy") ? "no" : undefined}>{statusLabel || (isBagged ? "Bagged" : "To buy")}</span>
             </button>
             {isBagged && (
                 <button

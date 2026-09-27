@@ -16,6 +16,7 @@ import {Quicksand, Saira} from "next/font/google";
 import {AuthProvider} from "./hooks/useAuth";
 import {cookies} from "next/headers";
 import AnimatedFavicon from "./components/AnimatedFavicon";
+import SiteCredit from "./components/SiteCredit";
 
 const quicksand = Quicksand({
     subsets: ["latin"],
@@ -121,14 +122,9 @@ export default async function RootLayout({children}) {
                     </LoadingProvider>
                 </AuthProvider>
 
-                <a
-                    href="https://neilmallia.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="fixed bottom-2 left-2 z-50 brand-color transition-colors duration-200 text-[10px] !border-0 "
-                >
-                    By Neil VM
-                </a>
+                <footer className="site-footer">
+                    <SiteCredit />
+                </footer>
             </body>
         </html>
     );

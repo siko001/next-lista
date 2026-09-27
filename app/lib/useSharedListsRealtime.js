@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useRef} from "react";
-import Pusher from "pusher-js";
+import {subscribePusherEvent} from "./pusherClient";
 import {invalidateListData} from "./dataCache.mjs";
 
 export default function useSharedListsRealtime(
@@ -14,12 +14,6 @@ export default function useSharedListsRealtime(
     useEffect(() => {
         if (!userId) return;
 
-        // Initialize Pusher with your app key
-        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
-            cluster: "eu",
-        });
-
-        const channel = pusher.subscribe("user-lists-" + userId);
         const isDuplicate = (data) => {
             const key = `${data.action}:${data.listId}:${data.userId}:${data.actorId || ''}`;
             const now = Date.now();
@@ -34,7 +28,7 @@ export default function useSharedListsRealtime(
             return false;
         };
 
-        channel.bind("share-update", (data) => {
+        return subscribePusherEvent("user-lists-" + userId, "share-update", (data) => {
             invalidateListData(userId);
             if (data.action !== 'remove') return; // only handle removals here
             if (isDuplicate(data)) return;
@@ -103,11 +97,5 @@ export default function useSharedListsRealtime(
                 );
             }
         });
-
-        // Cleanup on unmount
-        return () => {
-            channel.unbind_all();
-            pusher.unsubscribe("user-lists-" + userId);
-        };
     }, [userId, setUserLists, showNotification]);
 }

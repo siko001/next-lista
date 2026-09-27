@@ -4,7 +4,7 @@ import {DragDropContext, Droppable, Draggable} from "@hello-pangea/dnd";
 import {WP_API_BASE, isListOwner, removeListRelationship} from "./lib/helpers";
 import {invalidateCurrentLists} from "./lib/dataCache.mjs";
 import gsap from "gsap";
-import Pusher from "pusher-js";
+import {subscribePusherEvent} from "./lib/pusherClient";
 
 // Websockets
 import useUserListsRealtime from "./lib/UserListsRealTime";
@@ -34,6 +34,7 @@ import ListLoader from "./components/loaders/ListLoader";
 import {ListCardsSkeleton} from "./components/loaders/PageSkeleton";
 import List from "./components/parts/List";
 import ChatWidget from "./components/ChatWidget";
+import SiteCredit from "./components/SiteCredit";
 
 const HomeClient = ({
     isRegistered,
@@ -44,6 +45,8 @@ const HomeClient = ({
     metadata,
 }) => {
     const [shareDialogOpen, setShareDialogOpen] = useState(null);
+    const shareDialogOpenRef = useRef(null);
+    shareDialogOpenRef.current = shareDialogOpen;
     const [shareDialogView, setShareDialogView] = useState("share");
     const [sharedWithUsers, setSharedWithUsers] = useState(null);
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
@@ -345,13 +348,7 @@ const HomeClient = ({
 
     useEffect(() => {
         if (!userData?.id) return;
-        const pusher = new Pusher("a9f747a06cd5ec1d8c62", {
-            cluster: "eu",
-        });
-
-        const channel = pusher.subscribe("user-lists-" + userData.id);
-
-        channel.bind("share-update", (data) => {
+        return subscribePusherEvent("user-lists-" + userData.id, "share-update", (data) => {
             invalidateCurrentLists();
             if (data.action === "add") {
                 const newUser = {
@@ -367,7 +364,7 @@ const HomeClient = ({
                                 ...(list.acf.shared_with_users || []),
                                 newUser,
                             ];
-                            if (shareDialogOpen === parseInt(data.listId)) {
+                            if (shareDialogOpenRef.current === parseInt(data.listId)) {
                                 nextSharedUsers = updatedUsers;
                             }
                             return {
@@ -390,12 +387,7 @@ const HomeClient = ({
                 );
             }
         });
-
-        return () => {
-            channel.unbind_all();
-            pusher.unsubscribe("user-lists-" + userData.id);
-        };
-    }, [userData?.id, shareDialogOpen, userLists]);
+    }, [userData?.id, setUserLists, showNotification]);
 
     // Prefer client context for header auth state to avoid SSR/CSR mismatch flicker
     const headerRegistered =
@@ -614,6 +606,8 @@ const HomeClient = ({
                     </span>
                 </div>
             </div>
+
+            <footer className="site-footer"><SiteCredit /></footer>
 
             {overlay && <Overlay handleDeleteList={handleDeleteList} />}
 

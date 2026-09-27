@@ -9,6 +9,7 @@ export default function CategoryFilter({
     categories = [],
     selectedCategories = [],
     onCategoryToggle = () => {},
+    translateText = (_, source) => source,
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const filterRef = useRef(null);
@@ -54,7 +55,7 @@ export default function CategoryFilter({
         ? "All categories"
         : selectedCategories.length === 1
         ? decodeHtmlEntities(selectedCategories[0])
-        : `${selectedCategories.length} categories selected`;
+        : null;
 
     return (
         <div className="picker-category-filter" ref={filterRef}>
@@ -67,7 +68,9 @@ export default function CategoryFilter({
                     aria-controls="picker-category-options"
                 >
                     <SlidersHorizontal size={17} aria-hidden="true" />
-                    <span>{label}</span>
+                    {label === null
+                        ? <span>{selectedCategories.length} {translateText("picker-category:categories selected", "categories selected")}</span>
+                        : translateText(`picker-category:${label}`, label)}
                     <ChevronDown size={17} aria-hidden="true" />
                 </button>
                 {selectedCategories.length > 0 && (
@@ -76,15 +79,15 @@ export default function CategoryFilter({
                         className="picker-category-clear"
                         onClick={() => onCategoryToggle("all")}
                     >
-                        Clear filters
+                        {translateText("picker-category:clear", "Clear filters")}
                     </button>
                 )}
             </div>
             {isOpen && (
                 <div className="picker-category-popover" id="picker-category-options">
                     <div className="picker-category-popover-header">
-                        <span>Browse categories</span>
-                        <button type="button" onClick={() => setIsOpen(false)}>Done</button>
+                        {translateText("picker-category:browse", "Browse categories")}
+                        <button type="button" onClick={() => setIsOpen(false)}>{translateText("picker-category:done", "Done")}</button>
                     </div>
                     <div className="picker-category-options" ref={optionsRef} data-lenis-prevent>
                         <div className="picker-category-options-grid">
@@ -94,7 +97,7 @@ export default function CategoryFilter({
                             onClick={() => onCategoryToggle("all")}
                             aria-pressed={selectedCategories.length === 0}
                         >
-                            <span>All categories</span>
+                            {translateText("picker-category:All categories", "All categories")}
                             {selectedCategories.length === 0 && <Check size={17} aria-hidden="true" />}
                         </button>
                         {categories.map((category) => {
@@ -107,7 +110,7 @@ export default function CategoryFilter({
                                     onClick={() => onCategoryToggle(category)}
                                     aria-pressed={selected}
                                 >
-                                    <span>{decodeHtmlEntities(category)}</span>
+                                    {translateText(`picker-category:${decodeHtmlEntities(category)}`, decodeHtmlEntities(category))}
                                     {selected && <Check size={17} aria-hidden="true" />}
                                 </button>
                             );

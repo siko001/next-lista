@@ -65,7 +65,7 @@ export async function POST(request) {
         const transcription = await transcriptionResponse.json();
         const transcript = String(transcription.text || "").trim();
         if (!transcript) return json({error: "No speech was detected. Please try again."}, 422);
-        if (["destination", "choice"].includes(form.get("mode"))) return json({transcript});
+        if (["destination", "choice", "command"].includes(form.get("mode"))) return json({transcript});
         if (NON_ITEM.test(transcript)) return json({error: "No shopping items were heard. Please try again."}, 422);
 
         const extractionResponse = await fetch(

@@ -1,6 +1,7 @@
 // app/utils/translate.js
 
 let googleTranslateElementInit = null;
+let latestLanguageRequest = 0;
 
 // Initialize Google Translate
 export function initGoogleTranslate() {
@@ -89,15 +90,25 @@ export function changeLanguage(lang) {
         !window.google ||
         !window.google.translate
     ) {
-        console.warn("Google Translate not loaded yet");
-        return;
+        return false;
     }
 
     const selectField = document.querySelector(".goog-te-combo");
     if (selectField) {
         selectField.value = lang;
         selectField.dispatchEvent(new Event("change"));
+        return true;
     }
+    return false;
+}
+
+export function changeLanguageWhenReady(lang) {
+    const request = ++latestLanguageRequest;
+    const attempt = (remaining) => {
+        if (request !== latestLanguageRequest || changeLanguage(lang)) return;
+        if (remaining > 0) setTimeout(() => attempt(remaining - 1), 250);
+    };
+    attempt(24);
 }
 
 // Get current language

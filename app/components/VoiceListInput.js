@@ -80,9 +80,8 @@ export default function VoiceListInput({
         const vad = vadRef.current;
         if (!vad) return;
         clearInterval(vad.interval);
-        clearTimeout(vad.stopTimer);
-        clearTimeout(vad.recognitionRestart);
-        try { vad.recognition?.abort(); } catch {}
+        vad.commandController?.abort();
+        if (vad.commandRecorder?.state === "recording") vad.commandRecorder.stop();
         vad.audio?.close().catch(() => {});
         vadRef.current = null;
     }, []);
@@ -97,10 +96,10 @@ export default function VoiceListInput({
         if (vad) {
             vad.promptActive = false;
             vad.lastSpeechAt = Date.now();
-            clearTimeout(vad.stopTimer);
-            try { vad.recognition?.abort(); } catch {}
-            vad.recognition = null;
+            vad.commandController?.abort();
+            if (vad.commandRecorder?.state === "recording") vad.commandRecorder.stop();
         }
+        if (recorderRef.current?.state === "paused") recorderRef.current.resume();
         setPausePrompt(false);
     }, []);
 
@@ -204,64 +203,91 @@ export default function VoiceListInput({
             source.connect(analyser);
             const samples = new Float32Array(analyser.fftSize);
             const vad = {
-                audio, interval: null, recognition: null, recognitionRestart: null, stopTimer: null,
-                speechFrames: 0, lastSpeechAt: Date.now(), latestVoiceAt: 0,
+                audio, interval: null, commandRecorder: null, commandController: null,
+                commandSpeechFrames: 0, commandLastSpeechAt: 0, commandStartedAt: 0,
+                speechFrames: 0, lastSpeechAt: Date.now(),
                 promptedAt: 0, promptActive: false, questionSpeaking: false,
             };
             vadRef.current = vad;
 
-            const listenForFinish = () => {
-                const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!Recognition || recorder.state !== "recording" || vadRef.current !== vad) return;
+            const recordAnswer = () => {
+                if (vadRef.current !== vad || recorder.state !== "paused") return;
                 try {
-                    const recognition = new Recognition();
-                    recognition.lang = "en-GB";
-                    recognition.continuous = true;
-                    recognition.interimResults = false;
-                    recognition.onresult = (event) => {
-                        for (let index = event.resultIndex; index < event.results.length; index++) {
-                            if (!event.results[index].isFinal) continue;
-                            const phrase = normalize(event.results[index][0].transcript);
-                            if (vad.promptActive && /^(?:continue|keep going|more|not yet)$/.test(phrase)) {
+                    const types = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm"];
+                    const mimeType = types.find((type) => MediaRecorder.isTypeSupported(type));
+                    const answerRecorder = new MediaRecorder(stream, mimeType ? {mimeType} : undefined);
+                    const answerChunks = [];
+                    vad.commandRecorder = answerRecorder;
+                    vad.commandSpeechFrames = 0;
+                    vad.commandLastSpeechAt = 0;
+                    vad.commandStartedAt = Date.now();
+                    answerRecorder.ondataavailable = (event) => {
+                        if (event.data?.size) answerChunks.push(event.data);
+                    };
+                    answerRecorder.onstop = async () => {
+                        if (vadRef.current !== vad || !vad.promptActive || vad.commandSpeechFrames < 2) return;
+                        const blob = new Blob(answerChunks, {type: answerRecorder.mimeType || "audio/webm"});
+                        if (!blob.size) return;
+                        const controller = new AbortController();
+                        vad.commandController = controller;
+                        setBusy(true);
+                        try {
+                            const form = new FormData();
+                            form.append("audio", blob, "voice-answer");
+                            form.append("mode", "command");
+                            const response = await fetch("/api/ai/voice-items", {
+                                method: "POST",
+                                headers: {Authorization: `Bearer ${authToken}`},
+                                body: form,
+                                signal: controller.signal,
+                            });
+                            const data = await response.json();
+                            if (!response.ok) throw new Error(data.error || "Could not understand the answer.");
+                            if (vadRef.current !== vad || !vad.promptActive) return;
+                            const phrase = normalize(data.transcript);
+                            if (/^(?:continue|keep going|more|not yet)$/.test(phrase)) {
                                 continueRecording();
-                            } else if (mode === "items" && /(?:^| )(?:stop|stop recording|that s it|that is it|all done|i m done|done|finished)$/.test(phrase)) {
-                                clearTimeout(vad.stopTimer);
-                                vad.stopTimer = setTimeout(() => {
-                                    // A separate word such as "watch" cancels a tentative "stop".
-                                    if (vadRef.current === vad &&
-                                        Date.now() - vad.latestVoiceAt >= 2700) stopRecording();
-                                }, 2800);
-                            } else if (vad.promptActive) {
-                                continueRecording();
+                            } else if (/^(?:stop|stop recording|that s it|that is it|all done|i m done|done|finished)$/.test(phrase)) {
+                                stopRecording();
+                            } else {
+                                setError("Please say ‘stop’ or ‘continue’, or use a button below.");
                             }
+                        } catch (cause) {
+                            if (cause.name !== "AbortError" && vadRef.current === vad) {
+                                setError("Could not understand the answer. Use Stop or Continue below.");
+                            }
+                        } finally {
+                            if (vadRef.current === vad) vad.commandController = null;
+                            if (!disposedRef.current) setBusy(false);
                         }
                     };
-                    recognition.onend = () => {
-                        if (vad.recognition === recognition) vad.recognition = null;
-                        if (vadRef.current === vad && !vad.questionSpeaking && recorder.state === "recording" && vad.canRestart !== false) {
-                            vad.recognitionRestart = setTimeout(listenForFinish, 350);
-                        }
-                    };
-                    recognition.onerror = (event) => {
-                        if (["not-allowed", "service-not-allowed"].includes(event.error)) vad.canRestart = false;
-                    };
-                    recognition.start();
-                    vad.recognition = recognition;
-                } catch {}
+                    answerRecorder.start();
+                } catch {
+                    setError("Voice answer is unavailable. Use Stop or Continue below.");
+                }
             };
 
             vad.interval = setInterval(() => {
-                if (recorder.state !== "recording" || vad.questionSpeaking) return;
+                if (vad.questionSpeaking || (recorder.state !== "recording" && vad.commandRecorder?.state !== "recording")) return;
                 analyser.getFloatTimeDomainData(samples);
                 let power = 0;
                 for (const sample of samples) power += sample * sample;
                 const level = Math.sqrt(power / samples.length);
                 const now = Date.now();
+                if (vad.commandRecorder?.state === "recording") {
+                    if (level > 0.012) {
+                        vad.commandSpeechFrames += 1;
+                        vad.commandLastSpeechAt = now;
+                    } else if (vad.commandSpeechFrames >= 2 && now - vad.commandLastSpeechAt >= 1200) {
+                        vad.commandRecorder.stop();
+                    } else if (now - vad.commandStartedAt >= 12000) {
+                        vad.commandRecorder.stop();
+                    }
+                    return;
+                }
                 if (level > 0.012) {
                     vad.speechFrames += 1;
                     vad.lastSpeechAt = now;
-                    vad.latestVoiceAt = now;
-                    if (vad.stopTimer) clearTimeout(vad.stopTimer);
                 } else if (
                     mode === "items" && vad.speechFrames >= 2 && !vad.promptActive &&
                     now - vad.lastSpeechAt >= 4000 && now - vad.promptedAt >= 12000
@@ -270,18 +296,15 @@ export default function VoiceListInput({
                     vad.promptedAt = now;
                     vad.questionSpeaking = true;
                     setPausePrompt(true);
-                    try { vad.recognition?.abort(); } catch {}
                     recorder.pause();
                     speak("Are you finished? Say stop, or continue adding items.", () => {
                         if (vadRef.current !== vad || recorder.state !== "paused") return;
                         vad.questionSpeaking = false;
                         vad.lastSpeechAt = Date.now();
-                        recorder.resume();
-                        listenForFinish();
+                        recordAnswer();
                     });
                 }
             }, 200);
-            if (mode === "items") listenForFinish();
         } catch {
             // Recording and the manual Stop control still work without audio analysis.
         }

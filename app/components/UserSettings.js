@@ -4,11 +4,11 @@ import {useState, useEffect, useRef, useId} from "react";
 import {createPortal} from "react-dom";
 import {Check, ChevronDown, Globe, Monitor, Moon, Settings2, Sun, X} from "lucide-react";
 import gsap from "gsap";
-import {changeLanguage, initGoogleTranslate} from "../utils/translate";
+import {changeLanguageWhenReady, initGoogleTranslate} from "../utils/translate";
 import {useListContext} from "../contexts/ListContext";
 import {createSmoothScroller} from "../lib/smoothScroll";
+import {LANGUAGES} from "../lib/languages";
 
-const LANGUAGES = {en: "English", mt: "Maltese", it: "Italian", es: "Spanish", fr: "French", de: "German", pt: "Portuguese"};
 const THEMES = [{value: "light", label: "Light", Icon: Sun}, {value: "system", label: "System", Icon: Monitor}, {value: "dark", label: "Dark", Icon: Moon}];
 
 function updateTheme(preference) {
@@ -23,6 +23,7 @@ function updateTheme(preference) {
 export default function UserSettings({isOpen, onClose}) {
     const [theme, setTheme] = useState("system");
     const [currentLanguage, setCurrentLanguage] = useState("en");
+    const [languages, setLanguages] = useState(LANGUAGES);
     const [languageError, setLanguageError] = useState("");
     const [isVisible, setIsVisible] = useState(false);
     const modalRef = useRef(null);
@@ -50,6 +51,24 @@ export default function UserSettings({isOpen, onClose}) {
             initialized.current = true;
         }
         return () => media.removeEventListener("change", sync);
+    }, []);
+
+    useEffect(() => {
+        const readAvailableLanguages = () => {
+            const selector = document.querySelector(".goog-te-combo");
+            if (!selector || selector.options.length < 2) return false;
+            const available = Object.fromEntries([...selector.options]
+                .filter((option) => option.value)
+                .map((option) => [option.value, option.textContent.trim()]));
+            setLanguages({en: "English", ...available});
+            return true;
+        };
+        if (readAvailableLanguages()) return;
+        const observer = new MutationObserver(() => {
+            if (readAvailableLanguages()) observer.disconnect();
+        });
+        observer.observe(document.body, {childList: true, subtree: true});
+        return () => observer.disconnect();
     }, []);
 
     useEffect(() => { if (isOpen) setIsVisible(true); }, [isOpen]);
@@ -109,9 +128,10 @@ export default function UserSettings({isOpen, onClose}) {
     const handleLanguageChange = (language) => {
         if (language === currentLanguage) return;
         try {
-            changeLanguage(language);
+            changeLanguageWhenReady(language);
             setCurrentLanguage(language);
             localStorage.setItem("preferredLanguage", language);
+            window.dispatchEvent(new Event("lista:language-changed"));
             setLanguageError("");
         } catch {
             setLanguageError("We couldn't change the language. Please try again.");
@@ -150,7 +170,8 @@ export default function UserSettings({isOpen, onClose}) {
                             <div className="settings-language">
                                 <Globe size={19} aria-hidden="true" />
                                 <select id={languageId} value={currentLanguage} onChange={event => handleLanguageChange(event.target.value)} aria-describedby={`${languageId}-hint`}>
-                                    {Object.entries(LANGUAGES).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+                                    {!languages[currentLanguage] && <option value={currentLanguage}>{currentLanguage.toUpperCase()}</option>}
+                                    {Object.entries(languages).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
                                 </select>
                                 <ChevronDown size={17} aria-hidden="true" />
                             </div>
