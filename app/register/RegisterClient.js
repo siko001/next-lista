@@ -13,11 +13,14 @@ import AuthShell from "../components/auth/AuthShell";
 import AuthField from "../components/auth/AuthField";
 import PlayfulSubmit from "../components/auth/PlayfulSubmit";
 
+const EMAIL_WITH_TLD = /^[^\s@]+@(?:[^\s@.]+\.)+[^\s@.]{2,}$/;
+
 const schema = yup.object().shape({
     username: yup.string().required("Username is required"),
     email: yup
         .string()
         .email("Invalid email format")
+        .test("domain-ending", "Add a domain ending, such as .com or .mt", value => !value || EMAIL_WITH_TLD.test(value))
         .required("Email is required"),
     password: yup
         .string()
@@ -53,7 +56,7 @@ export default function RegisterClient() {
     // Keep availability checks in sync with the latest value and with form validation.
     useEffect(() => {
         setEmailStatus("idle");
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+        if (!EMAIL_WITH_TLD.test(email)) return;
         const controller = new AbortController();
         const timeout = setTimeout(async () => {
             setEmailStatus("checking");
@@ -101,7 +104,11 @@ export default function RegisterClient() {
             const result = await response.json();
 
             if (result.code === "rest_user_invalid_email") {
-                showNotification(`email is already registered`, "error");
+                setError("email", {type: "server", message: "Enter a valid email with a domain ending, such as .com or .mt"});
+                return;
+            }
+            if (result.code === "existing_user_email") {
+                setError("email", {type: "server", message: "This email is already registered"});
                 return;
             }
 
@@ -153,10 +160,10 @@ export default function RegisterClient() {
                     window.location.href = "/";
                 }, 3000);
             } else {
-                showNotification(`Error: ${result.message}`);
+                showNotification(`Error: ${result.message || "Could not create account"}`, "error");
             }
         } catch (error) {
-            showNotification("Something went wrong. Please try again.");
+            showNotification("Something went wrong. Please try again.", "error");
         }
     };
 

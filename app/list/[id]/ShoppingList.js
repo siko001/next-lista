@@ -1320,7 +1320,7 @@ export default function ShoppingList({
                 />
             </div>
 
-            <div className="w-full fixed -bottom-10 left-0  blur-xl z-40 hidden-bg py-14  px-4 flex items-center justify-between"></div>
+            <div className="pointer-events-none w-full fixed -bottom-10 left-0 blur-xl z-40 hidden-bg py-14 px-4 flex items-center justify-between"></div>
 
             {shareDialogOpen && (
                 <ShareListDialog

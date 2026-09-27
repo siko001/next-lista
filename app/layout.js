@@ -13,10 +13,10 @@ import "./css/auth.css";
 import "./css/settings.css";
 import "./css/not-found.css";
 import {Quicksand, Saira} from "next/font/google";
-import {AuthProvider} from "./hooks/useAuth";
 import {cookies} from "next/headers";
 import AnimatedFavicon from "./components/AnimatedFavicon";
 import SiteCredit from "./components/SiteCredit";
+import AssistantAddProgress from "./components/AssistantAddProgress";
 
 const quicksand = Quicksand({
     subsets: ["latin"],
@@ -104,23 +104,22 @@ export default async function RootLayout({children}) {
                 className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${quicksand.variable} font-saira antialiased transition-colors duration-200`}
             >
                 <AnimatedFavicon />
-                <AuthProvider>
-                    <LoadingProvider>
-                        <NotificationProvider>
-                            <ListProvider>
-                                <UserProvider initialRegistered={initialRegistered} initialUserName={initialUserName}>
-                                    <ProductProvider>
-                                        <ValidationProvider>
-                                            <OverlayProvider>
-                                                {children}
-                                            </OverlayProvider>
-                                        </ValidationProvider>
-                                    </ProductProvider>
-                                </UserProvider>
-                            </ListProvider>
-                        </NotificationProvider>
-                    </LoadingProvider>
-                </AuthProvider>
+                <LoadingProvider>
+                    <NotificationProvider>
+                        <AssistantAddProgress />
+                        <ListProvider>
+                            <UserProvider initialRegistered={initialRegistered} initialUserName={initialUserName}>
+                                <ProductProvider>
+                                    <ValidationProvider>
+                                        <OverlayProvider>
+                                            {children}
+                                        </OverlayProvider>
+                                    </ValidationProvider>
+                                </ProductProvider>
+                            </UserProvider>
+                        </ListProvider>
+                    </NotificationProvider>
+                </LoadingProvider>
 
                 <footer className="site-footer">
                     <SiteCredit />

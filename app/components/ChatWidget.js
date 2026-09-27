@@ -1,7 +1,6 @@
 "use client";
 import {
   useCallback,
-  useMemo,
   useRef,
   useState,
   useEffect,
@@ -19,11 +18,13 @@ import {
   INGREDIENT_NAME_MAX_LENGTH,
 } from "../lib/config";
 import VoiceListInput from "./VoiceListInput";
+import AssistantMessage from "./AssistantMessage";
+import {runAssistantAddJob} from "../lib/assistantAddJobs";
 import { History, MessageCircle, Mic, SquarePen, X } from "lucide-react";
 
 const INITIAL_MESSAGE = {
   role: "assistant",
-  text: "Hi! Ask for a recipe, or tell me what to add to a list. For spoken shopping items, open the Voice tab.",
+  text: "Hi! Tell me what you're in the mood to cook, ask for ideas, or tell me what to add to your list.",
 };
 
 const ChatWidget = forwardRef(function ChatWidget(
@@ -261,76 +262,6 @@ const ChatWidget = forwardRef(function ChatWidget(
 
   // Simple caches to avoid repeated fetching during a session
   const productsCacheRef = useRef({ all: null, custom: null });
-
-  // Very small mock recipe map
-  const recipeMap = useMemo(
-    () => ({
-      lasagna: [
-        "Lasagna Sheet",
-        "Ground beef",
-        "Tomato sauce",
-        "Onion",
-        "Garlic",
-        "Ricotta",
-        "Mozzarella",
-        "Parmesan",
-        "Olive oil",
-        "Salt",
-        "Pepper",
-      ],
-      pancakes: [
-        "Flour",
-        "Milk",
-        "Eggs",
-        "Sugar",
-        "Baking powder",
-        "Salt",
-        "Butter",
-      ],
-      salad: [
-        "Lettuce",
-        "Tomatoes",
-        "Cucumber",
-        "Olive oil",
-        "Lemon",
-        "Salt",
-        "Pepper",
-      ],
-    }),
-    [],
-  );
-
-  const parseRecipeRequest = useCallback((text) => {
-    if (!text) return null;
-    const t = text.toLowerCase();
-    // simple extraction: find keyword after 'make' or 'doing' or 'cook'
-    const patterns = [
-      /make\s+(?:a\s+|an\s+)?([^.?]+)/i,
-      /doing\s+(?:a\s+|an\s+)?([^.?]+)/i,
-      /cook(?:ing)?\s+(?:a\s+|an\s+)?([^.?]+)/i,
-      /plan(?:ning)?\s+to\s+make\s+(?:a\s+|an\s+)?([^.?]+)/i,
-      /recipe\s+for\s+([^.?]+)/i,
-    ];
-    for (const p of patterns) {
-      const m = text.match(p);
-      if (m && m[1]) {
-        return m[1].trim();
-      }
-    }
-    // fallback: first word
-    return text.trim();
-  }, []);
-
-  const findIngredients = useCallback(
-    (recipeTitle) => {
-      if (!recipeTitle) return [];
-      const key = recipeTitle.toLowerCase().split(" ")[0];
-      if (recipeMap[key]) return recipeMap[key];
-      // fallback generic ingredients
-      return ["Salt", "Pepper", "Olive oil"];
-    },
-    [recipeMap],
-  );
 
   const handleSubmit = async (e, overrideText = null) => {
     e?.preventDefault?.();
@@ -821,262 +752,45 @@ const ChatWidget = forwardRef(function ChatWidget(
       }
     }
 
-    // Prefer AI endpoint, fallback to local map
-    let aiTitle = null;
-    let aiIngredients = null;
     setTyping(true);
-    // If user asked for an alternative and we have ingredient context, steer the query to request another recipe with the same ingredients.
     let finalQuery = text;
-    if (
-      altIntent &&
-      Array.isArray(ingredientContextRef.current) &&
-      ingredientContextRef.current.length
-    ) {
-      const list = ingredientContextRef.current.join(", ");
-      finalQuery = `Suggest another recipe using only: ${list}`;
+    if (altIntent && Array.isArray(ingredientContextRef.current) && ingredientContextRef.current.length) {
+      finalQuery = `${text} (Earlier ingredients: ${ingredientContextRef.current.join(", ")})`;
     }
     try {
       const resp = await fetch("/api/ai/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: finalQuery,
-          ingredientsHint: ingredientContextRef.current || null,
-          alternate: !!altIntent,
-        }),
+        body: JSON.stringify({ query: finalQuery, history: messages.slice(-10) }),
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        aiTitle = (data?.title || "").trim();
-        aiIngredients = Array.isArray(data?.ingredients)
-          ? data.ingredients.map((s) => String(s || "").trim()).filter(Boolean)
-          : null;
-        var apiVariations = Array.isArray(data?.variations)
-          ? data.variations
-          : null;
-        var apiVariationQuestion = data?.variationQuestion || null;
-      }
-    } catch {}
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data?.error || "The assistant is temporarily unavailable.");
 
-    const title = aiTitle || parseRecipeRequest(text);
-    const ingredients = aiIngredients || findIngredients(title);
-    const normalizedTitle = title
-      ? title.charAt(0).toUpperCase() + title.slice(1)
-      : "Recipe";
-
-    const keyCheck = (title || "").toLowerCase().split(" ")[0];
-    const titleLooksUnknown = (title || "").toLowerCase().includes("no recipe");
-    const aiMissingOrEmpty = !aiIngredients || aiIngredients.length === 0;
-    const genericFallback = ["salt", "pepper", "olive oil"];
-    const aiLooksGeneric = Array.isArray(aiIngredients)
-      ? aiIngredients.length > 0 &&
-        aiIngredients.every((s) =>
-          genericFallback.includes(String(s).toLowerCase()),
-        )
-      : false;
-    const isUnknownRecipe =
-      (aiMissingOrEmpty || aiLooksGeneric || titleLooksUnknown) &&
-      !recipeMap[keyCheck];
-    if (isUnknownRecipe) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: `Sorry, I couldn't find a recipe for "${text}". Please try another dish or rephrase (e.g., "recipe for lasagna").`,
-        },
-      ]);
+      const assistantMessage = {
+        role: "assistant",
+        text: data.message || (data.kind === "recipe" ? `Here's a plan for ${data.title}.` : "How can I help?"),
+        recipe: data.kind === "recipe" ? {
+          title: data.title,
+          ingredients: data.ingredients,
+          steps: data.steps || [],
+        } : null,
+        suggestions: data.suggestions || [],
+        links: data.links || [],
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
       setPendingVariation(null);
+      if (data.kind === "recipe") {
+        setPendingRecipe({ title: data.title, ingredients: data.ingredients });
+        ingredientContextRef.current = data.ingredients;
+      }
+    } catch (error) {
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        text: error?.message || "I couldn't reach the assistant just now. Please try again.",
+      }]);
+    } finally {
       setTyping(false);
-      return;
     }
-
-    const detectBaseDish = (userText, aiTitleText, aiIngs) => {
-      const u = `${userText || ""}`.toLowerCase();
-      const t = `${aiTitleText || ""}`.toLowerCase();
-      const specifiedKeywords = [
-        "chicken",
-        "beef",
-        "tuna",
-        "tofu",
-        "vegetarian",
-        "jam",
-        "chocolate",
-        "plain",
-        "lamb",
-        "prawn",
-        "shrimp",
-        "prawns",
-      ];
-      const userSpecified = specifiedKeywords.some((k) => u.includes(k));
-      const s = `${u} ${t}`;
-      if (!userSpecified && s.includes("salad")) return "salad";
-      if (s.includes("lasagna") || s.includes("lasagne")) return "lasagna";
-      if (!userSpecified && (s.includes("pancake") || s.includes("pancakes")))
-        return "pancakes";
-      if (!userSpecified && s.includes("curry")) return "curry";
-      if (!userSpecified && Array.isArray(aiIngs)) {
-        const low = aiIngs.map((x) => String(x).toLowerCase());
-        const looksLikeSalad = ["lettuce", "cucumber"].every((k) =>
-          low.find((v) => v.includes(k)),
-        );
-        if (looksLikeSalad) return "salad";
-      }
-      return null;
-    };
-
-    const baseDish = detectBaseDish(text, title, aiIngredients);
-
-    // If user provided ingredients in the prompt (e.g., "I have carrots, onions and chickpeas"), persist them for follow-ups
-    const extractIngredientsFromText = (t) => {
-      if (!t) return null;
-      const m =
-        t.match(/\bi have\s+([^.?]+)/i) ||
-        t.match(/\bwith\s+([^.?]+)/i) ||
-        t.match(/\busing\s+([^.?]+)/i);
-      if (!m || !m[1]) return null;
-      const raw = m[1]
-        .replace(/\band\b/gi, ",")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      return raw.length >= 2 ? raw : null;
-    };
-    const parsedIngs = extractIngredientsFromText(text);
-    if (parsedIngs) {
-      ingredientContextRef.current = parsedIngs;
-    } else if (
-      altIntent &&
-      Array.isArray(aiIngredients) &&
-      aiIngredients.length
-    ) {
-      // If this was an alternate suggestion, keep using the AI's ingredients as the current context
-      ingredientContextRef.current = aiIngredients;
-    }
-
-    const determineVariations = (base, baseTitle, baseIngredients) => {
-      if (!base) return null;
-      if (base === "salad") {
-        return {
-          title: baseTitle,
-          baseIngredients,
-          baseDish: base,
-          question: "How would you like your salad?",
-          options: [
-            { key: "vegetarian", label: "Vegetarian" },
-            { key: "chicken", label: "Chicken" },
-            { key: "tuna", label: "Tuna" },
-            { key: "tofu", label: "Tofu" },
-            { key: "classic", label: "Classic" },
-          ],
-        };
-      }
-      if (base === "lasagna") {
-        return {
-          title: baseTitle,
-          baseIngredients,
-          baseDish: base,
-          question: "Choose a lasagna variation:",
-          options: [
-            { key: "beef", label: "Beef" },
-            { key: "vegetarian", label: "Vegetarian" },
-            { key: "classic", label: "Classic" },
-          ],
-        };
-      }
-      if (base === "pancakes") {
-        return {
-          title: baseTitle,
-          baseIngredients,
-          baseDish: base,
-          question: "Choose a pancakes variation:",
-          options: [
-            { key: "plain", label: "Plain" },
-            { key: "jam", label: "Jam" },
-            { key: "chocolate", label: "Chocolate" },
-          ],
-        };
-      }
-      if (base === "curry") {
-        return {
-          title: baseTitle,
-          baseIngredients,
-          baseDish: base,
-          question: "Which curry variation would you like?",
-          options: [
-            { key: "chicken", label: "Chicken" },
-            { key: "beef", label: "Beef" },
-            { key: "lamb", label: "Lamb" },
-            { key: "prawn", label: "Prawn" },
-            { key: "vegetarian", label: "Vegetarian" },
-            { key: "tofu", label: "Tofu" },
-            { key: "classic", label: "Classic" },
-          ],
-        };
-      }
-      return null;
-    };
-
-    if (apiVariations && apiVariations.length && baseDish) {
-      const normalizedOptions = apiVariations.map((it) => {
-        if (typeof it === "string") return { key: it.toLowerCase(), label: it };
-        const key = (
-          it?.key ||
-          it?.id ||
-          it?.label ||
-          it?.name ||
-          ""
-        ).toString();
-        const label = (it?.label || it?.name || it?.title || key).toString();
-        return { key: key.toLowerCase(), label };
-      });
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: `${
-            apiVariationQuestion || "Choose a variation:"
-          } ${normalizedOptions.map((o) => o.label).join(", ")}`,
-        },
-      ]);
-      setPendingVariation({
-        title: normalizedTitle,
-        baseIngredients: ingredients,
-        baseDish,
-        question: apiVariationQuestion || "Choose a variation:",
-        options: normalizedOptions,
-        source: "api",
-      });
-      setTyping(false);
-      return;
-    }
-
-    const variations = determineVariations(
-      baseDish,
-      normalizedTitle,
-      ingredients,
-    );
-    if (variations) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: `${variations.question} ${variations.options
-            .map((o) => o.label)
-            .join(", ")}`,
-        },
-      ]);
-      setPendingVariation(variations);
-      setTyping(false);
-      return;
-    }
-
-    const reply = `For ${normalizedTitle}, you'll need: \n- ${ingredients.join(
-      "\n- ",
-    )}\n\nEdit the list below and confirm when ready.`;
-    setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-    setPendingVariation(null);
-    setPendingRecipe({ title: normalizedTitle, ingredients });
-    setTyping(false);
   };
 
   const handleSelectVariation = useCallback(
@@ -1349,6 +1063,16 @@ const ChatWidget = forwardRef(function ChatWidget(
     [token, context, resolveProductIdByTitle, userData?.id],
   );
 
+  const addItemsWithProgress = (targetListId, items, listName = "your list") => {
+    const task = runAssistantAddJob({
+      items,
+      listName,
+      addItem: (item) => addItemToList(targetListId, item),
+    });
+    setOpen(false);
+    return task;
+  };
+
   const handleConfirmAdd = async () => {
     if (!pendingRecipe) return;
     setLoading(true);
@@ -1376,9 +1100,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       const toAdd = editedIngredients?.length
         ? editedIngredients.filter((s) => !!s && s.trim() !== "")
         : pendingRecipe.ingredients;
-      for (const ing of toAdd) {
-        await addItemToList(targetListId, ing);
-      }
+      await addItemsWithProgress(targetListId, toAdd, context === "home" ? `Items for: ${pendingRecipe.title}` : "this list");
 
       showNotification("Ingredients added to your list", "success", 1200);
       setMessages((prev) => [
@@ -1387,6 +1109,9 @@ const ChatWidget = forwardRef(function ChatWidget(
       ]);
       setLastRecipe({ title: pendingRecipe.title, ingredients: toAdd });
       setPendingRecipe(null);
+    } catch (error) {
+      if (Array.isArray(error.remainingItems)) setEditedIngredients(error.remainingItems);
+      showNotification(`Added ${error.completed || 0} item(s). Please retry the remaining items.`, "error");
     } finally {
       // Announce AI bulk adding end
       try {
@@ -1418,9 +1143,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       const toAdd = editedIngredients?.length
         ? editedIngredients.filter((s) => !!s && s.trim() !== "")
         : pendingRecipe.ingredients;
-      for (const ing of toAdd) {
-        await addItemToList(targetListId, ing);
-      }
+      await addItemsWithProgress(targetListId, toAdd, `Items for: ${pendingRecipe.title}`);
 
       showNotification(
         "New list created and ingredients added",
@@ -1436,6 +1159,8 @@ const ChatWidget = forwardRef(function ChatWidget(
       ]);
       setLastRecipe({ title: pendingRecipe.title, ingredients: toAdd });
       setPendingRecipe(null);
+    } catch (error) {
+      showNotification(`Added ${error.completed || 0} item(s). Please check the new list before retrying.`, "error");
     } finally {
       try {
         window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
@@ -1759,9 +1484,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       } catch {}
 
       // Add each ingredient
-      for (const ing of ingredients) {
-        await addItemToList(foundList.id, ing);
-      }
+      await addItemsWithProgress(foundList.id, ingredients, listName);
 
       showNotification(
         `Added ${ingredients.length} item${
@@ -1892,9 +1615,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       } catch {}
 
       // Add each ingredient
-      for (const ing of ingredients) {
-        await addItemToList(newListData.id, ing);
-      }
+      await addItemsWithProgress(newListData.id, ingredients, listName);
 
       showNotification(
         `List "${listName}" created and ingredients added`,
@@ -1947,9 +1668,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       } catch {}
 
       // Add each ingredient to the existing list
-      for (const ing of ingredients) {
-        await addItemToList(existingListId, ing);
-      }
+      await addItemsWithProgress(existingListId, ingredients, listName);
 
       showNotification(
         `Added ${ingredients.length} item${
@@ -2079,9 +1798,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       } catch {}
 
       // Add each ingredient
-      for (const ing of pendingDirectAdd) {
-        await addItemToList(listId, ing);
-      }
+      await addItemsWithProgress(listId, pendingDirectAdd, listName);
 
       showNotification(
         `Added ${pendingDirectAdd.length} item${
@@ -2151,9 +1868,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       } catch {}
 
       // Add each ingredient
-      for (const ing of pendingDirectAdd) {
-        await addItemToList(newListData.id, ing);
-      }
+      await addItemsWithProgress(newListData.id, pendingDirectAdd, listName);
 
       showNotification(
         `List "${listName}" created and ingredients added`,
@@ -2314,15 +2029,15 @@ const ChatWidget = forwardRef(function ChatWidget(
                   key={i}
                   className={m.role === "user" ? "text-right" : "text-left"}
                 >
-                  <span
-                    className={`inline-block max-w-[92%] whitespace-pre-wrap break-words px-4 py-3 rounded-2xl ${
+                  <div
+                    className={`inline-block max-w-[92%] break-words px-4 py-3 rounded-2xl ${
                       m.role === "user"
                         ? "bg-blue-600 text-white"
                         : "ai-chat-message-bg"
                     }`}
                   >
-                    {m.text}
-                  </span>
+                    <AssistantMessage message={m} onSuggestion={(suggestion) => handleSubmit(null, suggestion)} onMoreIdeas={() => handleSubmit(null, "More ideas, please. Keep the same preferences and suggest different dishes from the ones you just mentioned.")} />
+                  </div>
                 </div>
               ))}
 
@@ -2499,9 +2214,7 @@ const ChatWidget = forwardRef(function ChatWidget(
                             );
                           } catch {}
                           let targetListId = propListId;
-                          for (const ing of lastRecipe.ingredients) {
-                            await addItemToList(targetListId, ing);
-                          }
+                          await addItemsWithProgress(targetListId, lastRecipe.ingredients, "this list");
                           showNotification(
                             "Re-added ingredients",
                             "success",
@@ -2509,6 +2222,8 @@ const ChatWidget = forwardRef(function ChatWidget(
                           );
                           setCanReadd(false);
                           setListEmptied(false);
+                        } catch (error) {
+                          showNotification(`Added ${error.completed || 0} item(s). Please retry the remaining items.`, "error");
                         } finally {
                           try {
                             window.dispatchEvent(
@@ -2764,11 +2479,12 @@ const ChatWidget = forwardRef(function ChatWidget(
                 </div>
               )}
 
-              {/* Default Try buttons - only show when not in any special mode */}
+              {/* Conversation starters */}
               {!pendingRecipe &&
                 !pendingVariation &&
                 !typing &&
                 !loading &&
+                messages.length === 1 &&
                 !pendingDirectAdd &&
                 !pendingListNotFound &&
                 !pendingDuplicateList &&
@@ -2777,35 +2493,35 @@ const ChatWidget = forwardRef(function ChatWidget(
                     <button
                       type="button"
                       onClick={() => {
-                        const ex = "I plan to make lasagna";
+                        const ex = "What should I cook tonight?";
                         setInput(ex);
                         handleSubmit(null, ex);
                       }}
                       className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                     >
-                      Try: Lasagna
+                      Dinner ideas
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        const ex = "Recipe for pancakes";
+                        const ex = "Help me plan a main dish with a side";
                         setInput(ex);
                         handleSubmit(null, ex);
                       }}
                       className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                     >
-                      Try: Pancakes
+                      Plan a meal
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        const ex = "I'm cooking salad";
+                        const ex = "What can I make with chickpeas and feta?";
                         setInput(ex);
                         handleSubmit(null, ex);
                       }}
                       className="px-2 py-1 font-quicksand font-black cursor-pointer rounded border border-[var(--ai-chat-border)] ai-chat-button"
                     >
-                      Try: Salad
+                      Use what I have
                     </button>
                   </div>
                 )}
@@ -2823,7 +2539,7 @@ const ChatWidget = forwardRef(function ChatWidget(
                 placeholder={
                   awaitingNewListName
                     ? "Enter list name..."
-                    : "Ask for a recipe or add items..."
+                    : "Ask anything about meals or your list..."
                 }
                 disabled={typing || loading}
                 className="min-w-0 flex-1 rounded-xl font-quicksand px-4 py-3 disabled:opacity-50 ai-chat-input"
@@ -2858,6 +2574,7 @@ const ChatWidget = forwardRef(function ChatWidget(
               storageKey={storageKey ? `${storageKey}:voice` : null}
               open={open}
               onDraftChange={handleVoiceDraftChange}
+              onTaskStarted={() => setOpen(false)}
             />
           </div>
 

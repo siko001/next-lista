@@ -1,9 +1,8 @@
 export const LANGUAGES = {
     en: "English",
     mt: "Maltese",
-    it: "Italian",
     es: "Spanish",
-    fr: "French",
-    de: "German",
-    pt: "Portuguese",
+    bg: "Bulgarian",
+    "zh-CN": "Chinese (Simplified)",
+    ja: "Japanese",
 };

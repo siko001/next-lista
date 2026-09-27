@@ -578,8 +578,14 @@
     background: transparent;
     color: var(--page-muted);
     cursor: pointer;
+    transition: background-color .24s ease, color .24s ease, transform .24s ease;
 }
-.list-product-remove:hover { background: rgb(225 67 85 / 12%); color: #e14355; }
+.list-product-remove:hover { background: rgb(225 67 85 / 12%); color: #e14355; transform: scale(1.06); }
+.list-product-remove:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) {
+    .list-product-remove { transition: none; }
+    .list-product-remove:hover, .list-product-remove:active { transform: none; }
+}
 .list-product-toggle:focus-visible,
 .list-product-remove:focus-visible,
 .list-card-action:focus-visible,
@@ -667,6 +673,7 @@
 .list-detail-page {
     display: flex;
     flex-direction: column;
+    min-height: 100dvh;
     background: radial-gradient(ellipse 620px 260px at 50% 100%, rgb(33 186 156 / 5%), transparent 95%), radial-gradient(ellipse 520px 230px at 50% 200px, rgb(33 186 156 / 6%), transparent 95%), var(--background);
 }
 :is(.dark, .dark-mode) .list-detail-page { background: radial-gradient(ellipse 620px 260px at 50% 100%, rgb(33 186 156 / 7%), transparent 95%), radial-gradient(ellipse 520px 230px at 50% 200px, rgb(33 186 156 / 8%), transparent 95%), var(--background); }

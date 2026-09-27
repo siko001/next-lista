@@ -23,7 +23,6 @@ function updateTheme(preference) {
 export default function UserSettings({isOpen, onClose}) {
     const [theme, setTheme] = useState("system");
     const [currentLanguage, setCurrentLanguage] = useState("en");
-    const [languages, setLanguages] = useState(LANGUAGES);
     const [languageError, setLanguageError] = useState("");
     const [isVisible, setIsVisible] = useState(false);
     const modalRef = useRef(null);
@@ -40,7 +39,14 @@ export default function UserSettings({isOpen, onClose}) {
         const saved = localStorage.getItem("theme") || "system";
         setTheme(saved);
         updateTheme(saved);
-        setCurrentLanguage(localStorage.getItem("preferredLanguage") || "en");
+        const savedLanguage = localStorage.getItem("preferredLanguage") || "en";
+        if (LANGUAGES[savedLanguage]) {
+            setCurrentLanguage(savedLanguage);
+        } else {
+            localStorage.setItem("preferredLanguage", "en");
+            setCurrentLanguage("en");
+            changeLanguageWhenReady("en");
+        }
         const media = matchMedia("(prefers-color-scheme: dark)");
         const sync = () => {
             if ((localStorage.getItem("theme") || "system") === "system") updateTheme("system");
@@ -51,24 +57,6 @@ export default function UserSettings({isOpen, onClose}) {
             initialized.current = true;
         }
         return () => media.removeEventListener("change", sync);
-    }, []);
-
-    useEffect(() => {
-        const readAvailableLanguages = () => {
-            const selector = document.querySelector(".goog-te-combo");
-            if (!selector || selector.options.length < 2) return false;
-            const available = Object.fromEntries([...selector.options]
-                .filter((option) => option.value)
-                .map((option) => [option.value, option.textContent.trim()]));
-            setLanguages({en: "English", ...available});
-            return true;
-        };
-        if (readAvailableLanguages()) return;
-        const observer = new MutationObserver(() => {
-            if (readAvailableLanguages()) observer.disconnect();
-        });
-        observer.observe(document.body, {childList: true, subtree: true});
-        return () => observer.disconnect();
     }, []);
 
     useEffect(() => { if (isOpen) setIsVisible(true); }, [isOpen]);
@@ -170,8 +158,7 @@ export default function UserSettings({isOpen, onClose}) {
                             <div className="settings-language">
                                 <Globe size={19} aria-hidden="true" />
                                 <select id={languageId} value={currentLanguage} onChange={event => handleLanguageChange(event.target.value)} aria-describedby={`${languageId}-hint`}>
-                                    {!languages[currentLanguage] && <option value={currentLanguage}>{currentLanguage.toUpperCase()}</option>}
-                                    {Object.entries(languages).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+                                    {Object.entries(LANGUAGES).map(([code, name]) => <option key={code} value={code}>{name}</option>)}
                                 </select>
                                 <ChevronDown size={17} aria-hidden="true" />
                             </div>

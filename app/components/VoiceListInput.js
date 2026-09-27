@@ -4,6 +4,7 @@ import {useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
 import {Mic, Square, Volume2, X} from "lucide-react";
 import {decryptToken, decodeHtmlEntities, WP_API_BASE} from "../lib/helpers";
 import {INGREDIENT_NAME_MAX_LENGTH} from "../lib/config";
+import {runAssistantAddJob} from "../lib/assistantAddJobs";
 
 const getListName = (list) => decodeHtmlEntities(
     typeof list.title === "string" ? list.title : list.title?.rendered || `List ${list.id}`
@@ -57,6 +58,7 @@ export default function VoiceListInput({
     storageKey,
     open,
     onDraftChange,
+    onTaskStarted,
 }) {
     const recorderRef = useRef(null);
     const streamRef = useRef(null);
@@ -500,25 +502,30 @@ export default function VoiceListInput({
             }
             if (!targetId) throw new Error("No shopping list is available.");
             window.dispatchEvent(new CustomEvent("lista:ai-adding-start"));
-            let added = 0;
-            for (const item of cleaned) {
-                try {
-                    await addItemToList(targetId, item);
-                    added += 1;
-                } catch (cause) {
-                    setError(`${added} item${added === 1 ? "" : "s"} added. ${cause.message || "Some items could not be added."}`);
-                    setItems(cleaned.slice(added));
-                    return;
-                }
-            }
+            const task = runAssistantAddJob({
+                items: cleaned,
+                listName: targetName,
+                addItem: (item) => addItemToList(targetId, item),
+            });
+            onTaskStarted?.();
+            const {done: added} = await task;
+            if (storageKey) localStorage.removeItem(storageKey);
             setItems([]);
             setTranscript("");
             setNeedsReview(false);
             setRecordingChoice(false);
             showNotification(`Added ${added} item${added === 1 ? "" : "s"} to ${targetName}`, "success");
-            speak(`Added ${added} item${added === 1 ? "" : "s"} to ${targetName}.`);
         } catch (cause) {
-            setError(cause.message || "Could not add the items. Please try again.");
+            if (Array.isArray(cause.remainingItems)) {
+                const remaining = cause.remainingItems;
+                setItems(remaining);
+                if (storageKey) {
+                    try { localStorage.setItem(storageKey, JSON.stringify({items: remaining, transcript, needsReview, destination})); } catch {}
+                }
+                setError(`${cause.completed} of ${cleaned.length} added. ${cause.message || "Please retry the remaining items."}`);
+            } else {
+                setError(cause.message || "Could not add the items. Please try again.");
+            }
         } finally {
             window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
             setBusy(false);
