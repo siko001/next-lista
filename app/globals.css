@@ -398,6 +398,30 @@ select:-moz-autofill {
     color: var(--ai-chat-help-text);
 }
 
+.ai-chat button {
+    transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease,
+        box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.ai-chat button:hover:not(:disabled) {
+    box-shadow: 0 3px 12px rgba(37, 99, 235, 0.18);
+    transform: translateY(-1px);
+}
+
+.ai-chat button:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
+
+.ai-chat button:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-chat button { transition: none; }
+    .ai-chat button:hover:not(:disabled), .ai-chat button:active:not(:disabled) { transform: none; }
+}
+
 .ai-chat-button {
     transition: all 0.2s ease;
 }
