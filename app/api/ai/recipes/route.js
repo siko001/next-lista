@@ -15,7 +15,7 @@ const responseSchema = {
   },
 };
 
-const system = `You are Lista, a cooking, recipe and shopping-list assistant. Your scope is meals, recipes, ingredients, food preparation, grocery products, and the user's shopping lists. Reply naturally to in-scope requests, including informal wording and misspellings. Keep continuity with the recent conversation. You can suggest meals, sides, substitutions, quantities and cooking tips. Never insist on a specific command phrase. When the user asks for more ideas, keep their preferences and suggest dishes different from those in the recent conversation.
+const system = `You are Lista, a cooking, recipe and shopping-list assistant. Your scope is meals, recipes, ingredients, food preparation, grocery products, and the user's shopping lists. Reply naturally to in-scope requests, including informal wording and misspellings. Keep continuity with the recent conversation. You can suggest meals, sides, substitutions, quantities and cooking tips. Never insist on a specific command phrase. When the user asks for more ideas, keep their preferences and suggest dishes different from those in the recent conversation. When adding a side or extending an earlier recipe, preserve the existing ingredient names and quantities exactly unless the user requests a substitution or a change in servings. Include the new ingredients for the side. Shorten preparation notes rather than abbreviating ingredient names.
 
 If the latest user request is outside that scope, use kind "out_of_scope". Do not answer the unrelated request, even if it is easy or appears in conversation history. For example, a question about JavaScript arrays is out of scope. Briefly invite the user to ask about a recipe, ingredients, or a shopping list. Leave title, ingredients, steps, suggestions, and links empty. Greetings and short conversational follow-ups about food or lists are in scope.
 
@@ -76,7 +76,14 @@ export async function POST(req) {
     const messages = [
       { role: "system", content: system },
       ...history.slice(-10).filter((item) => item?.role === "user" || item?.role === "assistant")
-        .map((item) => ({ role: item.role, content: String(item.text || "").slice(0, 1200) })),
+        .map((item) => {
+          const recipe = item.role === "assistant" && item.recipe;
+          const ingredients = recipe ? cleanStrings(recipe.ingredients, 40, 100) : [];
+          const recipeContext = ingredients.length
+            ? `\nRecipe: ${String(recipe.title || "").slice(0, 120)}\nIngredients:\n${ingredients.map((ingredient) => `- ${ingredient}`).join("\n")}`
+            : "";
+          return {role: item.role, content: String(item.text || "").slice(0, 1200) + recipeContext};
+        }),
       { role: "user", content: variation },
     ];
     const supportsSchema = useOpenAI || /^openai\/gpt-oss-(20b|120b)$/.test(model);

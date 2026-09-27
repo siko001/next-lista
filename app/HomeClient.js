@@ -7,6 +7,7 @@ import gsap from "gsap";
 import {subscribePusherEvent} from "./lib/pusherClient";
 
 // Websockets
+import useLocalListSync from "./lib/useLocalListSync";
 import useUserListsRealtime from "./lib/UserListsRealTime";
 import useRealtimeAllListDelete from "./lib/DeleteAllListRealtime";
 import useSharedListsRealtime from "./lib/useSharedListsRealtime";
@@ -337,6 +338,19 @@ const HomeClient = ({
         }
     }, []);
 
+    useLocalListSync(userData?.id, async ({signal, isCurrent}) => {
+        if (!token) return;
+        const response = await fetch(`${WP_API_BASE}/custom/v1/shopping-lists-by-owner/${userData.id}`, {
+            headers: {Authorization: `Bearer ${token}`}, signal, cache: "no-store",
+        });
+        if (!response.ok) return;
+        const lists = await response.json();
+        if (!isCurrent() || !Array.isArray(lists)) return;
+        const accessible = lists.filter((list) => String(list.acf?.owner_id) === String(userData.id) ||
+            list.acf?.shared_with_users?.some((user) => String(user.ID) === String(userData.id)))
+            .sort((a, b) => a.menu_order - b.menu_order);
+        setUserLists(accessible);
+    });
     useUserListsRealtime(userData?.id, setUserLists);
     useRealtimeAllListDelete(
         userLists,

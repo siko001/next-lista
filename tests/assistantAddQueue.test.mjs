@@ -186,3 +186,121 @@ test("a corrupt saved record does not prevent other batches from continuing", as
     await enqueue(queue, {items: ["Milk"]});
     assert.equal(queue.getSnapshot()[0].status, "complete");
 });
+
+function clock() {
+    let time = 1000;
+    let nextId = 1;
+    const timers = new Map();
+    return {
+        now: () => time,
+        schedule(callback, delay) { const id = nextId++; timers.set(id, {callback, at: time + delay}); return id; },
+        cancel(id) { timers.delete(id); },
+        get delays() { return [...timers.values()].map((timer) => timer.at - time); },
+        advance() {
+            const [id, timer] = [...timers.entries()].sort((a, b) => a[1].at - b[1].at)[0];
+            time = timer.at;
+            timers.delete(id);
+            timer.callback();
+        },
+    };
+}
+
+test("a refresh fetch rejection before pagehide resumes without a manual retry", async () => {
+    const store = storage();
+    const time = clock();
+    const calls = [];
+    const old = makeQueue(store, {...time, addProduct: async (list, id) => {
+        calls.push([list, id]);
+        if (id === 12) throw new TypeError("Failed to fetch");
+    }});
+    old.setSession(session);
+    const task = enqueue(old);
+    let rejected = false;
+    task.catch(() => { rejected = true; });
+    await old.drain();
+    assert.equal(rejected, false, "temporary failures must not reject the caller's batch");
+    assert.equal(old.getSnapshot()[0].status, "retrying");
+    assert.equal(old.getSnapshot()[0].done, 1);
+    // The browser delivers the failure before pagehide; the persisted checkpoint
+    // must still be eligible to resume on the new page.
+    old.setSession(null);
+    assert.deepEqual(time.delays, []);
+    const fresh = makeQueue(store, {...time, addProduct: async (list, id) => calls.push([list, id])});
+    fresh.setSession(session);
+    await fresh.drain();
+    assert.deepEqual(time.delays, [1000]);
+    time.advance();
+    await fresh.drain();
+    assert.deepEqual(calls, [[99, 11], [99, 12], [99, 12], [99, 13]]);
+    assert.equal(fresh.getSnapshot()[0].status, "complete");
+    assert.deepEqual(time.delays, []);
+});
+
+test("legacy Failed to fetch jobs recover on load without clicking Retry", async () => {
+    const store = storage();
+    store.setItem(`${ASSISTANT_JOB_PREFIX}7:legacy`, JSON.stringify({
+        id: "legacy", userId: "7", listId: 99, listName: "Weekly", createdAt: 1,
+        items: [{title: "Milk", productId: 11}, {title: "Bread", productId: 12}],
+        total: 2, done: 1, status: "error", error: "Failed to fetch",
+    }));
+    const calls = [];
+    const queue = makeQueue(store, {addProduct: async (list, id) => calls.push([list, id])});
+    queue.setSession(session);
+    await queue.drain();
+    assert.deepEqual(calls, [[99, 12]]);
+    assert.equal(queue.getSnapshot()[0].status, "complete");
+});
+
+test("temporary failures back off to 30 seconds and eventually settle the original batch", async () => {
+    const store = storage();
+    const time = clock();
+    let calls = 0;
+    const queue = makeQueue(store, {...time, addProduct: async () => {
+        calls++;
+        if (calls <= 7) throw Object.assign(new Error("Service unavailable"), {status: 503});
+    }});
+    queue.setSession(session);
+    const task = enqueue(queue, {items: ["Milk"]});
+    await queue.drain();
+    for (const delay of [1000, 2000, 4000, 8000, 16000, 30000, 30000]) {
+        assert.deepEqual(time.delays, [delay]);
+        time.advance();
+        await queue.drain();
+    }
+    assert.deepEqual(await task, {done: 1, total: 1});
+    assert.equal(calls, 8);
+    assert.deepEqual(time.delays, []);
+});
+
+test("offline jobs wait without requests and resume immediately on online", async () => {
+    const store = storage();
+    const time = clock();
+    let online = false;
+    let calls = 0;
+    const queue = makeQueue(store, {...time, isOnline: () => online, addProduct: async () => { calls++; }});
+    queue.setSession(session);
+    const task = enqueue(queue);
+    await queue.drain();
+    assert.equal(calls, 0);
+    assert.equal(queue.getSnapshot()[0].status, "retrying");
+    assert.deepEqual(time.delays, []);
+    online = true;
+    queue.sync({retryNow: true});
+    await queue.drain();
+    assert.equal(calls, 3);
+    assert.deepEqual(await task, {done: 3, total: 3});
+});
+
+test("authentication errors stay paused and do not create a retry timer", async () => {
+    const time = clock();
+    const queue = makeQueue(storage(), {...time, addProduct: async () => {
+        throw Object.assign(new Error("Please sign in again"), {status: 401});
+    }});
+    queue.setSession(session);
+    await assert.rejects(enqueue(queue), /sign in/);
+    await queue.drain();
+    queue.sync({retryNow: true});
+    await queue.drain();
+    assert.equal(queue.getSnapshot()[0].status, "error");
+    assert.deepEqual(time.delays, []);
+});

@@ -1,3 +1,5 @@
+import {findMatchingListProduct} from "./ingredientIdentity.mjs";
+import {assistantHttpError} from "./assistantJobErrors.mjs";
 import {createAssistantAddQueue} from "./assistantAddQueue.mjs";
 import {WP_API_BASE, getAllProducts, decodeHtmlEntities} from "./helpers";
 import {invalidateListData, invalidateCache, cacheKeys} from "./dataCache.mjs";
@@ -9,7 +11,7 @@ const request = async (path, token, body) => {
         cache: "no-store",
         ...(body ? {body: JSON.stringify(body)} : {}),
     });
-    if (!response.ok) throw new Error(response.status === 401 || response.status === 403
+    if (!response.ok) throw assistantHttpError(response.status, response.status === 401 || response.status === 403
         ? "Please sign in again, then retry this job."
         : "Could not save your items. Check your connection and retry this job.");
     return response.json();
@@ -17,8 +19,18 @@ const request = async (path, token, body) => {
 
 const queue = createAssistantAddQueue({
     storage: () => window.localStorage,
+    isOnline: () => navigator.onLine !== false,
     // Serializes jobs across tabs and releases automatically when a tab refreshes.
     withLock: (name, run) => navigator.locks ? navigator.locks.request(name, run) : run(),
+    findExistingProduct: async (listId, title, {token}) => {
+        const list = await request(`get-shopping-list-products?shoppingListId=${encodeURIComponent(listId)}`, token);
+        if (!list?.success || !Array.isArray(list.linkedProducts)) {
+            throw new Error("Could not check the items already on this list. Please retry this job.");
+        }
+        const products = [...list.linkedProducts, ...(list.checkedProducts || []), ...(list.baggedProducts || [])]
+            .map((product) => ({...product, title: decodeHtmlEntities(product.title)}));
+        return findMatchingListProduct(products, title);
+    },
     resolveProduct: async (title, {token, userId}) => {
         const normal = (value) => decodeHtmlEntities(typeof value === "string" ? value : value?.rendered || "").toLowerCase().trim();
         const catalogue = await getAllProducts(token, {strict: true});

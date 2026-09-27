@@ -178,3 +178,14 @@ export function invalidateSessionData(userId) {
 export function announceLogout(userId) {
     if (userId) getChannel()?.postMessage({kind: "logout", userId: String(userId)});
 }
+
+export function subscribeListInvalidation(userId, listener) {
+    if (!browser() || !userId) return () => {};
+    getChannel();
+    const key = cacheKeys.lists(userId);
+    const onInvalidated = (event) => {
+        if (Array.isArray(event.detail) && event.detail.some((prefix) => typeof prefix === "string" && key.startsWith(prefix))) listener();
+    };
+    window.addEventListener("lista:cache-invalidated", onInvalidated);
+    return () => window.removeEventListener("lista:cache-invalidated", onInvalidated);
+}

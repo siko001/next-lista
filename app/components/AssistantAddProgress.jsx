@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useState, useSyncExternalStore} from "react";
+import {useEffect, useRef, useState, useSyncExternalStore} from "react";
 import {X} from "lucide-react";
 import {
     dismissAssistantAddJob,
@@ -43,7 +43,7 @@ export default function AssistantAddProgress() {
     useEffect(() => {
         const sync = (event) => {
             if (event.type === "storage" && event.key && !event.key.startsWith("lista:assistant-add:v1:")) return;
-            try { syncAssistantAddJobs(); } catch { /* Storage may be disabled. */ }
+            try { syncAssistantAddJobs({retryNow: event.type === "online"}); } catch { /* Storage may be disabled. */ }
         };
         window.addEventListener("storage", sync);
         window.addEventListener("online", sync);
@@ -57,6 +57,25 @@ export default function AssistantAddProgress() {
         getAssistantAddJobs,
         () => EMPTY_JOBS
     );
+    const completionTimers = useRef(new Map());
+    useEffect(() => {
+        const timers = completionTimers.current;
+        const completedIds = new Set(jobs.filter((job) => job.status === "complete").map((job) => job.id));
+        for (const [id, timer] of timers) {
+            if (!completedIds.has(id)) { clearTimeout(timer); timers.delete(id); }
+        }
+        for (const id of completedIds) {
+            if (timers.has(id)) continue;
+            timers.set(id, setTimeout(() => {
+                timers.delete(id);
+                try { dismissAssistantAddJob(id); } catch { /* Keep the manual dismiss button if storage is unavailable. */ }
+            }, 3500));
+        }
+    }, [jobs]);
+    useEffect(() => {
+        const timers = completionTimers.current;
+        return () => { for (const timer of timers.values()) clearTimeout(timer); timers.clear(); };
+    }, []);
     const visibleJobs = jobs.filter((job) => String(job.userId) === String(userData?.id));
     if (!visibleJobs.length && !storageError) return null;
 
@@ -70,16 +89,18 @@ export default function AssistantAddProgress() {
                         <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-bold">
-                                    {job.status === "complete" ? "Items added" : job.status === "error" ? "Adding paused" : "Adding items…"}
+                                    {job.status === "complete" ? "Items added" : job.status === "error" ? "Adding paused" : job.status === "retrying" ? "Reconnecting…" : "Adding items…"}
                                 </p>
                                 <p className="truncate text-xs opacity-75">{job.done} of {job.total} · {job.listName}</p>
                             </div>
-                            {job.status !== "running" && (
+                            {["error", "complete"].includes(job.status) && (
                                 <button type="button" aria-label={job.status === "error" ? "Discard remaining items" : "Dismiss progress"} onClick={() => {
                                     try { dismissAssistantAddJob(job.id); } catch { setStorageError("Could not clear saved progress. Please try again."); }
                                 }} className="rounded p-1 hover:bg-blue-600 hover:text-white"><X size={16}/></button>
                             )}
                         </div>
+                        {job.skipped > 0 && <p className="mt-1 text-xs opacity-75">{job.skipped} already on this list</p>}
+                        {job.status === "retrying" && <p className="mt-2 text-xs opacity-75">Progress saved. Continuing automatically when the connection is available.</p>}
                         {job.status === "error" && (
                             <div className="mt-2 text-xs">
                                 <p>{job.error}</p>

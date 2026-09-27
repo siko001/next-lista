@@ -1,11 +1,20 @@
+import {isTemporaryAssistantError} from "./assistantJobErrors.mjs";
+
 // Durable, account-scoped queue. Credentials and component callbacks are never stored.
 export const ASSISTANT_JOB_PREFIX = "lista:assistant-add:v1:";
 
-export function createAssistantAddQueue({storage, withLock, resolveProduct, addProduct, onAdded = () => {}, onActivity = () => {}}) {
+export function createAssistantAddQueue({
+    storage, withLock, resolveProduct, addProduct, findExistingProduct = async () => null,
+    onAdded = () => {}, onActivity = () => {}, isOnline = () => true,
+    now = Date.now, schedule = setTimeout, cancel = clearTimeout,
+}) {
     let jobs = [];
     let session = null;
     let generation = 0;
     let pumping = null;
+    let retryTimer = null;
+    let retryRequested = false;
+    let pumpRequested = false;
     const listeners = new Set();
     const waiters = new Map();
     const key = (job) => `${ASSISTANT_JOB_PREFIX}${job.userId}:${job.id}`;
@@ -26,11 +35,16 @@ export function createAssistantAddQueue({storage, withLock, resolveProduct, addP
                 const storedKey = store.key(i);
                 if (!storedKey?.startsWith(prefix)) continue;
                 try {
-                    const job = JSON.parse(store.getItem(storedKey));
+                    let job = JSON.parse(store.getItem(storedKey));
                     if (String(job.userId) !== session.userId || key(job) !== storedKey || !job.listId ||
                         !Array.isArray(job.items) || !job.items.length || !job.items.every((item) => typeof item.title === "string") ||
                         job.total !== job.items.length || !Number.isInteger(job.done) || job.done < 0 || job.done > job.items.length ||
-                        !["running", "error", "complete"].includes(job.status)) continue;
+                        !["running", "retrying", "error", "complete"].includes(job.status)) continue;
+                    // Recover jobs paused by the previous version, including the
+                    // exact "Failed to fetch" record left by a navigation abort.
+                    if (job.status === "error" && isTemporaryAssistantError({message: job.error, retryable: job.retryable})) {
+                        job = {...job, status: "retrying", retryAt: 0, retryCount: 0};
+                    }
                     next.push(job);
                 } catch { /* Ignore malformed records, without losing other jobs. */ }
             }
@@ -51,22 +65,55 @@ export function createAssistantAddQueue({storage, withLock, resolveProduct, addP
             error.jobId = job.id;
             error.completed = job.done;
             waiter.reject(error);
-        } else waiter.resolve({done: job.done, total: job.total});
+        } else waiter.resolve({done: job.done, total: job.total, ...(job.skipped ? {skipped: job.skipped} : {})});
+    };
+    const clearRetryTimer = () => {
+        if (retryTimer !== null) cancel(retryTimer);
+        retryTimer = null;
+    };
+    const scheduleRetry = () => {
+        clearRetryTimer();
+        if (!session || !isOnline()) return;
+        const waiting = jobs.filter((job) => job.status === "retrying");
+        if (!waiting.length) return;
+        const next = Math.min(...waiting.map((job) => job.retryAt || 0));
+        retryTimer = schedule(() => { retryTimer = null; void pump(); }, Math.max(0, next - now()));
     };
     const pump = () => {
-        if (!session || pumping) return pumping || Promise.resolve();
+        if (!session) return pumping || Promise.resolve();
+        if (pumping) { pumpRequested = true; return pumping; }
+        clearRetryTimer();
         const current = session;
         const version = generation;
         const active = () => generation === version && session === current;
         pumping = Promise.resolve().then(() => withLock(`lista:assistant-add:${current.userId}`, async () => {
             if (!active()) return;
             refresh(); // Another tab may have finished while we waited for the lock.
+            if (retryRequested) {
+                retryRequested = false;
+                for (const waiting of jobs.filter((item) => item.status === "retrying")) {
+                    save({...waiting, retryAt: 0});
+                }
+            }
             let job;
-            while (active() && (job = jobs.find((item) => item.status === "running"))) {
+            while (active() && (job = jobs.find((item) => item.status === "running" ||
+                (item.status === "retrying" && isOnline() && (item.retryAt || 0) <= now())))) {
                 onActivity(true);
                 try {
+                    job = {...job, status: "running", error: null, retryAt: null};
+                    save(job);
+                    if (!isOnline()) throw Object.assign(new Error("Waiting for a connection."), {retryable: true});
                     while (job.done < job.total && active()) {
                         const item = job.items[job.done];
+                        const existing = await findExistingProduct(job.listId, item.title, current);
+                        if (!active()) return;
+                        if (existing) {
+                            // Keep the existing quantity and bagged/checked state.
+                            // No write or optimistic "item added" event is needed.
+                            job = {...job, done: job.done + 1, skipped: (job.skipped || 0) + 1, retryCount: 0};
+                            save(job);
+                            continue;
+                        }
                         if (!item.productId) {
                             const productId = await resolveProduct(item.title, current);
                             if (!active()) return;
@@ -77,7 +124,7 @@ export function createAssistantAddQueue({storage, withLock, resolveProduct, addP
                         const product = job.items[job.done];
                         await addProduct(job.listId, product.productId, current);
                         if (!active()) return;
-                        job = {...job, done: job.done + 1};
+                        job = {...job, done: job.done + 1, retryCount: 0};
                         save(job);
                         onAdded(job, product);
                     }
@@ -87,12 +134,18 @@ export function createAssistantAddQueue({storage, withLock, resolveProduct, addP
                     settle(job);
                 } catch (cause) {
                     if (!active()) return;
-                    job = {...job, status: "error", error: cause.message || "Could not add the items."};
-                    try { save(job); } catch {
+                    const retryable = isTemporaryAssistantError(cause);
+                    const retryCount = Math.min(6, (job.retryCount || 0) + 1);
+                    job = {...job, status: retryable ? "retrying" : "error",
+                        error: cause.message || "Could not add the items.", retryable, retryCount,
+                        retryAt: retryable ? now() + Math.min(30000, 1000 * 2 ** (retryCount - 1)) : null};
+                    try { save(job); } catch (storageError) {
+                        // A failed checkpoint cannot promise safe automatic recovery.
+                        job = {...job, status: "error", retryable: false, error: storageError.message};
                         jobs = jobs.map((item) => item.id === job.id ? job : item);
                         publish();
                     }
-                    settle(job, cause);
+                    if (job.status === "error") settle(job, new Error(job.error));
                 } finally { onActivity(false); }
             }
         })).catch((cause) => {
@@ -100,7 +153,10 @@ export function createAssistantAddQueue({storage, withLock, resolveProduct, addP
         }).finally(() => {
             pumping = null;
             // A session change can occur while an old request is completing.
-            if (session && generation !== version) void pump();
+            const runAgain = generation !== version || retryRequested || pumpRequested;
+            pumpRequested = false;
+            if (session && runAgain) void pump();
+            else scheduleRetry();
         });
         return pumping;
     };
@@ -110,8 +166,10 @@ export function createAssistantAddQueue({storage, withLock, resolveProduct, addP
         setSession(next) {
             session = next?.userId && next?.token ? {...next, userId: String(next.userId)} : null;
             generation++;
+            clearRetryTimer();
+            retryRequested = false;
             refresh();
-            // Interrupted jobs resume on load. Failed jobs stay reviewable until retry.
+            // Permanent errors stay reviewable; connection failures resume automatically.
             void pump();
         },
         enqueue({userId, listId, listName, items}) {
@@ -131,17 +189,24 @@ export function createAssistantAddQueue({storage, withLock, resolveProduct, addP
         retry(id) {
             const job = jobs.find((item) => item.id === id);
             if (!job || job.status !== "error") return;
-            save({...job, status: "running", error: null});
+            save({...job, status: "running", error: null, retryAt: null, retryCount: 0});
             void pump();
         },
         dismiss(id) {
             const job = jobs.find((item) => item.id === id);
-            if (!job || job.status === "running") return;
+            if (!job || ["running", "retrying"].includes(job.status)) return;
             storage().removeItem(key(job));
             jobs = jobs.filter((item) => item.id !== id);
             publish();
         },
-        sync() { refresh(); void pump(); },
-        drain: () => pump(),
+        sync({retryNow = false} = {}) {
+            if (retryNow) retryRequested = true;
+            refresh();
+            void pump();
+        },
+        async drain() {
+            await (pumping || pump());
+            while (pumping) await pumping;
+        },
     };
 }

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
     cachedRead, cachedValue, cacheVersion, seedCache, invalidateCache,
-    invalidateSessionData, cacheKeys, CACHE_TTL,
+    invalidateSessionData, cacheKeys, CACHE_TTL, subscribeListInvalidation, invalidateListData,
 } from "../app/lib/dataCache.mjs";
 
 const values = new Map();
@@ -74,4 +74,40 @@ test("a forced refresh wins over an older request", async () => {
     await old;
     assert.deepEqual(cachedValue(key), [{id: "fresh"}]);
     invalidateCache(key);
+});
+
+
+test("other-tab invalidations refresh only the matching account without rebroadcasting", () => {
+    const previousWindow = globalThis.window;
+    const target = new EventTarget();
+    globalThis.window = {
+        sessionStorage: storage,
+        addEventListener: target.addEventListener.bind(target),
+        removeEventListener: target.removeEventListener.bind(target),
+        dispatchEvent: target.dispatchEvent.bind(target),
+    };
+    let channel;
+    globalThis.BroadcastChannel = class {
+        constructor() { channel = this; this.sent = []; }
+        postMessage(data) { this.sent.push(data); }
+    };
+    let updates = 0;
+    const unsubscribe = subscribeListInvalidation(7, () => updates++);
+    try {
+        channel.onmessage({data: {prefixes: [cacheKeys.lists(8)]}});
+        assert.equal(updates, 0);
+        channel.onmessage({data: {prefixes: [cacheKeys.lists(7)]}});
+        assert.equal(updates, 1);
+        assert.equal(channel.sent.length, 0, "receiving does not cause a broadcast loop");
+        invalidateListData(7);
+        assert.equal(updates, 1, "the originating tab keeps its optimistic view");
+        assert.deepEqual(channel.sent, [{prefixes: [cacheKeys.lists(7)]}]);
+        unsubscribe();
+        channel.onmessage({data: {prefixes: [cacheKeys.lists(7)]}});
+        assert.equal(updates, 1);
+    } finally {
+        unsubscribe();
+        globalThis.window = previousWindow;
+        globalThis.BroadcastChannel = undefined;
+    }
 });

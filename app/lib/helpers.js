@@ -1,4 +1,5 @@
 import CryptoJS from "crypto-js";
+import {assistantHttpError} from "./assistantJobErrors.mjs";
 import {getCookie} from "cookies-next";
 import {cachedRead, cacheKeys, CACHE_TTL, invalidateCurrentLists} from "./dataCache.mjs";
 export const SECRET_KEY = "your-secret-key-123";
@@ -130,7 +131,7 @@ export const getAllProducts = async (encryptedToken, {strict = false} = {}) => {
             // The catalogue is shared and changes only when products are published.
             ...(typeof window === "undefined" ? {next: {revalidate: 600}} : {}),
         });
-        if (!response.ok) throw new Error("Failed to fetch product catalogue");
+        if (!response.ok) throw assistantHttpError(response.status, "Failed to fetch product catalogue");
         const data = await response.json();
         if (!Array.isArray(data)) throw new Error("Invalid product catalogue");
         return data;

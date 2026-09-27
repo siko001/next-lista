@@ -17,6 +17,7 @@ import {cookies} from "next/headers";
 import AnimatedFavicon from "./components/AnimatedFavicon";
 import SiteCredit from "./components/SiteCredit";
 import AssistantAddProgress from "./components/AssistantAddProgress";
+import WindowGlow from "./components/WindowGlow";
 
 const quicksand = Quicksand({
     subsets: ["latin"],
@@ -104,6 +105,7 @@ export default async function RootLayout({children}) {
                 className={`${geistSans.variable} ${geistMono.variable} ${saira.variable} ${quicksand.variable} font-saira antialiased transition-colors duration-200`}
             >
                 <AnimatedFavicon />
+                <WindowGlow />
                 <LoadingProvider>
                     <NotificationProvider>
                         <ListProvider>

@@ -1,4 +1,5 @@
 import Pusher from "pusher-js";
+import {createSharedRealtime} from "./sharedRealtime.mjs";
 
 let pusher;
 const channelReferences = new Map();
@@ -18,7 +19,7 @@ export function getPusher() {
 
 // Share one socket per tab. Each listener owns only its own event binding, so
 // leaving one screen cannot remove another screen's listener on the same channel.
-export function subscribePusherEvent(channelName, eventName, handler) {
+function subscribeDirectPusherEvent(channelName, eventName, handler) {
   if (disconnectTimer) {
     clearTimeout(disconnectTimer);
     disconnectTimer = undefined;
@@ -51,4 +52,22 @@ export function subscribePusherEvent(channelName, eventName, handler) {
       }, 500);
     }
   };
+}
+
+
+let shared;
+export function subscribePusherEvent(channelName, eventName, handler) {
+  if (typeof window === "undefined" || !navigator.locks || typeof BroadcastChannel === "undefined") {
+    return subscribeDirectPusherEvent(channelName, eventName, handler);
+  }
+  if (!shared) {
+    shared = createSharedRealtime({
+      createChannel: () => new BroadcastChannel("lista-remote-events-v1"),
+      requestLock: (signal, run) => navigator.locks.request("lista-remote-connection-v1", {signal}, run),
+      subscribeRemote: subscribeDirectPusherEvent,
+    });
+    window.addEventListener("pagehide", () => shared.pause());
+    window.addEventListener("pageshow", () => shared.resume());
+  }
+  return shared.subscribe(channelName, eventName, handler);
 }

@@ -95,3 +95,29 @@ test("unrelated questions receive a scoped reply without unrelated content", asy
     assert.match(sent.messages[0].content, /shopping lists/);
   } finally { restore(); }
 });
+
+test("recipe follow-ups include the original ingredient names and amounts in AI history", async () => {
+  process.env.GROQ_API_KEY = "test-key";
+  delete process.env.OPENAI_API_KEY;
+  let sent;
+  globalThis.fetch = async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return Response.json({choices: [{message: {content: JSON.stringify({
+      kind: "recipe", message: "Serve with warm pita.", title: "Halloumi salad with pita",
+      ingredients: ["½ cucumber, diced", "200g halloumi, sliced", "2 pita breads"],
+      steps: ["Warm the pita and serve alongside."], suggestions: [], links: [],
+    })}}]});
+  };
+  try {
+    const response = await POST(new Request("http://localhost/api/ai/recipes", {
+      method: "POST", body: JSON.stringify({query: "Serve with warm pita bread", history: [{
+        role: "assistant", text: "Here is a fresh salad.",
+        recipe: {title: "Halloumi salad", ingredients: ["½ cucumber, diced", "200g halloumi, sliced"]},
+      }]}),
+    }));
+    assert.equal(response.status, 200);
+    assert.match(sent.messages.at(-2).content, /½ cucumber, diced/);
+    assert.match(sent.messages.at(-2).content, /200g halloumi, sliced/);
+    assert.match(sent.messages[0].content, /preserve the existing ingredient names and quantities exactly/);
+  } finally { restore(); }
+});

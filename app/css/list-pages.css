@@ -494,7 +494,9 @@
     min-height: 52px;
     margin: 8px 0 0 !important;
     padding: 8px 4px !important;
-    background: var(--page-canvas) !important;
+    background: color-mix(in srgb, var(--page-canvas) 72%, transparent) !important;
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
     border-bottom: 1px solid var(--page-border);
     isolation: isolate;
     z-index: 30;
@@ -502,8 +504,8 @@
 .list-section-heading::before {
     content: "";
     position: absolute;
-    inset: -20px 0 0;
-    background: var(--page-canvas);
+    inset: -20px 0 100%;
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--page-canvas) 72%, transparent));
     z-index: -1;
     pointer-events: none;
 }

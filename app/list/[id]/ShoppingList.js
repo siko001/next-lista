@@ -5,6 +5,7 @@ import {useEffect, useState, useRef} from "react";
 import {useLoading} from "../../contexts/LoadingContext";
 import {calculateProgress, WP_API_BASE, decryptToken, getAllProducts, getAllCustomProducts, getFavourites, decodeHtmlEntities} from "../../lib/helpers";
 import {searchProductsInLanguage} from "../../lib/domTranslations.mjs";
+import useLocalListSync from "../../lib/useLocalListSync";
 import useDomTranslations from "../../lib/useDomTranslations";
 import {invalidateCurrentLists, seedCache, cacheVersion, cacheKeys, CACHE_TTL} from "../../lib/dataCache.mjs";
 import {
@@ -978,6 +979,31 @@ export default function ShoppingList({
     }, [currentList?.acf?.shared_with_users]);
 
     const [listTitle, setListTitle] = useState(currentList.title);
+    useLocalListSync(userId, async ({signal, isCurrent}) => {
+        const headers = {Authorization: `Bearer ${decryptToken(token)}`};
+        const [itemsResponse, listResponse] = await Promise.all([
+            fetch(`${WP_API_BASE}/custom/v1/get-shopping-list-products?shoppingListId=${listId}`, {headers, signal, cache: "no-store"}),
+            fetch(`${WP_API_BASE}/custom/v1/shopping-list/${listId}`, {headers, signal, cache: "no-store"}),
+        ]);
+        if (listResponse.status === 404 && isCurrent()) { window.location.assign("/"); return; }
+        if (!itemsResponse.ok || !listResponse.ok) return;
+        const [items, details] = await Promise.all([itemsResponse.json(), listResponse.json()]);
+        if (!isCurrent() || !items.success || !Array.isArray(items.linkedProducts)) return;
+        const normalize = (products) => (products || []).map((product) => ({...product, id: product.id || product.ID, ID: product.id || product.ID}));
+        const checked = normalize(items.checkedProducts);
+        const bagged = normalize(items.baggedProducts);
+        setAllLinkedProducts(normalize(items.linkedProducts));
+        setOriginalCheckedProducts(checked);
+        setOriginalBaggedProducts(bagged);
+        const search = searchTermRef.current;
+        setCheckedProducts(search ? searchProductsInLanguage(checked, search, language, FUSE_CHECKED_OPTIONS) : checked);
+        setBaggedProducts(search ? searchProductsInLanguage(bagged, search, language, FUSE_CHECKED_OPTIONS) : bagged);
+        setTotalProductCount(items.linkedProducts.length);
+        setBaggedProductCount(bagged.length);
+        setCurrentList(details);
+        setListTitle(details.title);
+        setSharedWithUsers(details.acf?.shared_with_users || []);
+    });
 
     // Keep navigation previews current after adding, bagging, or removing items.
     useEffect(() => {
