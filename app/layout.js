@@ -106,9 +106,9 @@ export default async function RootLayout({children}) {
                 <AnimatedFavicon />
                 <LoadingProvider>
                     <NotificationProvider>
-                        <AssistantAddProgress />
                         <ListProvider>
                             <UserProvider initialRegistered={initialRegistered} initialUserName={initialUserName}>
+                                <AssistantAddProgress />
                                 <ProductProvider>
                                     <ValidationProvider>
                                         <OverlayProvider>

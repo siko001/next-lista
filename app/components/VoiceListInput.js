@@ -53,7 +53,6 @@ export default function VoiceListInput({
     userLists,
     getShoppingList,
     createShoppingList,
-    addItemToList,
     showNotification,
     storageKey,
     open,
@@ -505,27 +504,22 @@ export default function VoiceListInput({
             const task = runAssistantAddJob({
                 items: cleaned,
                 listName: targetName,
-                addItem: (item) => addItemToList(targetId, item),
+                userId,
+                listId: targetId,
             });
-            onTaskStarted?.();
-            const {done: added} = await task;
-            if (storageKey) localStorage.removeItem(storageKey);
+            // Once accepted, the queue owns the items, including retries.
+            try { if (storageKey) localStorage.removeItem(storageKey); } catch {}
             setItems([]);
             setTranscript("");
             setNeedsReview(false);
             setRecordingChoice(false);
+            onTaskStarted?.();
+            const {done: added} = await task;
             showNotification(`Added ${added} item${added === 1 ? "" : "s"} to ${targetName}`, "success");
         } catch (cause) {
-            if (Array.isArray(cause.remainingItems)) {
-                const remaining = cause.remainingItems;
-                setItems(remaining);
-                if (storageKey) {
-                    try { localStorage.setItem(storageKey, JSON.stringify({items: remaining, transcript, needsReview, destination})); } catch {}
-                }
-                setError(`${cause.completed} of ${cleaned.length} added. ${cause.message || "Please retry the remaining items."}`);
-            } else {
-                setError(cause.message || "Could not add the items. Please try again.");
-            }
+            setError(cause.jobId
+                ? "Your progress is saved. Retry the remaining items from the progress card."
+                : cause.message || "Could not add the items. Please try again.");
         } finally {
             window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
             setBusy(false);

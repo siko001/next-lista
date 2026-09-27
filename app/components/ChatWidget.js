@@ -11,8 +11,7 @@ import { gsap } from "gsap";
 import { useUserContext } from "../contexts/UserContext";
 import { useListContext } from "../contexts/ListContext";
 import { useNotificationContext } from "../contexts/NotificationContext";
-import { decryptToken, WP_API_BASE, decodeHtmlEntities, getAllProducts, getAllCustomProducts } from "../lib/helpers";
-import {invalidateListData, invalidateCache, cacheKeys} from "../lib/dataCache.mjs";
+import { decryptToken, WP_API_BASE, decodeHtmlEntities } from "../lib/helpers";
 import {
   LIST_NAME_MAX_LENGTH,
   INGREDIENT_NAME_MAX_LENGTH,
@@ -259,9 +258,6 @@ const ChatWidget = forwardRef(function ChatWidget(
       setCanReadd(true);
     }
   }, [context, listEmptied, lastRecipe]);
-
-  // Simple caches to avoid repeated fetching during a session
-  const productsCacheRef = useRef({ all: null, custom: null });
 
   const handleSubmit = async (e, overrideText = null) => {
     e?.preventDefault?.();
@@ -952,123 +948,31 @@ const ChatWidget = forwardRef(function ChatWidget(
     userData?.id,
   ]);
 
-  const loadProductPools = useCallback(async () => {
-    if (!token) throw new Error("No session is available.");
-    const [all, custom] = await Promise.all([
-      getAllProducts(token, {strict: true}),
-      getAllCustomProducts(token),
-    ]);
-    if (!Array.isArray(all) || !Array.isArray(custom)) {
-      throw new Error("Could not check existing products.");
-    }
-    productsCacheRef.current = { all, custom };
-    return productsCacheRef.current;
-  }, [token]);
-
-  const resolveProductIdByTitle = useCallback(
-    async (title) => {
-      const pools = await loadProductPools();
-      const norm = (s) => (s || "").toString().toLowerCase().trim();
-      const target = norm(title);
-
-      // Search core products first
-      const core = pools.all?.find(
-        (p) => norm(decodeHtmlEntities(p.title)) === target,
-      );
-      if (core?.id) return { id: core.id, source: "core" };
-
-      // Then search custom products
-      const custom = pools.custom?.find((p) => norm(p.title) === target);
-      if (custom?.id) return { id: custom.id, source: "custom" };
-
-      return { id: null, source: null };
-    },
-    [loadProductPools],
-  );
-
-  const addItemToList = useCallback(
-    async (shoppingListId, title) => {
-      if (!shoppingListId || !token)
-        throw new Error("No list or session is available.");
-      // Use decrypted token only when inside a list page (encrypted token there)
-      const authToken = context === "list" ? decryptToken(token) : token;
-      // 1) Try to resolve product id from existing pools
-      let { id: productId } = await resolveProductIdByTitle(title);
-
-      // 2) If not found, create a custom product once
-      if (!productId) {
-        try {
-          const res = await fetch(
-            `${WP_API_BASE}/custom/v1/create-custom-product`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${authToken}`,
-              },
-              body: JSON.stringify({ title }),
-            },
-          );
-          if (!res.ok) throw new Error("Could not create a custom product.");
-          const data = await res.json();
-          productId = data?.id || data?.product_id || data?.product?.id || null;
-
-          // Update cache to include this newly created custom item
-          if (productId) {
-            if (userData?.id) invalidateCache(cacheKeys.customProducts(userData.id));
-            const pools = productsCacheRef.current;
-            if (pools?.custom) {
-              pools.custom = [{ id: productId, title }, ...pools.custom];
-            }
-          }
-        } catch (err) {
-          throw err;
-        }
-      }
-
-      if (!productId) throw new Error(`Could not create ${title}.`);
-
-      try {
-        const response = await fetch(
-          `${WP_API_BASE}/custom/v1/update-shopping-list`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${authToken}`,
-            },
-            body: JSON.stringify({
-              shoppingListId,
-              productId,
-              action: "add",
-            }),
-          },
-        );
-        if (!response.ok) throw new Error(`Could not add ${title}.`);
-        invalidateListData(userData?.id);
-        // Optimistic UI: notify list page
-        try {
-          const evt = new CustomEvent("lista:items-added", {
-            detail: {
-              listId: shoppingListId,
-              items: [{ id: productId, title }],
-            },
-          });
-          window.dispatchEvent(evt);
-        } catch {}
-      } catch (err) {
-        throw err;
-      }
-    },
-    [token, context, resolveProductIdByTitle, userData?.id],
-  );
-
   const addItemsWithProgress = (targetListId, items, listName = "your list") => {
     const task = runAssistantAddJob({
       items,
       listName,
-      addItem: (item) => addItemToList(targetListId, item),
+      userId: userData?.id,
+      listId: targetListId,
     });
+    // The durable queue owns this batch now. Do not restore a second add prompt
+    // from the conversation draft when the page reloads mid-job.
+    setPendingRecipe(null);
+    setEditedIngredients([]);
+    setPendingDirectAdd(null);
+    setListSelectionMode(null);
+    setPendingDuplicateList(null);
+    setPendingListNotFound(null);
+    setPendingListNameTooLong(null);
+    setAwaitingNewListName(false);
+    try {
+      const draft = JSON.parse(localStorage.getItem(storageKey) || "null");
+      if (draft) localStorage.setItem(storageKey, JSON.stringify({...draft,
+        pendingRecipe: null, editedIngredients: [], pendingDirectAdd: null,
+        listSelectionMode: null, pendingDuplicateList: null, pendingListNotFound: null,
+        pendingListNameTooLong: null, awaitingNewListName: false,
+      }));
+    } catch {}
     setOpen(false);
     return task;
   };
@@ -1110,8 +1014,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       setLastRecipe({ title: pendingRecipe.title, ingredients: toAdd });
       setPendingRecipe(null);
     } catch (error) {
-      if (Array.isArray(error.remainingItems)) setEditedIngredients(error.remainingItems);
-      showNotification(`Added ${error.completed || 0} item(s). Please retry the remaining items.`, "error");
+      showNotification(error.jobId ? "Your progress is saved. Retry from the progress card." : error.message || "Could not start adding items.", "error");
     } finally {
       // Announce AI bulk adding end
       try {
@@ -1160,7 +1063,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       setLastRecipe({ title: pendingRecipe.title, ingredients: toAdd });
       setPendingRecipe(null);
     } catch (error) {
-      showNotification(`Added ${error.completed || 0} item(s). Please check the new list before retrying.`, "error");
+      showNotification(error.jobId ? "Your progress is saved. Retry from the progress card." : error.message || "Could not start adding items.", "error");
     } finally {
       try {
         window.dispatchEvent(new CustomEvent("lista:ai-adding-end"));
@@ -2569,7 +2472,6 @@ const ChatWidget = forwardRef(function ChatWidget(
               userLists={userLists}
               getShoppingList={getShoppingList}
               createShoppingList={createShoppingList}
-              addItemToList={addItemToList}
               showNotification={showNotification}
               storageKey={storageKey ? `${storageKey}:voice` : null}
               open={open}
