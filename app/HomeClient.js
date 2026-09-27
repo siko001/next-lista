@@ -2,6 +2,7 @@
 import {useEffect, useState, useRef} from "react";
 import {DragDropContext, Droppable, Draggable} from "@hello-pangea/dnd";
 import {WP_API_BASE, isListOwner, removeListRelationship} from "./lib/helpers";
+import {invalidateCurrentLists} from "./lib/dataCache.mjs";
 import gsap from "gsap";
 import Pusher from "pusher-js";
 
@@ -51,6 +52,7 @@ const HomeClient = ({
     const {
         userLists,
         getShoppingList,
+        hydrateUserLists,
         setUserLists,
         deleteList,
         copyShoppingList,
@@ -73,9 +75,14 @@ const HomeClient = ({
         setIsInnerList(false);
         let active = true;
         if (userData && userData.id && token) {
-            getShoppingList(userData.id, token).finally(() => {
-                if (active) setInitialLoadComplete(true);
-            });
+            if (String(userData.id) === String(userId) && Array.isArray(lists)) {
+                hydrateUserLists(userData.id, lists);
+                setInitialLoadComplete(true);
+            } else {
+                getShoppingList(userData.id, token).finally(() => {
+                    if (active) setInitialLoadComplete(true);
+                });
+            }
         } else if (!userLoading && !token) {
             setInitialLoadComplete(true);
         }
@@ -167,6 +174,7 @@ const HomeClient = ({
     const handleDragEnd = async (result) => {
         if (lenis.current) lenis.current.options.smoothWheel = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         if (!result.destination || result.source.index === result.destination.index) return;
+        invalidateCurrentLists();
         const items = Array.from(userLists);
         const [reorderedItem] = items.splice(result.source.index, 1);
         items.splice(result.destination.index, 0, reorderedItem);
@@ -187,6 +195,7 @@ const HomeClient = ({
                 body: JSON.stringify({orders: updates}),
             });
             if (!response.ok) throw new Error("Could not save list order");
+            invalidateCurrentLists();
         } catch (error) {
             console.error("Reorder failed:", error);
             setUserLists(userLists);
@@ -303,7 +312,7 @@ const HomeClient = ({
         // Fetch all lists again to ensure everything is in sync
         if (userData?.id) {
             setTimeout(() => {
-                getShoppingList(userData.id, token);
+                getShoppingList(userData.id, token, {force: true});
             }, 500);
         }
     };
@@ -343,6 +352,7 @@ const HomeClient = ({
         const channel = pusher.subscribe("user-lists-" + userData.id);
 
         channel.bind("share-update", (data) => {
+            invalidateCurrentLists();
             if (data.action === "add") {
                 const newUser = {
                     ID: parseInt(data.userId),

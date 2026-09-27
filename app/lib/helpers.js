@@ -1,4 +1,6 @@
 import CryptoJS from "crypto-js";
+import {getCookie} from "cookies-next";
+import {cachedRead, cacheKeys, CACHE_TTL, invalidateCurrentLists} from "./dataCache.mjs";
 export const SECRET_KEY = "your-secret-key-123";
 export const WP_API_BASE =
     "https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json";
@@ -30,6 +32,9 @@ export const decryptToken = (encryptedToken) => {
     }
 };
 
+const browserUserId = () => typeof window === "undefined" ? null : getCookie("id");
+const privateFetchOptions = () => ({cache: "no-store"});
+
 // Fetch shopping lists for the user
 export const getShoppingList = async (userId, encryptedToken) => {
     // Decrypt the token
@@ -48,6 +53,7 @@ export const getShoppingList = async (userId, encryptedToken) => {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
             },
+            ...privateFetchOptions(),
         });
 
         const data = await response.json();
@@ -96,6 +102,7 @@ export const getListDetails = async (listId, encryptedToken) => {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
             },
+            ...privateFetchOptions(),
         });
 
         const data = await response.json();
@@ -106,25 +113,33 @@ export const getListDetails = async (listId, encryptedToken) => {
     }
 };
 
-export const getAllProducts = async (encryptedToken) => {
+export const getAllProducts = async (encryptedToken, {strict = false} = {}) => {
     const token = decryptToken(encryptedToken);
     if (!token) {
+        if (strict) throw new Error("No product catalogue session");
         return [];
     }
     const url = `${WP_API_BASE}/custom/v1/products`;
-    try {
+    const load = async () => {
         const response = await fetch(url, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
             },
+            // The catalogue is shared and changes only when products are published.
+            ...(typeof window === "undefined" ? {next: {revalidate: 600}} : {}),
         });
-
+        if (!response.ok) throw new Error("Failed to fetch product catalogue");
         const data = await response.json();
+        if (!Array.isArray(data)) throw new Error("Invalid product catalogue");
         return data;
+    };
+    try {
+        return await cachedRead(cacheKeys.catalogue, CACHE_TTL.catalogue, load);
     } catch (error) {
         console.error("Failed to fetch all products:", error);
+        if (strict) throw error;
         return [];
     }
 };
@@ -142,6 +157,7 @@ export const getLinkedProducts = async (shoppingListId, encryptedToken) => {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
             },
+            ...privateFetchOptions(),
         });
 
         const data = await response.json();
@@ -206,6 +222,7 @@ export const getBaggedItems = async (shoppingListId, token) => {
             headers: {
                 Authorization: `Bearer ${decryptedToken}`,
             },
+            ...privateFetchOptions(),
         }
     );
 
@@ -215,31 +232,43 @@ export const getBaggedItems = async (shoppingListId, token) => {
 
 export const getAllCustomProducts = async (token) => {
     const decryptedToken = decryptToken(token);
-    const res = await fetch(`${WP_API_BASE}/custom/v1/get-custom-products`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${decryptedToken}`,
-        },
-    });
-    const data = await res.json();
-    return data;
+    if (!decryptedToken) return [];
+    const load = async () => {
+        const res = await fetch(`${WP_API_BASE}/custom/v1/get-custom-products`, {
+            method: "GET",
+            headers: {"Content-Type": "application/json", Authorization: `Bearer ${decryptedToken}`},
+            ...privateFetchOptions(),
+        });
+        if (!res.ok) throw new Error(`Failed to fetch custom products (HTTP ${res.status})`);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error("Invalid custom products");
+        return data;
+    };
+    const userId = browserUserId();
+    return userId ? cachedRead(cacheKeys.customProducts(userId), CACHE_TTL.customProducts, load) : load();
 };
 
 export const getFavourites = async (token) => {
     const decryptedToken = decryptToken(token);
+    if (!decryptedToken) return [];
     try {
-        const res = await fetch(`${WP_API_BASE}/custom/v1/get-favourites`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${decryptedToken}`,
-            },
-        });
-        return await res.json();
+        const load = async () => {
+            const res = await fetch(`${WP_API_BASE}/custom/v1/get-favourites`, {
+                method: "GET",
+                headers: {"Content-Type": "application/json", Authorization: `Bearer ${decryptedToken}`},
+                ...privateFetchOptions(),
+            });
+            if (!res.ok) throw new Error("Failed to fetch favourites");
+            const data = await res.json();
+            const favourites = Array.isArray(data) ? data : data?.favourites;
+            if (!Array.isArray(favourites)) throw new Error("Invalid favourites");
+            return favourites;
+        };
+        const userId = browserUserId();
+        return userId ? await cachedRead(cacheKeys.favourites(userId), CACHE_TTL.favourites, load) : await load();
     } catch (error) {
         console.error("Error fetching favourites:", error);
-        return {success: false, favourites: []};
+        return [];
     }
 };
 
@@ -285,6 +314,7 @@ export const removeListRelationship = async (
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
         }
+        invalidateCurrentLists();
 
         const text = await res.text();
 

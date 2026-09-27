@@ -8,6 +8,7 @@ import {Mail, LockKeyhole, UserRound} from "lucide-react";
 import Notification from "../components/Notification";
 import {useUserContext} from "../contexts/UserContext";
 import {useNotificationContext} from "../contexts/NotificationContext";
+import {invalidateSessionData} from "../lib/dataCache.mjs";
 import AuthShell from "../components/auth/AuthShell";
 import AuthField from "../components/auth/AuthField";
 import PlayfulSubmit from "../components/auth/PlayfulSubmit";
@@ -57,7 +58,7 @@ export default function RegisterClient() {
         const timeout = setTimeout(async () => {
             setEmailStatus("checking");
             try {
-                const response = await fetch(`https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json/custom-api/v1/check-email?email=${encodeURIComponent(email)}`, {signal: controller.signal});
+                const response = await fetch(`https://yellowgreen-woodpecker-591324.hostingersite.com/wp-json/custom-api/v1/check-email?email=${encodeURIComponent(email)}`, {signal: controller.signal, cache: "no-store"});
                 if (!response.ok) throw new Error("Could not check email");
                 const result = await response.json();
                 if (controller.signal.aborted) return;
@@ -105,6 +106,7 @@ export default function RegisterClient() {
             }
 
             if (response.ok && result) {
+                invalidateSessionData(userData?.id);
                 setRedirecting(true);
                 showNotification(
                     "User has been registered successfully. Redirecting to home page"

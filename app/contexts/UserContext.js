@@ -4,6 +4,7 @@ import {setCookie, getCookie, deleteCookie} from "cookies-next";
 import CryptoJS from "crypto-js";
 import {useListContext} from "./ListContext";
 import {WP_API_BASE, SECRET_KEY} from "../lib/helpers";
+import {cachedValue, seedCache, invalidateSessionData, announceLogout, cacheKeys, CACHE_TTL} from "../lib/dataCache.mjs";
 const UserContext = createContext();
 
 export const UserProvider = ({children, initialRegistered = false, initialUserName}) => {
@@ -12,7 +13,7 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [registered, setRegistered] = useState(initialRegistered);
-    const {setUserLists} = useListContext();
+    const {clearUserLists} = useListContext();
 
     // Function to encrypt data
     const encryptData = (data) => {
@@ -70,6 +71,7 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
+                cache: "no-store",
             });
 
             if (!res.ok) throw new Error("Failed to fetch user data");
@@ -81,16 +83,19 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
 
     // Function to log out the user
     const logout = () => {
+        const oldId = getCookie("id");
         // Theme is a device preference; keep it consistent when signing out.
         // Clear authentication data
         deleteCookie("token");
         deleteCookie("registered");
         deleteCookie("id");
         deleteCookie("username");
+        invalidateSessionData(oldId);
+        announceLogout(oldId);
         setUserData(null);
         setRegistered(false);
         setToken(null);
-        setUserLists(null);
+        clearUserLists();
     };
 
     // Initialization function
@@ -143,9 +148,21 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
 
                 setToken(tokenData.token);
             } else {
-                // Token exists? Fetch user data
+                // Paint the account label immediately, then validate the token
+                // against WordPress on every load. Cached identity is only UI data.
+                const userId = getCookie("id");
+                const snapshot = userId && cachedValue(cacheKeys.profile(userId));
+                if (snapshot && String(snapshot.id) === String(userId)) {
+                    setUserData(snapshot);
+                    setToken(storedToken);
+                }
                 const data = await fetchUserData(storedToken);
                 setUserData(data);
+                if (userId) seedCache(cacheKeys.profile(userId), {
+                    id: data.id,
+                    name: data.name,
+                    registered: data.registered,
+                }, CACHE_TTL.profile);
                 // The login session is already known from the server cookie.
                 // A delayed profile response must not turn its navigation into a guest view.
                 if (data.registered === "yes") setRegistered(true);
@@ -163,6 +180,18 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
         initializeUser();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        const syncLogout = (event) => {
+            if (String(event.detail) !== String(userData?.id)) return;
+            setUserData(null);
+            setRegistered(false);
+            setToken(null);
+            clearUserLists();
+        };
+        window.addEventListener("lista:logout", syncLogout);
+        return () => window.removeEventListener("lista:logout", syncLogout);
+    }, [userData?.id, clearUserLists]);
 
     return (
         <UserContext.Provider

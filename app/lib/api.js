@@ -2,7 +2,7 @@ export const WP_API_BASE = 'https://yellowgreen-woodpecker-591324.hostingersite.
 
 export const getSharedList = async (listId) => {
     try {
-        const response = await fetch(`${WP_API_BASE}/custom/v1/shared-list/${listId}`);
+        const response = await fetch(`${WP_API_BASE}/custom/v1/shared-list/${listId}`, {cache: 'no-store'});
         return await response.json();
     } catch (error) {
         return { success: false, message: 'Network error' };

@@ -12,7 +12,8 @@ import { gsap } from "gsap";
 import { useUserContext } from "../contexts/UserContext";
 import { useListContext } from "../contexts/ListContext";
 import { useNotificationContext } from "../contexts/NotificationContext";
-import { decryptToken, WP_API_BASE, decodeHtmlEntities } from "../lib/helpers";
+import { decryptToken, WP_API_BASE, decodeHtmlEntities, getAllProducts, getAllCustomProducts } from "../lib/helpers";
+import {invalidateListData, invalidateCache, cacheKeys} from "../lib/dataCache.mjs";
 import {
   LIST_NAME_MAX_LENGTH,
   INGREDIENT_NAME_MAX_LENGTH,
@@ -1239,30 +1240,16 @@ const ChatWidget = forwardRef(function ChatWidget(
 
   const loadProductPools = useCallback(async () => {
     if (!token) throw new Error("No session is available.");
-    if (productsCacheRef.current.all && productsCacheRef.current.custom) {
-      return productsCacheRef.current;
-    }
-    const authToken = context === "list" ? decryptToken(token) : token;
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${authToken}`,
-    };
-    const [resAll, resCustom] = await Promise.all([
-      fetch(`${WP_API_BASE}/custom/v1/products`, { method: "GET", headers }),
-      fetch(`${WP_API_BASE}/custom/v1/get-custom-products`, {
-        method: "GET",
-        headers,
-      }),
+    const [all, custom] = await Promise.all([
+      getAllProducts(token, {strict: true}),
+      getAllCustomProducts(token),
     ]);
-    if (!resAll.ok || !resCustom.ok)
-      throw new Error("Could not check existing products.");
-    const [all, custom] = await Promise.all([resAll.json(), resCustom.json()]);
     if (!Array.isArray(all) || !Array.isArray(custom)) {
       throw new Error("Could not check existing products.");
     }
     productsCacheRef.current = { all, custom };
     return productsCacheRef.current;
-  }, [token, context]);
+  }, [token]);
 
   const resolveProductIdByTitle = useCallback(
     async (title) => {
@@ -1314,6 +1301,7 @@ const ChatWidget = forwardRef(function ChatWidget(
 
           // Update cache to include this newly created custom item
           if (productId) {
+            if (userData?.id) invalidateCache(cacheKeys.customProducts(userData.id));
             const pools = productsCacheRef.current;
             if (pools?.custom) {
               pools.custom = [{ id: productId, title }, ...pools.custom];
@@ -1343,6 +1331,7 @@ const ChatWidget = forwardRef(function ChatWidget(
           },
         );
         if (!response.ok) throw new Error(`Could not add ${title}.`);
+        invalidateListData(userData?.id);
         // Optimistic UI: notify list page
         try {
           const evt = new CustomEvent("lista:items-added", {
@@ -1357,7 +1346,7 @@ const ChatWidget = forwardRef(function ChatWidget(
         throw err;
       }
     },
-    [token, context, resolveProductIdByTitle],
+    [token, context, resolveProductIdByTitle, userData?.id],
   );
 
   const handleConfirmAdd = async () => {
@@ -1720,7 +1709,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       const authToken = context === "list" ? decryptToken(token) : token;
 
       // Fetch all user lists
-      const fetchedLists = await getShoppingList(userData.id, authToken);
+      const fetchedLists = await getShoppingList(userData.id, authToken, {force: true});
 
       if (!fetchedLists || fetchedLists.length === 0) {
         setMessages((prev) => [
@@ -1845,7 +1834,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       const authToken = context === "list" ? decryptToken(token) : token;
 
       // Fetch existing lists to check for duplicates
-      const fetchedLists = await getShoppingList(userData.id, authToken);
+      const fetchedLists = await getShoppingList(userData.id, authToken, {force: true});
 
       // Check if list with same name already exists
       const listTitle = (l) => l.title?.rendered || l.title || "";
@@ -2030,7 +2019,7 @@ const ChatWidget = forwardRef(function ChatWidget(
         const authToken = context === "list" ? decryptToken(token) : token;
 
         // Always fetch fresh lists from server to ensure we have the latest data
-        const fetchedLists = await getShoppingList(userData.id, authToken);
+        const fetchedLists = await getShoppingList(userData.id, authToken, {force: true});
 
         if (fetchedLists && fetchedLists.length > 0) {
           setAvailableLists(fetchedLists);

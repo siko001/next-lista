@@ -397,7 +397,9 @@
 .list-detail-header h2 { overflow: visible; overflow-wrap: anywhere; font-size: clamp(19px, 3vw, 25px); line-height: 1.2; }
 .list-detail-header > div:first-child { padding: 0; gap: 12px; }
 .list-detail-header > div:first-child > div:first-child { min-width: 0; flex: 1; }
-.list-detail-header .relative.top-2 { top: 0; left: 0; }
+.list-header-title-group { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; gap: 7px; }
+.list-header-meta-pill { margin-top: 0; max-width: 100%; font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; white-space: normal; }
+.list-header-meta-pill svg { width: 14px; height: 14px; }
 .list-header-actions { gap: 9px; flex: none; }
 .list-detail-header .settings-icon,
 .list-detail-header .list-header-search-icon { width: 20px; height: 20px; color: var(--page-muted); }

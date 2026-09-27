@@ -5,6 +5,7 @@ import {useRef} from "react";
 import {animateProductExit} from "../../lib/productMotion";
 import {Check, X} from "lucide-react";
 import {useNotificationContext} from "../../contexts/NotificationContext";
+import {invalidateCurrentLists} from "../../lib/dataCache.mjs";
 
 export default function Product({
     setTotalProductCount,
@@ -28,6 +29,7 @@ export default function Product({
 
     const updateProductStatus = async (action) => {
         if (!shoppingListId || !token) return;
+        invalidateCurrentLists();
         const decryptedToken = decryptToken(token);
 
         // Update local state based on action
@@ -73,6 +75,7 @@ export default function Product({
             );
 
             const data = await response.json();
+            if (response.ok && !data.error) invalidateCurrentLists();
 
             if (!response.ok || data.error) {
                 // Handle error
@@ -154,6 +157,7 @@ export default function Product({
     // remove from linked and bagged
     const handleRemoveSingleProduct = async () => {
         if (isMovingRef.current || !shoppingListId || !token) return;
+        invalidateCurrentLists();
         isMovingRef.current = true;
         const decryptedToken = decryptToken(token);
         const productId = product.id;
@@ -183,6 +187,7 @@ export default function Product({
             );
             const data = await response.json();
             if (!response.ok || data.error) throw new Error(data.error || "Removal failed");
+            invalidateCurrentLists();
             showNotification("Product removed", "success", 1200);
         } catch (error) {
             console.error("Error:", error);

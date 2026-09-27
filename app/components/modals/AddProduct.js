@@ -13,9 +13,23 @@ import {
 } from "../../lib/helpers";
 
 import {INGREDIENT_NAME_MAX_LENGTH} from "../../lib/config";
+import {invalidateCurrentLists, invalidateCurrentProducts} from "../../lib/dataCache.mjs";
 import "../../css/product-picker.css";
 import {useParams} from "next/navigation";
 import CategoryFilter from "../CategoryFilter";
+
+// WordPress updates the whole list for each request. Keep writes in order,
+// while the picker can respond to every click immediately.
+const listMutationQueues = new Map();
+function enqueueListMutation(listId, mutation) {
+    const key = String(listId);
+    const previous = listMutationQueues.get(key) || Promise.resolve();
+    const next = previous.catch(() => {}).then(mutation);
+    listMutationQueues.set(key, next);
+    next.finally(() => {
+        if (listMutationQueues.get(key) === next) listMutationQueues.delete(key);
+    }).catch(() => {});
+}
 
 // Contexts
 import {useNotificationContext} from "../../contexts/NotificationContext";
@@ -26,7 +40,6 @@ export default function AddProduct({
     setTotalProductCount,
     baggedProductCount,
     setBaggedProductCount,
-    progress,
     setProgress,
     allLinkedProducts,
     setAllLinkedProducts,
@@ -43,6 +56,10 @@ export default function AddProduct({
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [filteredProducts, setFilteredProducts] = useState(allProducts);
     const [favouriteProducts, setFavouriteProducts] = useState(favourites);
+    const favouritesEditedRef = useRef(false);
+    useEffect(() => {
+        if (!favouritesEditedRef.current) setFavouriteProducts(favourites);
+    }, [favourites]);
     const [searchResults, setSearchResults] = useState(null);
     const [popularSearchResults, setPopularSearchResults] = useState(null);
     const [favouriteSearchResults, setFavouriteSearchResults] = useState(null);
@@ -61,6 +78,20 @@ export default function AddProduct({
         useState("popular");
     const overlayRef = useRef(null);
     const panelRef = useRef(null);
+    const selectedIdsRef = useRef(new Set((allLinkedProducts || []).map((item) => String(item.ID))));
+    const baggedIdsRef = useRef(new Set((baggedProducts || []).map((item) => String(item.id))));
+    const removedBaggedRef = useRef(new Map());
+    const countsRef = useRef({total: totalProductCount, bagged: baggedProductCount});
+    const pendingCountRef = useRef(0);
+    const intentVersionRef = useRef(new Map());
+    const failureNotifiedRef = useRef(false);
+
+    useEffect(() => {
+        if (pendingCountRef.current !== 0) return;
+        selectedIdsRef.current = new Set((allLinkedProducts || []).map((item) => String(item.ID)));
+        baggedIdsRef.current = new Set((baggedProducts || []).map((item) => String(item.id)));
+        countsRef.current = {total: totalProductCount, bagged: baggedProductCount};
+    }, [allLinkedProducts, baggedProducts, totalProductCount, baggedProductCount]);
 
     const fuseOptions = {
         keys: ["title"],
@@ -68,90 +99,98 @@ export default function AddProduct({
         distance: 100,
     };
 
-    const updateProductInShoppingList = async (productId, isAdding, token) => {
-        if (!shoppingListId || !token) return;
-        const decryptedToken = decryptToken(token);
-        const isProductBagged = baggedProducts?.some(
-            (product) => product.id === productId
-        );
-        //
-        const productTitle =
-            allProducts.find((product) => product.id === productId)?.title ||
-            customProducts.find((product) => product.id === productId)?.title;
-        if (isAdding) {
-            setCheckedProducts((prev) => {
-                const uniqueProducts =
-                    prev?.filter((product) => product.id !== productId) || [];
-                return [
-                    ...uniqueProducts,
-                    {id: productId, title: productTitle},
-                ];
-            });
-            setAllLinkedProducts((prev) => {
-                const uniqueProducts =
-                    prev?.filter((product) => product.ID !== productId) || [];
-                return [
-                    ...uniqueProducts,
-                    {ID: productId, title: productTitle},
-                ];
-            });
-            setTotalProductCount((prev) => prev + 1);
-        } else {
-            setCheckedProducts((prev) =>
-                prev?.filter((product) => product.id !== productId)
-            );
-            setBaggedProducts((prev) =>
-                prev?.filter((product) => product.id !== productId)
-            );
-            setAllLinkedProducts((prev) =>
-                prev?.filter((product) => product.ID !== productId)
-            );
-            setTotalProductCount((prev) => prev - 1);
-            if (isProductBagged) {
-                setBaggedProductCount((prev) => prev - 1);
-                setProgress((prev) => {
-                    const newProgress = prev - (1 / totalProductCount) * 100;
-                    return newProgress < 0 ? 0 : newProgress;
-                });
-            }
-        }
+    const applySelection = (productId, selected, {restoreBagged = false} = {}) => {
+        const key = String(productId);
+        const wasSelected = selectedIdsRef.current.has(key);
+        if (wasSelected === selected) return;
+        const wasBagged = baggedIdsRef.current.has(key);
+        const baggedRecord = removedBaggedRef.current.get(key);
+        const title = allProducts.find((item) => String(item.id) === key)?.title
+            || customProducts.find((item) => String(item.id) === key)?.title
+            || allLinkedProducts?.find((item) => String(item.ID) === key)?.title
+            || baggedRecord?.title;
 
-        try {
-            const response = await fetch(
-                `${WP_API_BASE}/custom/v1/update-shopping-list`,
-                {
+        if (selected) {
+            selectedIdsRef.current.add(key);
+            setAllLinkedProducts((previous) => [
+                ...(previous || []).filter((item) => String(item.ID) !== key),
+                {ID: productId, title},
+            ]);
+            if (restoreBagged && baggedRecord) {
+                baggedIdsRef.current.add(key);
+                setBaggedProducts((previous) => [
+                    ...(previous || []).filter((item) => String(item.id) !== key),
+                    baggedRecord,
+                ]);
+                countsRef.current.bagged += 1;
+            } else {
+                setCheckedProducts((previous) => [
+                    ...(previous || []).filter((item) => String(item.id) !== key),
+                    {id: productId, title},
+                ]);
+            }
+        } else {
+            selectedIdsRef.current.delete(key);
+            if (wasBagged) {
+                const record = baggedProducts?.find((item) => String(item.id) === key);
+                if (record) removedBaggedRef.current.set(key, record);
+                baggedIdsRef.current.delete(key);
+                countsRef.current.bagged -= 1;
+            }
+            setCheckedProducts((previous) => (previous || []).filter((item) => String(item.id) !== key));
+            setBaggedProducts((previous) => (previous || []).filter((item) => String(item.id) !== key));
+            setAllLinkedProducts((previous) => (previous || []).filter((item) => String(item.ID) !== key));
+        }
+        countsRef.current.total += selected ? 1 : -1;
+        setTotalProductCount(countsRef.current.total);
+        setBaggedProductCount(countsRef.current.bagged);
+        setProgress(countsRef.current.total > 0
+            ? Math.round((countsRef.current.bagged / countsRef.current.total) * 100)
+            : 0);
+    };
+
+    const handleCheckboxChange = (productId) => {
+        if (!shoppingListId || !token) return;
+        const key = String(productId);
+        const wasSelected = selectedIdsRef.current.has(key);
+        const wasBagged = baggedIdsRef.current.has(key);
+        const shouldSelect = !wasSelected;
+        const version = (intentVersionRef.current.get(key) || 0) + 1;
+        intentVersionRef.current.set(key, version);
+        pendingCountRef.current += 1;
+        applySelection(productId, shouldSelect);
+        invalidateCurrentLists();
+
+        enqueueListMutation(shoppingListId, async () => {
+            try {
+                const response = await fetch(`${WP_API_BASE}/custom/v1/update-shopping-list`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${decryptedToken}`,
+                        Authorization: `Bearer ${decryptToken(token)}`,
                     },
                     body: JSON.stringify({
                         shoppingListId,
                         productId,
-                        action: isAdding ? "add" : "remove",
+                        action: shouldSelect ? "add" : "remove",
                     }),
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                if (data?.error) throw new Error(data.error);
+                failureNotifiedRef.current = false;
+                invalidateCurrentLists();
+            } catch {
+                if (intentVersionRef.current.get(key) === version) {
+                    applySelection(productId, wasSelected, {restoreBagged: wasBagged});
                 }
-            );
-
-            const data = await response.json();
-        } catch (error) {
-            console.error("Error:", error);
-        }
-    };
-
-    let isUpdating = false;
-    const handleCheckboxChange = (productId, token) => {
-        if (isUpdating) return;
-        isUpdating = true;
-        const isCurrentlyChecked = allLinkedProducts?.some(
-            (product) => product.ID === productId
-        );
-        updateProductInShoppingList(
-            productId,
-            !isCurrentlyChecked,
-            token
-        ).finally(() => {
-            isUpdating = false;
+                if (!failureNotifiedRef.current) {
+                    showNotification("Couldn’t update the list. Please check your connection and try again.", "error");
+                    failureNotifiedRef.current = true;
+                }
+            } finally {
+                pendingCountRef.current -= 1;
+            }
         });
     };
 
@@ -427,6 +466,7 @@ export default function AddProduct({
             }
         );
         const data = await res.json();
+        invalidateCurrentProducts();
         const fetchedCustomProducts = await getAllCustomProducts(token);
         setCustomProducts(fetchedCustomProducts);
         if (searchValue) {
@@ -445,6 +485,8 @@ export default function AddProduct({
         shoppingListId,
         customProductss
     ) => {
+        invalidateCurrentLists();
+        invalidateCurrentProducts();
         // Animate the products getting deleted
         if (productListRef.current) {
             const productDiv = productListRef.current.querySelector(
@@ -497,6 +539,8 @@ export default function AddProduct({
         const data = await res.json();
 
         // if in linked products set counter minus 1
+        invalidateCurrentLists();
+        invalidateCurrentProducts();
         const isProductLinked = allLinkedProducts?.some(
             (product) => product.ID === productId
         );
@@ -528,6 +572,8 @@ export default function AddProduct({
     };
 
     const handleAddToFavourites = async (productId, token) => {
+        favouritesEditedRef.current = true;
+        invalidateCurrentProducts();
         // title
         const productTitle =
             allProducts.find((product) => product.id === productId)?.title ||
@@ -570,6 +616,7 @@ export default function AddProduct({
                 }
             );
             const data = await res.json();
+            invalidateCurrentProducts();
         } else {
             // add to favourites
             setFavouriteProducts((prev) => {
@@ -610,6 +657,7 @@ export default function AddProduct({
                 }
             );
             const data = await res.json();
+            invalidateCurrentProducts();
         }
     };
 
@@ -679,7 +727,7 @@ export default function AddProduct({
                         type="checkbox"
                         checked={isSelected}
                         disabled={isTemporaryProduct}
-                        onChange={() => handleCheckboxChange(product.id, token)}
+                        onChange={() => handleCheckboxChange(product.id)}
                     />
                     <span className="picker-product-check" aria-hidden="true">
                         {isSelected && <Check size={17} strokeWidth={3} />}

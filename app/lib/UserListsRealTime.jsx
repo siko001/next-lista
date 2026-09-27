@@ -2,6 +2,7 @@ import {useEffect, useRef} from "react";
 import Pusher from "pusher-js";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import {useListContext} from "../contexts/ListContext";
+import {invalidateListData} from "./dataCache.mjs";
 
 export default function useUserListsRealtime(
     userId,
@@ -31,6 +32,7 @@ export default function useUserListsRealtime(
         channelNameRef.current = name;
 
         channel.bind("list-summary-updated", (data) => {
+            invalidateListData(userId);
             setUserLists((prev) =>
                 prev.map((list) =>
                     list.id === data.list_id

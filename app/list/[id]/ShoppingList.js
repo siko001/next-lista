@@ -4,7 +4,8 @@ import {animateProductExit} from "../../lib/productMotion";
 import {useEffect, useState, useMemo, useRef} from "react";
 import {useLoading} from "../../contexts/LoadingContext";
 import Fuse from "fuse.js";
-import {calculateProgress, WP_API_BASE, decryptToken} from "../../lib/helpers";
+import {calculateProgress, WP_API_BASE, decryptToken, getAllProducts, getAllCustomProducts, getFavourites} from "../../lib/helpers";
+import {invalidateCurrentLists, seedCache, cacheVersion, cacheKeys, CACHE_TTL} from "../../lib/dataCache.mjs";
 import {
     getUniqueCategories,
     groupProductsByCategory,
@@ -35,6 +36,8 @@ import BagIcon from "../../components/svgs/BagIcon";
 import XBagIcon from "../../components/svgs/XBagIcon";
 import EmptyBagIcon from "../../components/svgs/EmptyBagIcon";
 
+const FUSE_CHECKED_OPTIONS = {keys: ["title"], threshold: 0.4, distance: 100};
+
 export default function ShoppingList({
     listId,
     userId,
@@ -63,7 +66,7 @@ export default function ShoppingList({
     );
 
     // custom products
-    const [customProducts, setCustomProducts] = useState(userCustomProducts);
+    const [customProducts, setCustomProducts] = useState(userCustomProducts || []);
 
     // Store original product lists for search functionality
     const [originalCheckedProducts, setOriginalCheckedProducts] =
@@ -73,7 +76,9 @@ export default function ShoppingList({
     );
 
     const [allProducts, setAllProducts] = useState(AllProducts);
+    const [currentFavourites, setCurrentFavourites] = useState(favourites || []);
     const [shareDialogOpen, setShareDialogOpen] = useState(false);
+    const [shareDialogView, setShareDialogView] = useState("share");
     const [checklistSettings, setChecklistSettings] = useState(false);
     const [sharedWithUsers, setSharedWithUsers] = useState(
         currentList?.acf?.shared_with_users || [],
@@ -90,6 +95,34 @@ export default function ShoppingList({
         calculateProgress(totalProductCount, baggedProductCount) || 0,
     );
     const {setIsInnerList, isInInnerList, setUserLists, setListPreview} = useListContext();
+
+    useEffect(() => {
+        if (Array.isArray(AllProducts) && AllProducts.length > 0) seedCache(cacheKeys.catalogue, AllProducts, CACHE_TTL.catalogue);
+        if (userId && Array.isArray(userCustomProducts)) seedCache(cacheKeys.customProducts(userId), userCustomProducts, CACHE_TTL.customProducts);
+        if (userId && favourites) seedCache(cacheKeys.favourites(userId), favourites, CACHE_TTL.favourites);
+    }, [AllProducts, userCustomProducts, favourites, userId]);
+
+    // Refresh catalogue and personal product choices when the picker opens.
+    // Warm entries resolve immediately; expired entries fetch without blocking the modal.
+    useEffect(() => {
+        if (!productOverlay || !token) return;
+        let active = true;
+        const customKey = userId && cacheKeys.customProducts(userId);
+        const favouriteKey = userId && cacheKeys.favourites(userId);
+        const customVersion = customKey && cacheVersion(customKey);
+        const favouriteVersion = favouriteKey && cacheVersion(favouriteKey);
+        Promise.allSettled([
+            getAllProducts(token, {strict: true}),
+            getAllCustomProducts(token),
+            getFavourites(token),
+        ]).then(([catalogue, custom, saved]) => {
+            if (!active) return;
+            if (catalogue.status === "fulfilled") setAllProducts(catalogue.value);
+            if (custom.status === "fulfilled" && (!customKey || cacheVersion(customKey) === customVersion)) setCustomProducts(custom.value);
+            if (saved.status === "fulfilled" && (!favouriteKey || cacheVersion(favouriteKey) === favouriteVersion)) setCurrentFavourites(saved.value);
+        });
+        return () => { active = false; };
+    }, [productOverlay, token, userId]);
 
     // Get Categories
     const [categories, setCategories] = useState([]);
@@ -145,21 +178,13 @@ export default function ShoppingList({
 
     const {showNotification} = useNotificationContext();
     // Create Fuse instances for fuzzy search
-    const fuseCheckedOptions = {
-        keys: ["title"],
-        threshold: 0.4, // Lower threshold means more strict matching
-        distance: 100, // How far to extend the fuzzy match
-    };
-
     const fuseChecked = useMemo(
-        () => new Fuse(originalCheckedProducts, fuseCheckedOptions),
+        () => new Fuse(originalCheckedProducts, FUSE_CHECKED_OPTIONS),
         [originalCheckedProducts],
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     );
     const fuseBagged = useMemo(
-        () => new Fuse(originalBaggedProducts, fuseCheckedOptions),
+        () => new Fuse(originalBaggedProducts, FUSE_CHECKED_OPTIONS),
         [originalBaggedProducts],
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     );
 
     // Update original product lists when primary lists change (outside of search)
@@ -213,6 +238,7 @@ export default function ShoppingList({
                 !Array.isArray(items)
             )
                 return;
+            invalidateCurrentLists();
 
             // Add to checkedProducts and allLinkedProducts if not present
             setCheckedProducts((prev) => {
@@ -479,6 +505,7 @@ export default function ShoppingList({
     // Bag All Products
     const handleBagAllItems = async (listId) => {
         if (bulkActionInFlightRef.current || checkedProducts.length === 0) return;
+        invalidateCurrentLists();
         bulkActionInFlightRef.current = true;
         await animateBulkRowsOut(".checked-products-container", 1);
         updateStates();
@@ -527,6 +554,7 @@ export default function ShoppingList({
                         }),
                     },
                 );
+                if (res.ok) invalidateCurrentLists();
             } catch (error) {
                 console.error("Bagging error:", error);
                 // Revert state on error
@@ -543,6 +571,7 @@ export default function ShoppingList({
 
     const handleUnbagAllProducts = async (listId) => {
         if (bulkActionInFlightRef.current || baggedProducts.length === 0) return;
+        invalidateCurrentLists();
         bulkActionInFlightRef.current = true;
         await animateBulkRowsOut(".bagged-products-container", -1);
         updateStates();
@@ -589,6 +618,7 @@ export default function ShoppingList({
                         }),
                     },
                 );
+                if (res.ok) invalidateCurrentLists();
             } catch (error) {
                 console.error("Unbagging error:", error);
                 // Revert state on error
@@ -606,6 +636,7 @@ export default function ShoppingList({
     // REMOVE ALL CHECKED AND LINKED PRODUCTS
     const handleRemoveCheckedItems = async (listId) => {
         if (bulkActionInFlightRef.current || checkedProducts.length === 0) return;
+        invalidateCurrentLists();
         bulkActionInFlightRef.current = true;
         const productsToRemove = [...checkedProducts]; // Create a copy of checked products
         await animateBulkRowsOut(".checked-products-container", 1);
@@ -681,6 +712,7 @@ export default function ShoppingList({
                 );
 
                 const data = await res.json();
+                if (res.ok) invalidateCurrentLists();
             } catch (error) {
                 console.error("Removal error:", error);
                 // Revert state on error
@@ -693,6 +725,7 @@ export default function ShoppingList({
     // REMOVE ALL BAGGED PRODUCTS
     const handleRemoveBaggedItems = async (listId) => {
         if (bulkActionInFlightRef.current || baggedProducts.length === 0) return;
+        invalidateCurrentLists();
         bulkActionInFlightRef.current = true;
         const productsToRemove = [...baggedProducts];
         await animateBulkRowsOut(".bagged-products-container", 1);
@@ -751,6 +784,7 @@ export default function ShoppingList({
                 );
 
                 const data = await res.json();
+                if (res.ok) invalidateCurrentLists();
             } catch (error) {
                 console.error("Removal error:", error);
                 // Revert state on error
@@ -764,6 +798,7 @@ export default function ShoppingList({
     // Real time updating
     useListaRealtimeUpdates(listId, (data) => {
         if (!data || !data.fields || userId == data.sender_id) return;
+        invalidateCurrentLists();
 
         // Normalize the linked products to ensure consistent ID field
         if (Array.isArray(data.fields.linked_products)) {
@@ -823,6 +858,24 @@ export default function ShoppingList({
         const channel = pusher.subscribe("user-lists-" + userId);
 
         channel.bind("share-update", (data) => {
+            invalidateCurrentLists();
+            if (data.action === "add" && parseInt(data.listId) === parseInt(listId)) {
+                const addedUser = {ID: parseInt(data.userId), display_name: data.userName};
+                const addMember = (members = []) =>
+                    members.some((member) => parseInt(member.ID) === addedUser.ID)
+                        ? members
+                        : [...members, addedUser];
+                setCurrentList((previous) => ({
+                    ...previous,
+                    acf: {...previous.acf, shared_with_users: addMember(previous.acf?.shared_with_users)},
+                }));
+                setUserLists((previous) => previous.map((item) =>
+                    parseInt(item.id) === parseInt(listId)
+                        ? {...item, acf: {...item.acf, shared_with_users: addMember(item.acf?.shared_with_users)}}
+                        : item
+                ));
+                return;
+            }
             // If we're the one being removed
             if (
                 data.action === "remove" &&
@@ -962,6 +1015,11 @@ export default function ShoppingList({
                     setTotalProductCount={setTotalProductCount}
                     setBaggedProductCount={setBaggedProductCount}
                     setShareDialogOpen={setShareDialogOpen}
+                    onManageAccess={() => {
+                        setShareDialogView("members");
+                        setShareDialogOpen(currentList.id);
+                    }}
+                    sharedWithUsers={sharedWithUsers}
                     token={token}
                     userId={userId}
                     list={currentList}
@@ -1214,11 +1272,10 @@ export default function ShoppingList({
 
             {productOverlay && (
                 <AddProduct
-                    favourites={favourites}
+                    favourites={currentFavourites}
                     customProducts={customProducts}
                     setCustomProducts={setCustomProducts}
                     baggedProducts={baggedProducts}
-                    progress={progress}
                     setProgress={setProgress}
                     baggedProductCount={baggedProductCount}
                     setBaggedProductCount={setBaggedProductCount}
@@ -1254,12 +1311,22 @@ export default function ShoppingList({
             {shareDialogOpen && (
                 <ShareListDialog
                     listId={shareDialogOpen}
-                    onClose={() => setShareDialogOpen(null)}
-                    setSharedWithUsers={setSharedWithUsers}
+                    onClose={() => {
+                        setShareDialogOpen(null);
+                        setShareDialogView("share");
+                    }}
+                    setSharedWithUsers={(users) => {
+                        setSharedWithUsers(users);
+                        setCurrentList((previous) => ({
+                            ...previous,
+                            acf: {...previous.acf, shared_with_users: users},
+                        }));
+                    }}
                     userId={userId}
                     list={currentList}
                     token={token}
-                    sharedWithUsers={currentList?.acf?.shared_with_users}
+                    sharedWithUsers={sharedWithUsers}
+                    initialView={shareDialogView}
                 />
             )}
         </main>

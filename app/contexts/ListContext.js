@@ -9,6 +9,7 @@ import {
 } from "react";
 import {useNotificationContext} from "./NotificationContext";
 import {decryptToken, WP_API_BASE} from "../lib/helpers";
+import {cachedRead, cachedValue, seedCache, invalidateListData, cacheKeys, CACHE_TTL} from "../lib/dataCache.mjs";
 import gsap from "gsap";
 const ListContext = createContext();
 import {createSmoothScroller} from "../lib/smoothScroll";
@@ -43,6 +44,32 @@ export const ListProvider = ({children}) => {
     const [listName, setListName] = useState();
     const [listPreview, setListPreview] = useState(null);
     const [listsLoaded, setListsLoaded] = useState(false);
+    const listsOwnerRef = useRef(null);
+
+    // Keep the current user's list summaries warm after optimistic edits and
+    // realtime events. Never put the JWT or a list from another account in a key.
+    useEffect(() => {
+        if (listsLoaded && listsOwnerRef.current && Array.isArray(userLists)) {
+            seedCache(cacheKeys.lists(listsOwnerRef.current), userLists, CACHE_TTL.lists);
+        }
+    }, [userLists, listsLoaded]);
+
+    const hydrateUserLists = (userId, serverLists) => {
+        if (!userId || !Array.isArray(serverLists)) return;
+        const sameActiveUser = listsLoaded && listsOwnerRef.current === String(userId)
+            && cachedValue(cacheKeys.lists(userId)) !== undefined;
+        listsOwnerRef.current = String(userId);
+        const initial = sameActiveUser ? userLists : serverLists;
+        setUserLists(initial);
+        seedCache(cacheKeys.lists(userId), initial, CACHE_TTL.lists);
+        setListsLoaded(true);
+    };
+
+    const clearUserLists = useCallback(() => {
+        listsOwnerRef.current = null;
+        setUserLists([]);
+        setListsLoaded(false);
+    }, []);
 
     // Create List
     const createShoppingList = async (listData) => {
@@ -68,39 +95,39 @@ export const ListProvider = ({children}) => {
         };
 
         const res = await sendApiRequest(url, method, listData.token, body);
+        if (res?.id && !res?.code) invalidateListData(listData.userId);
         return res;
     };
 
     // Fetch shopping lists for the user
-    const getShoppingList = async (userId, token) => {
+    const getShoppingList = async (userId, token, {force = false} = {}) => {
         const url = `${WP_API_BASE}/custom/v1/shopping-lists-by-owner/${userId}`;
 
         try {
-            const response = await fetch(url, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const load = async () => {
+                const response = await fetch(url, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    cache: "no-store",
+                });
+                if (!response.ok) throw new Error("Failed to fetch lists");
 
-            const data = await response.json();
-            // Filter lists where user is either owner or shared with
-            const filteredLists = Array.isArray(data)
-                ? data.filter((list) => {
-                      const isOwner = list?.acf?.owner_id == userId;
-                      const isShared =
-                          list?.acf?.shared_with_users != false &&
-                          list?.acf?.shared_with_users?.some(
-                              (user) => user.ID == userId
-                          );
-                      return isOwner || isShared;
-                  })
-                : [];
-
-            // Sort by menu_order
-            filteredLists.sort((a, b) => a.menu_order - b.menu_order);
-
+                const data = await response.json();
+                if (!Array.isArray(data)) throw new Error("Invalid list response");
+                const filteredLists = data.filter((list) => {
+                    const isOwner = list?.acf?.owner_id == userId;
+                    const isShared = Array.isArray(list?.acf?.shared_with_users) &&
+                        list.acf.shared_with_users.some((user) => user.ID == userId);
+                    return isOwner || isShared;
+                });
+                filteredLists.sort((a, b) => a.menu_order - b.menu_order);
+                return filteredLists;
+            };
+            const filteredLists = await cachedRead(cacheKeys.lists(userId), CACHE_TTL.lists, load, {force});
+            listsOwnerRef.current = String(userId);
             setUserLists(filteredLists);
             setListsLoaded(true);
             return filteredLists;
@@ -121,7 +148,7 @@ export const ListProvider = ({children}) => {
                 },
                 body: JSON.stringify(body),
             });
-
+            if (!response.ok) throw new Error(`API request failed (${response.status})`);
             const data = await response.json();
             return data;
         } catch (error) {
@@ -138,27 +165,6 @@ export const ListProvider = ({children}) => {
         if (state && state === "autoDelete") {
             decryptedToken = decryptToken(token);
         }
-
-        gsap.fromTo(
-            `#list-${listId}`,
-            {
-                opacity: 1,
-                border: "1px solid #ff0000",
-                duration: 0.5,
-            },
-            {
-                opacity: 0,
-                y: 100,
-                ease: "power2.out",
-                duration: 0.8,
-                onComplete: () => {
-                    setUserLists((prevLists) =>
-                        prevLists.filter((list) => list.id !== listId)
-                    );
-                    showNotification("List deleted successfully", "success");
-                },
-            }
-        );
 
         try {
             const response = await fetch(url, {
@@ -178,25 +184,23 @@ export const ListProvider = ({children}) => {
                 throw new Error("Failed to delete list");
             }
 
-            const data = await response.json();
+            await response.json();
             setHasDeletedLists(true);
+            invalidateListData(listsOwnerRef.current);
+            const removeFromView = () => {
+                setUserLists((prevLists) => prevLists.filter((list) => String(list.id) !== String(listId)));
+                showNotification("List deleted successfully", "success");
+            };
+            const element = document.getElementById(`list-${listId}`);
+            if (element) {
+                gsap.to(element, {opacity: 0, y: 100, duration: 0.45, ease: "power2.out", onComplete: removeFromView});
+            } else {
+                removeFromView();
+            }
+            return true;
         } catch (error) {
             console.error("Delete List Failed:", error);
             showNotification("Failed to delete list", "error");
-            setUserLists((prevLists) =>
-                prevLists.filter((list) => list.id !== listId)
-            );
-            gsap.to(`#list-${listId}`, {
-                opacity: 1,
-                border: "1px solid #000",
-                duration: 0.5,
-                onComplete: () => {
-                    setUserLists((prevLists) =>
-                        prevLists.filter((list) => list.id !== listId)
-                    );
-                    showNotification("List deleted successfully", "success");
-                },
-            });
             return null;
         }
     };
@@ -248,6 +252,7 @@ export const ListProvider = ({children}) => {
             }
 
             const freshList = await freshListResponse.json();
+            invalidateListData(listsOwnerRef.current);
 
             // Return the fresh list data with properly formatted title and same menu order
             return {
@@ -367,6 +372,7 @@ export const ListProvider = ({children}) => {
             }
 
             showNotification("List Renamed", "success", 1000);
+            invalidateListData(listsOwnerRef.current);
             return;
         } catch (error) {
             console.error("Error updating list:", error);
@@ -389,6 +395,8 @@ export const ListProvider = ({children}) => {
                 createShoppingList,
                 userLists,
                 getShoppingList,
+                hydrateUserLists,
+                clearUserLists,
                 setUserLists,
                 deleteList,
                 copyShoppingList,

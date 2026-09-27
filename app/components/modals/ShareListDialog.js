@@ -16,6 +16,7 @@ import {
     decryptToken,
 } from "../../lib/helpers";
 import Pusher from "pusher-js";
+import {invalidateCurrentLists} from "../../lib/dataCache.mjs";
 
 const ShareListDialog = ({
     listId,
@@ -218,6 +219,7 @@ const ShareListDialog = ({
             const data = await res.json();
 
             if (data.message === "User removed from shared list") {
+                invalidateCurrentLists();
                 // Update local shared users state
                 const updatedUsers = (localSharedUsers || []).filter(
                     (user) => user.ID !== removedUserId

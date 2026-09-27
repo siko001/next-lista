@@ -1,5 +1,6 @@
 import {useEffect, useRef} from "react";
 import Pusher from "pusher-js";
+import {invalidateListData} from "./dataCache.mjs";
 
 export default function useRealtimeAllListDelete(
     userLists,
@@ -28,6 +29,7 @@ export default function useRealtimeAllListDelete(
                 "shopping-list-" + list.id
             );
             channel.bind("list-deleted", (data) => {
+                invalidateListData(userId);
                 if (showNotification && data.sender_id !== userId) {
                     showNotification(
                         data.message || "A list was deleted by another user",

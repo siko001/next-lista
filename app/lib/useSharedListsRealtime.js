@@ -2,6 +2,7 @@
 
 import {useEffect, useRef} from "react";
 import Pusher from "pusher-js";
+import {invalidateListData} from "./dataCache.mjs";
 
 export default function useSharedListsRealtime(
     userId,
@@ -34,6 +35,7 @@ export default function useSharedListsRealtime(
         };
 
         channel.bind("share-update", (data) => {
+            invalidateListData(userId);
             if (data.action !== 'remove') return; // only handle removals here
             if (isDuplicate(data)) return;
             if (parseInt(data.userId) === parseInt(userId)) {

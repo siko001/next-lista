@@ -3,6 +3,7 @@ import {useRouter, useSearchParams} from "next/navigation";
 import {useEffect, useMemo, useRef, useState} from "react";
 import {getSharedList} from "../../lib/api";
 import {decryptToken, WP_API_BASE} from "../../lib/helpers";
+import {invalidateCurrentLists} from "../../lib/dataCache.mjs";
 import {useUserContext} from "../../contexts/UserContext";
 import SharedListStatus from "./SharedListStatus";
 
@@ -86,6 +87,7 @@ export default function SharedListPage({token, userId, listId}) {
                             response?.message || "Invalid or expired share link"
                         );
                     }
+                    invalidateCurrentLists();
                 } catch (err) {
                     console.error("Failed to accept share:", err);
                     throw err;

@@ -2,6 +2,7 @@ import {useEffect, useRef} from "react";
 import {getPusher} from "./pusherClient";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import {useListContext} from "../contexts/ListContext";
+import {invalidateListData} from "./dataCache.mjs";
 
 export default function useRealtimeRename(userId, setListTitle, isInInnerList) {
     const {showNotification} = useNotificationContext();
@@ -21,6 +22,7 @@ export default function useRealtimeRename(userId, setListTitle, isInInnerList) {
         channelRef.current = channel;
 
         channel.bind("list-summary-updated", (data) => {
+            invalidateListData(userId);
             if (data.title && setListTitle) {
                 setListTitle(data.title);
             }

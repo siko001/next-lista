@@ -2,6 +2,7 @@
 import {useState, useEffect, useRef} from "react";
 import {gsap} from "gsap";
 import {animateProductExit} from "../../lib/productMotion";
+import {invalidateCurrentLists} from "../../lib/dataCache.mjs";
 import {
     decryptToken,
     WP_API_BASE,
@@ -26,6 +27,7 @@ import CloseIcon from "../svgs/CloseIcon";
 import ThrowIcon from "../svgs/ThrowIcon";
 import SettingsIcon from "../svgs/SettingsIcon";
 import SearchIcon from "../svgs/SearchIcon";
+import {UserRound, UsersRound} from "lucide-react";
 
 export default function ShoppingListHeader({
     ownerName,
@@ -41,6 +43,8 @@ export default function ShoppingListHeader({
     userId,
     token,
     setShareDialogOpen,
+    onManageAccess,
+    sharedWithUsers,
     setAllLinkedProducts,
     allLinkedProducts,
     setCheckedProducts,
@@ -74,6 +78,8 @@ export default function ShoppingListHeader({
     const [originalBaggedLength, setOriginalBaggedLength] = useState(
         baggedProducts?.length || 0
     );
+    const isOwner = isListOwner(list, userId);
+    const sharedCount = Array.isArray(sharedWithUsers) ? sharedWithUsers.length : 0;
 
     useEffect(() => {
         const sentinel = stickySentinelRef.current;
@@ -246,6 +252,7 @@ export default function ShoppingListHeader({
 
     const handleEmptyList = async (id, token) => {
         if (!id || !token) return;
+        invalidateCurrentLists();
         const updateStates = async () => {
             setAllLinkedProducts([]);
             setCheckedProducts([]);
@@ -275,6 +282,7 @@ export default function ShoppingListHeader({
             if (!res.ok || !data.success || data.code === "jwt_auth_invalid_token") {
                 throw new Error("Could not empty list");
             }
+            invalidateCurrentLists();
         } catch (error) {
             setAllLinkedProducts(allLinkedProducts);
             setCheckedProducts(checkedProducts);
@@ -306,9 +314,7 @@ export default function ShoppingListHeader({
             <div ref={stickySentinelRef} className="list-header-sentinel" aria-hidden="true" />
             <div
                 ref={headerRef}
-                className={`w-full  flex flex-col ${
-                    isListOwner(list, userId) ? "gap-6" : "gap-2"
-                } list-detail-header ${isPinned ? "is-pinned" : ""} py-4 px-6 border shopping-list-header min-h-[100px] mx-auto sticky top-0 z-40`}
+                className={`w-full flex flex-col list-detail-header ${isPinned ? "is-pinned" : ""} py-4 px-6 border shopping-list-header min-h-[100px] mx-auto sticky top-0 z-40`}
             >
                 {/* list name */}
                 <div className="flex items-center justify-between  px-2">
@@ -350,7 +356,7 @@ export default function ShoppingListHeader({
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col top-2 -left-2 relative">
+                        <div className="list-header-title-group">
                             <h2
                                 ref={innerListRef}
                                 onClick={() => handleRenameClick(list.id)}
@@ -361,10 +367,22 @@ export default function ShoppingListHeader({
                                 )}
                             </h2>
 
-                            {!isListOwner(list, userId) && (
-                                <div className="relative -top-1 w-full h-full h-0 text-[10px] whitespace-nowrap">
-                                    Owned by: {ownerName}
-                                </div>
+                            {!isOwner && ownerName && (
+                                <span className="list-card-owner list-header-meta-pill">
+                                    <UserRound size={14} aria-hidden="true" />
+                                    Owned by {ownerName}
+                                </span>
+                            )}
+                            {isOwner && sharedCount > 0 && (
+                                <button
+                                    type="button"
+                                    className="list-card-shared list-header-meta-pill"
+                                    onClick={onManageAccess}
+                                    aria-label={`Manage access to ${decodeHtmlEntities(listName || title || list?.title)}, shared with ${sharedCount} ${sharedCount === 1 ? "person" : "people"}`}
+                                >
+                                    <UsersRound size={14} aria-hidden="true" />
+                                    Shared with {sharedCount}
+                                </button>
                             )}
                         </div>
                     )}

@@ -10,6 +10,7 @@ import {Mail, LockKeyhole} from "lucide-react";
 import {SECRET_KEY, WP_API_BASE} from "../lib/helpers";
 import {useUserContext} from "../contexts/UserContext";
 import {claimGuestLists} from "../lib/claimGuestLists";
+import {invalidateSessionData} from "../lib/dataCache.mjs";
 import Notification from "../components/Notification";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import AuthShell from "../components/auth/AuthShell";
@@ -70,6 +71,8 @@ export default function LoginClient() {
                     await claimGuestLists({apiBase: WP_API_BASE, guestToken, guestUserId: userData.id, accountToken: result.token});
                     setBringingLists(false);
                 }
+                invalidateSessionData(userData?.id);
+                invalidateSessionData(result.user_id);
                 // Encrypt and store the token in a cookie
                 const encryptedToken = encryptData(result.token);
                 setCookie("token", encryptedToken, {

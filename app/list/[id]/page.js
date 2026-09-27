@@ -6,8 +6,6 @@ import {
     getListDetails,
     getLinkedProducts,
     getAllProducts,
-    getAllCustomProducts,
-    getFavourites,
 } from "../../lib/helpers";
 
 export default async function Page({params}) {
@@ -23,14 +21,13 @@ export default async function Page({params}) {
         isRegistered = true;
     }
 
-    // Fetch all data in parallel
-    const [list, products, AllProducts, customProducts, favourites] =
+    // Only the list and catalogue are needed to render this page. Personal
+    // product choices load when the product picker opens.
+    const [list, products, AllProducts] =
         await Promise.all([
             getListDetails(listId, token),
             getLinkedProducts(listId, token),
             getAllProducts(token),
-            getAllCustomProducts(token),
-            getFavourites(token),
         ]);
 
     // if the list is not found, redirect to the home page
@@ -51,8 +48,8 @@ export default async function Page({params}) {
             token={token}
             checkedProductList={products.checkedProducts}
             products={products.linkedProducts}
-            userCustomProducts={customProducts}
-            favourites={favourites}
+            userCustomProducts={null}
+            favourites={null}
         />
     );
 }
