@@ -39,12 +39,13 @@
     "apk_signature": "verified",
     "aab_signature": "jar verified; self-signed upload certificate, no timestamp; JDK also reports ZIP stream ordering warnings. Play validation remains pending.",
     "production_policy_pages": "privacy and deletion pages HTTP 200; privacy names Neil Mallia; both publish the support email",
-    "production_ai_auth": "recipes and voice-items each reject absent/invalid sessions with HTTP 401 (4 checks); no paid AI call requested"
+    "production_ai_auth": "recipes and voice-items each reject absent/invalid sessions with HTTP 401 (4 checks); no paid AI call requested",
+    "list_creation_notification": "Uses the validated submitted name rather than the absent API title.raw field; existing creation/reordering UI flow passed; APK/AAB rebuilt and signatures verified."
   },
   "deployment": {
     "wordpress": "live",
     "vercel": "live; production build Ready from main, public privacy/deletion pages return 200",
-    "phone_0_1_2": "installed in place on 2026-10-11 13:51:27 Europe/Malta; version 0.1.2/code 3 verified, data preserved",
+    "phone_0_1_2": "Initial 0.1.2 installed in place on 2026-10-11 13:51:27 Europe/Malta; later notification-correction APK is not installed because no phone is connected.",
     "google_play": "not uploaded; identity verification pending",
     "vercel_deployment_id": "dpl_xLX4Z7aEaGxdDNW7W3rw1xoH6wzM",
     "vercel_source_commit": "5275d9fbbda55b276b097c0e52ac67081ca08e6f",
@@ -61,13 +62,13 @@
     {
       "file": "Lista-debug.apk",
       "bytes": 5277609,
-      "sha256": "1e53316e8c80f293dd6bd97c9dcdcdff4bdb4a9e486a7eedeb466638d9a45e29",
+      "sha256": "d815b09d075a6bee8ca1a41c4b5779cc06c86bd468212ac82f9e704ccc5d1e90",
       "native_so_files": 0
     },
     {
       "file": "Lista-release.aab",
-      "bytes": 3726606,
-      "sha256": "086dc781cb91d21ea31a8105cdf55ce4ce7a2714cb4b40ea753598f9268d5ff7",
+      "bytes": 3726622,
+      "sha256": "b8bf84ddeca6a4437a600d99020775965cf5257d892152802d250ab454449aba",
       "native_so_files": 0
     }
   ],

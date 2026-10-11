@@ -192,7 +192,7 @@ export default function Button(props) {
                     }, 3000);
 
                     showNotification(
-                        `List ${res.title.raw} created`,
+                        `List "${name}" created`,
                         "success",
                         2000
                     );

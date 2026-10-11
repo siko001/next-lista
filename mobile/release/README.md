@@ -21,6 +21,8 @@ Upload only the `.aab` to Play. The ignored `mobile/.signing/` directory contain
 
 ## What changed
 
+- List-creation confirmations use the name entered by the user. The API response omits `title.raw`, which previously produced “List undefined created”. The unsubmitted 0.1.2 APK/AAB were rebuilt with this correction; the latest APK still needs installing on the phone.
+
 - Unique guest credentials and a restricted app role replace the shared guest password and WordPress editor privileges. Existing sessions and registered passwords are preserved.
 - Private list permissions cover custom and native REST routes. Invitations expire after 48 hours and are revoked on member removal.
 - Authenticated revision checks replace public Pusher list broadcasts. Both web and Android need the updated client for live synchronization.
@@ -53,7 +55,7 @@ Following [Vercel’s agent setup guide](https://vercel.com/get-started.md), glo
 ## Next actions, in order
 1. **Revoke the old Pusher credential** in its provider account. Its live plugin is inactive and current source/archive no longer contains it, but old history and backups can retain the credential.
 2. **Confirm provider/log/backup retention** and finish the Data safety worksheet against the deployed configuration. Do not declare zero retention or ephemeral processing without evidence. Decide price, countries and intended audience before answering those Console fields; the content rating comes from Google's questionnaire.
-3. **Check the updated APK already installed on the phone.** Check microphone, list persistence after restarting, sharing with a second account, remote changes, privacy/deletion access and offline/reconnect behavior.
+3. **Install the latest corrective APK in place and check it on the phone.** The earlier 0.1.2 build is installed; the later notification fix awaits connection. Check microphone, list persistence after restarting, sharing with a second account, remote changes, privacy/deletion access and offline/reconnect behavior.
 4. **Finish Google's identity/phone/device verification.** Create Lista in Play Console, select the app name/language/category, add support information and the prepared listing/assets, complete app access, content rating, audience, ads and Data safety. Use a dedicated ordinary reviewer account; never administrator credentials.
 5. **Upload `Lista-release.aab` to internal testing**, inspect Play's compatibility/pre-launch results and install from Play. The Play signature differs from the debug signature: do not silently uninstall the debug app or erase guest data to switch builds. First confirm data is saved in a registered account.
 6. **Run closed testing with real participants.** New personal accounts require at least 12 opted-in testers continuously for 14 days before requesting production access. Internal testing and multiple accounts operated by one person do not establish that participation. Record real feedback and fixes for the production-access application.
