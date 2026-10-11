@@ -16,7 +16,6 @@ import {
     isListOwner,
     decryptToken,
 } from "../../lib/helpers";
-import Pusher from "pusher-js";
 import {invalidateCurrentLists} from "../../lib/dataCache.mjs";
 
 const ShareListDialog = ({

@@ -1,6 +1,8 @@
 "use client";
 import useListChangeEvents from "../lib/useListChangeEvents";
-import {createContext, useContext, useEffect, useState} from "react";
+import {createContext, useContext, useEffect, useState, useRef} from "react";
+import {usePathname} from "next/navigation";
+import {isPublicInfoPath} from "../lib/privacy.mjs";
 import {setCookie, getCookie, deleteCookie} from "cookies-next";
 import CryptoJS from "crypto-js";
 import {useListContext} from "./ListContext";
@@ -9,6 +11,8 @@ import {cachedValue, seedCache, invalidateSessionData, announceLogout, cacheKeys
 const UserContext = createContext();
 
 export const UserProvider = ({children, initialRegistered = false, initialUserName}) => {
+    const pathname = usePathname();
+    const initialized = useRef(false);
     const [userData, setUserData] = useState(null);
     const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -43,23 +47,6 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
             return await res.json();
         } catch (err) {
             throw new Error(err.message || "User creation error");
-        }
-    };
-
-    // Function to generate a JWT token
-    const generateToken = async (username) => {
-        try {
-            const res = await fetch(`${WP_API_BASE}/jwt-auth/v1/token`, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({username, password: "lista123"}),
-            });
-
-            if (!res.ok) throw new Error("Failed to generate token");
-
-            return await res.json();
-        } catch (err) {
-            throw new Error(err.message || "Token generation error");
         }
     };
 
@@ -111,7 +98,8 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
             if (!storedToken) {
                 // No token? Create a new user and generate a token
                 const newUser = await createUser();
-                const tokenData = await generateToken(newUser.username);
+                const tokenData = {token: newUser.token};
+                if (typeof tokenData.token !== "string" || tokenData.token.split(".").length !== 3) throw new Error("Please update Lista to start a secure guest session.");
 
                 // Encrypt and store the token in a cookie
                 const encryptedToken = encryptData(tokenData.token);
@@ -178,13 +166,16 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
     };
 
     useEffect(() => {
+        // Reading privacy/deletion information must not create a guest account.
+        if (isPublicInfoPath(pathname || "/") || initialized.current) return;
+        initialized.current = true;
         initializeUser();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [pathname]);
 
     useEffect(() => {
         const syncLogout = (event) => {
-            if (String(event.detail) !== String(userData?.id)) return;
+            if (userData?.id && String(event.detail) !== String(userData.id)) return;
             setUserData(null);
             setRegistered(false);
             setToken(null);

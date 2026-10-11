@@ -2,7 +2,7 @@ import React from "react";
 import {createRoot} from "react-dom/client";
 import {Capacitor} from "@capacitor/core";
 import {SplashScreen} from "@capacitor/splash-screen";
-import App, {ErrorScreen} from "./App.jsx";
+import App from "./App.jsx";
 import {initializeSession} from "./session.js";
 import {initializeRuntime} from "./runtime.js";
 import "@fontsource-variable/saira/wght.css";
@@ -14,6 +14,7 @@ import "../../app/css/list-pages.css";
 import "../../app/css/page-skeleton.css";
 import "../../app/css/auth.css";
 import "../../app/css/settings.css";
+import "../../app/css/public-info.css";
 import "../../app/css/not-found.css";
 import "./mobile.css";
 
@@ -27,7 +28,7 @@ async function startApp() {
         // StrictMode's development effect replay must not create duplicate guests.
         root.render(<App />);
     } catch {
-        root.render(<ErrorScreen message="Lista couldn’t open its secure session. Unlock your phone and try again." />);
+        root.render(<App sessionReady={false} />);
     } finally {
         if (Capacitor.isNativePlatform()) void SplashScreen.hide();
     }

@@ -1,0 +1,70 @@
+{
+  "prepared_on": "2026-10-11",
+  "application_id": "app.lista.shopping",
+  "version_name": "0.1.2",
+  "version_code": 3,
+  "target_sdk": 36,
+  "developer_name": "Neil Mallia",
+  "support_email": "neil.mallia1@gmail.com",
+  "backend": {
+    "route_guard_snippet": 1764,
+    "privacy_snippet": 1769,
+    "legacy_compatibility_snippet": 1774,
+    "old_public_broadcaster": "inactive",
+    "app_role_count": 212,
+    "administrator_count": 1
+  },
+  "checks": {
+    "shared_js": 67,
+    "mobile_unit": 11,
+    "php_route_authorization": 71,
+    "php_account_privacy": 46,
+    "live_route_authorization": 41,
+    "live_account_privacy": 67,
+    "packaged_startup": 3,
+    "mobile_ui": {
+      "covered": 21,
+      "latest_full_run_passed": 20,
+      "latest_full_run_failed": 1,
+      "follow_up_sync_passed": 1,
+      "follow_up_login_passed": 1,
+      "note": "The five-step remote synchronization case reached the overall 30-second test timeout during a concurrent build. Its timeout was raised to 60 seconds for five four-second polls, with individual assertions unchanged; the recheck passed in 19.5 seconds. The other 20 cases passed. Guest transfer unit/UI checks passed again after the final handoff edit."
+    },
+    "production_npm_advisories_shared": 0,
+    "production_npm_advisories_mobile": 0,
+    "web_build": "passed",
+    "android_apk_build": "passed",
+    "android_aab_build": "passed",
+    "configured_server_secrets_in_public_bundles": 0,
+    "apk_signature": "verified",
+    "aab_signature": "jar verified; self-signed upload certificate, no timestamp; JDK also reports ZIP stream ordering warnings. Play validation remains pending."
+  },
+  "deployment": {
+    "wordpress": "live",
+    "vercel": "CLI authenticated and project linked; merge and deployment pending",
+    "phone_0_1_2": "installed in place on 2026-10-11 13:51:27 Europe/Malta; version 0.1.2/code 3 verified, data preserved",
+    "google_play": "not uploaded; identity verification pending"
+  },
+  "remaining": [
+    "Publish website/AI routes and verify public policy URLs",
+    "Revoke retired Pusher credential at provider",
+    "Confirm provider/log/backup retention and final Data safety answers",
+    "Secure off-device backup of signing folder",
+    "Physical Android acceptance and Play internal-test checks",
+    "Finish Google identity/phone/device verification and Console forms"
+  ],
+  "artifacts": [
+    {
+      "file": "Lista-debug.apk",
+      "bytes": 5277609,
+      "sha256": "1e53316e8c80f293dd6bd97c9dcdcdff4bdb4a9e486a7eedeb466638d9a45e29",
+      "native_so_files": 0
+    },
+    {
+      "file": "Lista-release.aab",
+      "bytes": 3726606,
+      "sha256": "086dc781cb91d21ea31a8105cdf55ce4ce7a2714cb4b40ea753598f9268d5ff7",
+      "native_so_files": 0
+    }
+  ]
+}

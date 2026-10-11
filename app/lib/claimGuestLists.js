@@ -31,8 +31,8 @@ export async function claimGuestLists({apiBase, guestToken, guestUserId, account
     if (!response.ok) throw new Error("We couldn't check your guest lists. Please try logging in again.");
     const lists = await response.json();
     if (!Array.isArray(lists)) throw new Error("We couldn't check your guest lists. Please try logging in again.");
-    const owned = lists.filter(list => String(list?.acf?.owner_id) === String(guestUserId));
-    if (!owned.length) return 0;
+    // Even a guest with no owned lists can have favourites/custom products.
+    // The server decides what can move; complete that handoff before login.
     const transfer = await fetcher(`${apiBase}/custom/v1/claim-guest-lists`, {
         method: "POST",
         headers: {...headers, "Content-Type": "application/json"},

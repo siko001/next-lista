@@ -8,6 +8,7 @@ import {changeLanguageWhenReady, initGoogleTranslate} from "../utils/translate";
 import {useListContext} from "../contexts/ListContext";
 import {createSmoothScroller} from "../lib/smoothScroll";
 import {LANGUAGES} from "../lib/languages";
+import Link from "next/link";
 
 const THEMES = [{value: "light", label: "Light", Icon: Sun}, {value: "system", label: "System", Icon: Monitor}, {value: "dark", label: "Dark", Icon: Moon}];
 
@@ -52,7 +53,7 @@ export default function UserSettings({isOpen, onClose}) {
             if ((localStorage.getItem("theme") || "system") === "system") updateTheme("system");
         };
         media.addEventListener("change", sync);
-        if (!initialized.current) {
+        if (!initialized.current && savedLanguage !== "en" && LANGUAGES[savedLanguage]) {
             initGoogleTranslate();
             initialized.current = true;
         }
@@ -116,6 +117,7 @@ export default function UserSettings({isOpen, onClose}) {
     const handleLanguageChange = (language) => {
         if (language === currentLanguage) return;
         try {
+            if (!initialized.current && language !== "en") { initGoogleTranslate(); initialized.current = true; }
             changeLanguageWhenReady(language);
             setCurrentLanguage(language);
             localStorage.setItem("preferredLanguage", language);
@@ -154,7 +156,7 @@ export default function UserSettings({isOpen, onClose}) {
                         </section>
                         <section className="settings-section">
                             <label htmlFor={languageId}>Language</label>
-                            <p id={`${languageId}-hint`}>Feel at home in your preferred language.</p>
+                            <p id={`${languageId}-hint`}>Choose a language. Translation sends displayed text to Google Translate.</p>
                             <div className="settings-language">
                                 <Globe size={19} aria-hidden="true" />
                                 <select id={languageId} value={currentLanguage} onChange={event => handleLanguageChange(event.target.value)} aria-describedby={`${languageId}-hint`}>
@@ -163,6 +165,13 @@ export default function UserSettings({isOpen, onClose}) {
                                 <ChevronDown size={17} aria-hidden="true" />
                             </div>
                             {languageError && <p className="settings-error" role="alert">{languageError}</p>}
+                        </section>
+                        <section className="settings-section">
+                            <h3>Privacy and account</h3>
+                            <div className="settings-privacy-links">
+                                <Link href="/privacy" onClick={onClose}>Privacy policy</Link>
+                                <Link href="/delete-account" onClick={onClose}>Delete account and data</Link>
+                            </div>
                         </section>
                     </div>
                 </div>

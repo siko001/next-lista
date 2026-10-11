@@ -56,3 +56,28 @@ for (const platform of ["android", "ios"]) {
         expect(errors).toEqual([]);
     });
 }
+
+test("privacy remains readable when secure storage fails without creating a replacement guest account", async ({page}) => {
+    const backendRequests = [];
+    await page.addInitScript(() => {
+        window.androidBridge = {};
+        window.Capacitor = {
+            PluginHeaders: [
+                {name: "SecureStorage", methods: ["internalGetItem", "internalSetItem"].map(name => ({name, rtype: "promise"}))},
+                {name: "SplashScreen", methods: [{name: "hide", rtype: "promise"}]},
+            ],
+            nativePromise: async (_plugin, method) => {
+                if (method === "internalGetItem") throw new Error("Keychain unavailable");
+                return {};
+            },
+        };
+    });
+    await page.route("**/wp-json/**", route => { backendRequests.push(route.request().url()); return route.abort(); });
+    await page.goto("/privacy");
+    await expect(page.getByRole("heading", {name: "Lista privacy policy"})).toBeVisible();
+    await page.getByRole("link", {name: "Lista account deletion instructions"}).click();
+    await expect(page.getByRole("heading", {name: "Delete your Lista account"})).toBeVisible();
+    await page.getByRole("link", {name: "Back to Lista"}).click();
+    await expect(page.getByRole("alert")).toContainText("couldn’t open its secure session");
+    expect(backendRequests).toEqual([]);
+});

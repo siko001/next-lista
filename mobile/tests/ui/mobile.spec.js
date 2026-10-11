@@ -9,7 +9,7 @@ const product = (id, title) => ({id, ID: id, title, category: "Other", categorie
 async function fixture(page, {registered = true} = {}) {
     const state = {
         registered, checked: [product(11, "Milk"), product(12, "Tomatoes"), product(13, "Pasta")], bagged: [],
-        name: "Weekly groceries", order: 0, extraLists: [], requests: [], sockets: [], errors: [],
+        name: "Weekly groceries", order: 0, extraLists: [], requests: [], sockets: [], errors: [], revision: 0,
     };
     page.on("pageerror", (error) => state.errors.push(error.message));
     await page.addInitScript(({encrypted, registered}) => {
@@ -32,11 +32,12 @@ async function fixture(page, {registered = true} = {}) {
         state.requests.push({path: url.pathname, method: request.method(), body: request.postData()});
         let body;
         if (request.method() === "OPTIONS") return route.fulfill({status: 204, headers: {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS"}});
-        if (url.pathname.endsWith("/user-data")) body = {id: 7, name: "Neil", email: "neil@example.com", registered: state.registered ? "yes" : "no"};
+        if (url.pathname.endsWith("/sync-revision")) body = {revision: String(state.revision)};
+        else if (url.pathname.endsWith("/user-data")) body = {id: 7, name: "Neil", email: "neil@example.com", registered: state.registered ? "yes" : "no"};
         else if (url.pathname.includes("shopping-lists-by-owner")) body = [list(), ...state.extraLists];
         else if (url.pathname.endsWith("/shopping-list") && request.method() === "POST") {
             const {title, menu_order, acf} = request.postDataJSON();
-            const created = {id: 102 + state.extraLists.length, title, menu_order, acf: {...acf, product_count: 0, shared_with_users: []}};
+            const created = {id: 102 + state.extraLists.length, title, menu_order, acf: {owner_id: "7", ...acf, product_count: 0, shared_with_users: []}};
             state.extraLists.push(created);
             state.broadcastChange?.();
             body = {...created, title: {raw: title, rendered: title}};
@@ -72,7 +73,7 @@ async function fixture(page, {registered = true} = {}) {
             state.registered = true;
             body = {token: jwt, user_id: 7, user_display_name: "Neil"};
         } else if (/claim|transfer/.test(url.pathname)) body = {success: true};
-        else if (url.pathname.endsWith("/create-user")) body = {user_id: 7, username: "guest-test", name: "Guest"};
+        else if (url.pathname.endsWith("/create-user")) body = {user_id: 7, username: "guest-test", name: "Guest", token: jwt};
         else body = {success: true};
         await route.fulfill({json: body, headers: {"Access-Control-Allow-Origin": "*"}});
     });
@@ -88,6 +89,111 @@ async function fixture(page, {registered = true} = {}) {
     });
     return state;
 }
+
+test("privacy and deletion instructions work without an account or backend connection", async ({page}) => {
+    const requests = [];
+    await page.route("**/wp-json/**", route => { requests.push(route.request().url()); return route.abort(); });
+    await page.goto("/privacy");
+    await expect(page.getByRole("heading", {name: "Lista privacy policy"})).toBeVisible();
+    await mkdir("artifacts", {recursive: true});
+    await page.screenshot({path: "artifacts/privacy-page.png", fullPage: true});
+    await page.getByRole("link", {name: "Lista account deletion instructions"}).click();
+    await expect(page.getByRole("heading", {name: "Delete your Lista account"})).toBeVisible();
+    await page.screenshot({path: "artifacts/deletion-page.png", fullPage: true});
+    await expect(page.getByRole("link", {name: "Email deletion request"})).toHaveAttribute("href", /^mailto:neil\.mallia1@gmail\.com\?/);
+    await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 412);
+    expect(requests).toEqual([]);
+    await page.evaluate(() => {
+        localStorage.setItem("lista:assistant:7:home:home", "saved draft");
+        localStorage.setItem("theme", "dark");
+    });
+    await page.getByRole("button", {name: "Clear saved assistant conversations"}).click();
+    await expect(page.getByRole("status")).toContainText("were cleared on this device");
+    expect(await page.evaluate(() => localStorage.getItem("lista:assistant:7:home:home"))).toBeNull();
+    expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe("dark");
+});
+
+test("account settings link to privacy and deletion on a phone", async ({page}) => {
+    const state = await fixture(page);
+    await page.goto("/");
+    await page.getByRole("button", {name: "Open account settings"}).click();
+    await page.getByRole("link", {name: "Delete account and data"}).click();
+    await expect(page.getByRole("heading", {name: "Delete your Lista account"})).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("link", {name: "Back to Lista"}).click();
+    await expect(page.getByRole("button", {name: "Weekly groceries", exact: true})).toBeVisible();
+    expect(state.errors).toEqual([]);
+});
+
+test("voice input records audio, uploads it and releases the microphone", async ({page}) => {
+    const state = await fixture(page);
+    await page.addInitScript(() => {
+        navigator.mediaDevices.getUserMedia = async () => {
+            // Use a real MediaStream/MediaRecorder with a synthetic audio source;
+            // never access the developer's microphone in automated tests.
+            const audio = new AudioContext();
+            await audio.resume();
+            const oscillator = audio.createOscillator();
+            const destination = audio.createMediaStreamDestination();
+            oscillator.connect(destination);
+            oscillator.start();
+            window.testMicrophoneTrack = destination.stream.getAudioTracks()[0];
+            return destination.stream;
+        };
+    });
+    let upload;
+    await page.route("**/api/ai/voice-items", route => {
+        upload = route.request();
+        return route.fulfill({json: {transcript: "Bread, eggs", items: ["Bread", "Eggs"]}});
+    });
+    await page.goto("/list/101");
+    await expect(page.getByRole("button", {name: "Bag Milk", exact: true})).toBeVisible();
+    await page.locator("button.chat-widget").click();
+    await page.getByRole("tab", {name: "Voice", exact: true}).click();
+    await page.getByRole("button", {name: "Start voice input"}).click();
+    await expect(page.getByRole("button", {name: "Stop recording", exact: true})).toBeVisible();
+    // Allow at least two 200ms speech-analysis frames to observe the source.
+    await page.waitForTimeout(850);
+    await page.getByRole("button", {name: "Stop recording", exact: true}).click();
+    await expect(page.getByRole("textbox", {name: "Product 1 of 2"})).toHaveValue("Bread");
+    expect(upload.headers().authorization).toBe(`Bearer ${jwt}`);
+    expect(upload.headers()["content-type"]).toContain("multipart/form-data; boundary=");
+    expect(upload.postDataBuffer().length).toBeGreaterThan(500);
+    expect(await page.evaluate(() => window.testMicrophoneTrack.readyState)).toBe("ended");
+    expect(state.errors).toEqual([]);
+});
+
+test("a denied microphone gives actionable help and can be retried", async ({page}) => {
+    await fixture(page);
+    await page.addInitScript(() => {
+        navigator.mediaDevices.getUserMedia = async () => { throw new DOMException("Denied", "NotAllowedError"); };
+    });
+    await page.goto("/");
+    await page.locator("button.chat-widget").click();
+    await page.getByRole("tab", {name: "Voice", exact: true}).click();
+    await page.getByRole("button", {name: "Start voice input"}).click();
+    await expect(page.getByText("Microphone access is blocked.", {exact: false})).toBeVisible();
+    await expect(page.getByRole("button", {name: "Start voice input"})).toBeEnabled();
+});
+
+test.describe("Google Play screenshots", () => {
+    test.use({viewport: {width: 540, height: 960}, deviceScaleFactor: 2});
+    test("capture the actual app with representative demonstration lists", async ({page}) => {
+        await fixture(page);
+        await mkdir("artifacts/google-play", {recursive: true});
+        await page.goto("/");
+        await expect(page.getByRole("button", {name: "Weekly groceries", exact: true})).toBeVisible();
+        await page.screenshot({path: "artifacts/google-play/01-shopping-lists.png", animations: "disabled"});
+        await page.locator(".list-card-count").first().click();
+        await expect(page.getByRole("button", {name: "Bag Milk", exact: true})).toBeVisible();
+        await expect(page.locator(".list-product-row").last()).toHaveCSS("opacity", "1");
+        await page.screenshot({path: "artifacts/google-play/02-shopping-checklist.png", animations: "disabled"});
+        await page.locator(".shopping-list-header-settings > .settings-icon").click();
+        await page.getByRole("button", {name: "Share", exact: true}).click();
+        await expect(page.getByRole("button", {name: "Copy link Paste it wherever you like"})).toBeVisible();
+        await page.screenshot({path: "artifacts/google-play/03-share-a-list.png", animations: "disabled"});
+    });
+});
 
 test("phone layout opens existing lists, bags items and preserves changes on navigation", async ({page}) => {
     const state = await fixture(page);
@@ -140,22 +246,14 @@ test("bagging and unbagging synchronize between separate devices signed into the
         const broadcast = (source, destination) => () => {
             destination.checked = [...source.checked];
             destination.bagged = [...source.bagged];
-            for (const socket of [...source.sockets, ...destination.sockets]) socket.send(JSON.stringify({
-                event: "list-updated", channel: "shopping-list-101",
-                data: JSON.stringify({sender_id: 7, list_id: 101, message: "Other user updated the list", fields: {
-                    linked_products: [...source.checked, ...source.bagged],
-                    checked_products: source.checked, bagged_linked_products: source.bagged,
-                    product_count: source.checked.length + source.bagged.length,
-                    bagged_product_count: source.bagged.length,
-                }}),
-            }));
+            source.revision++; destination.revision++;
         };
         first.broadcastUpdate = broadcast(first, second);
         second.broadcastUpdate = broadcast(second, first);
         await Promise.all([page.goto("/list/101"), otherPage.goto("/list/101")]);
         await expect(page.getByRole("button", {name: "Bag Milk", exact: true})).toBeVisible();
         await expect(otherPage.getByRole("button", {name: "Bag Milk", exact: true})).toBeVisible();
-        await expect.poll(() => first.sockets.length > 0 && second.sockets.length > 0).toBeTruthy();
+        await expect.poll(() => first.requests.some(r => r.path.endsWith("/sync-revision")) && second.requests.some(r => r.path.endsWith("/sync-revision"))).toBeTruthy();
         await page.getByRole("button", {name: "Bag Milk", exact: true}).click();
         await expect(otherPage.getByRole("button", {name: "Move Milk back to checklist"})).toBeVisible();
         await otherPage.getByRole("button", {name: "Move Milk back to checklist"}).click();
@@ -168,12 +266,14 @@ test("bagging and unbagging synchronize between separate devices signed into the
 });
 
 test("remote creation, rename, deletion and newly shared lists appear without refreshing", async ({page}) => {
+    // Five sequential remote writes each wait for the real four-second poll.
+    test.setTimeout(60000);
     const state = await fixture(page);
     await page.goto("/");
     await expect(page.getByRole("button", {name: "Weekly groceries", exact: true})).toBeVisible();
-    await expect.poll(() => state.sockets.length).toBeGreaterThan(0);
+    await expect.poll(() => state.requests.some(r => r.path.endsWith("/sync-revision"))).toBeTruthy();
     const emit = (channel, event, data) => {
-        for (const socket of state.sockets) socket.send(JSON.stringify({channel, event, data: JSON.stringify(data)}));
+        state.revision++;
     };
     state.extraLists.push({id: 102, title: "Created on my phone", menu_order: -1, acf: {owner_id: "7", product_count: 0, shared_with_users: []}});
     emit("user-lists-7", "list-summary-updated", {list_id: 102, title: "Created on my phone", sender_id: 7});
@@ -203,9 +303,7 @@ test("creating and reordering lists synchronize in both directions while both sc
         const broadcast = (source, destination) => () => {
             destination.order = source.order;
             destination.extraLists = structuredClone(source.extraLists);
-            for (const socket of [...source.sockets, ...destination.sockets]) socket.send(JSON.stringify({
-                event: "lists-changed", channel: "user-lists-7", data: JSON.stringify({event_id: crypto.randomUUID()}),
-            }));
+            source.revision++; destination.revision++;
         };
         first.broadcastChange = broadcast(first, second);
         second.broadcastChange = broadcast(second, first);
@@ -252,12 +350,10 @@ test("account change events refresh the title and products of an open list", asy
     const state = await fixture(page);
     await page.goto("/list/101");
     await expect(page.getByRole("button", {name: "Bag Milk", exact: true})).toBeVisible();
-    await expect.poll(() => state.sockets.length).toBeGreaterThan(0);
+    await expect.poll(() => state.requests.some(r => r.path.endsWith("/sync-revision"))).toBeTruthy();
     state.name = "Changed on another device";
     state.bagged.push(state.checked.shift());
-    for (const socket of state.sockets) socket.send(JSON.stringify({
-        event: "lists-changed", channel: "user-lists-7", data: '{"event_id":"remote-change"}',
-    }));
+    state.revision++;
     await expect(page.locator(".list-header-title-group h2")).toHaveText(state.name);
     await expect(page.getByRole("button", {name: "Move Milk back to checklist"})).toBeVisible();
     expect(state.errors).toEqual([]);
@@ -271,10 +367,7 @@ test("an open list accepts later remote renames after being renamed locally", as
         const second = await fixture(otherPage);
         const broadcast = (source, destination) => () => {
             destination.name = source.name;
-            for (const socket of [...source.sockets, ...destination.sockets]) socket.send(JSON.stringify({
-                event: "list-summary-updated", channel: "user-lists-7",
-                data: JSON.stringify({list_id: 101, sender_id: 7, title: source.name}),
-            }));
+            source.revision++; destination.revision++;
         };
         first.broadcastRename = broadcast(first, second);
         second.broadcastRename = broadcast(second, first);
@@ -282,7 +375,7 @@ test("an open list accepts later remote renames after being renamed locally", as
         const heading = p => p.locator(".list-header-title-group h2");
         await expect(heading(page)).toHaveText("Weekly groceries");
         await expect(heading(otherPage)).toHaveText("Weekly groceries");
-        await expect.poll(() => first.sockets.length > 0 && second.sockets.length > 0).toBeTruthy();
+        await expect.poll(() => first.requests.some(r => r.path.endsWith("/sync-revision")) && second.requests.some(r => r.path.endsWith("/sync-revision"))).toBeTruthy();
         const rename = async (p, title) => {
             await heading(p).click();
             await p.getByPlaceholder("List-A Name").fill(title);
@@ -332,19 +425,27 @@ test("password recovery and login screens retain the existing mobile design", as
     expect(state.errors).toEqual([]);
 });
 
-test("AI requests use the hosted route adapter and the assistant remains usable", async ({page}) => {
-    const state = await fixture(page);
-    await page.route("**/api/ai/recipes", (route) => route.fulfill({json: {reply: "Try a fresh tomato pasta for dinner."}}));
-    await page.goto("/list/101");
-    await expect(page.getByRole("button", {name: "Bag Milk", exact: true})).toBeVisible();
-    await page.locator("button.chat-widget").click();
-    await page.getByPlaceholder("Ask anything about meals or your list...").fill("What can I cook for dinner?");
-    const request = page.waitForRequest((request) => request.url().includes("/api/ai/recipes"));
-    await page.getByRole("button", {name: "Send", exact: true}).click();
-    expect((await request).method()).toBe("POST");
-    await page.screenshot({path: "artifacts/android-assistant.png"});
-    expect(state.errors).toEqual([]);
-});
+for (const {name, path, registered} of [
+    {name: "registered list", path: "/list/101", registered: true},
+    {name: "guest home", path: "/", registered: false},
+]) {
+    test(`AI requests include the session from ${name}`, async ({page}) => {
+        const state = await fixture(page, {registered});
+        await page.route("**/api/ai/recipes", (route) => route.fulfill({json: {
+            kind: "chat", message: "Try a fresh tomato pasta for dinner.", suggestions: [], links: [],
+        }}));
+        await page.goto(path);
+        await page.locator("button.chat-widget").click();
+        await page.getByPlaceholder("Ask anything about meals or your list...").fill("What can I cook for dinner?");
+        const request = page.waitForRequest((request) => request.url().includes("/api/ai/recipes"));
+        await page.getByRole("button", {name: "Send", exact: true}).click();
+        const sent = await request;
+        expect(sent.method()).toBe("POST");
+        expect(sent.headers().authorization).toBe(`Bearer ${jwt}`);
+        await expect(page.getByText("Try a fresh tomato pasta for dinner.", {exact: true})).toBeVisible();
+        expect(state.errors).toEqual([]);
+    });
+}
 
 test("login transfers guest lists before replacing the mobile session and survives a reload", async ({page}) => {
     test.setTimeout(45000);
@@ -377,4 +478,32 @@ test("copied invitations use the public website origin rather than the local mob
     await page.getByRole("button", {name: "Copy link Paste it wherever you like"}).click();
     await expect.poll(() => page.evaluate(() => window.copiedInvitation)).toBe("https://next-lista.vercel.app/shared-list/101?k=invite-123");
     expect(state.errors).toEqual([]);
+});
+
+test("a guest must explicitly confirm account deletion and the device session is cleared", async ({page}) => {
+    await fixture(page, {registered: false});
+    let deleted = false;
+    await page.route('**/wp-json/custom/v1/account-deletion-preview', route => route.fulfill({json: {account_id: 7, name: 'Guest', owned_lists: 1, custom_products: 2}, headers: {'Access-Control-Allow-Origin': '*'}}));
+    await page.route('**/wp-json/custom/v1/delete-my-account', route => {
+        expect(route.request().headers().authorization).toBe(`Bearer ${jwt}`);
+        expect(route.request().postDataJSON()).toEqual({account_id: 7, confirmation: 'DELETE MY LISTA ACCOUNT'});
+        deleted = true;
+        return route.fulfill({json: {deleted: true}, headers: {'Access-Control-Allow-Origin': '*'}});
+    });
+    await page.goto('/delete-account');
+    await page.getByRole('button', {name: 'Review account deletion', exact: true}).click();
+    await expect(page.getByRole('button', {name: 'Permanently delete my account'})).toBeDisabled();
+    expect(deleted).toBe(false);
+    await page.getByRole('checkbox', {name: /I understand this is permanent/}).check();
+    await page.getByRole('button', {name: 'Permanently delete my account'}).click();
+    await expect(page.getByRole('status')).toContainText('deleted from the active service');
+    expect(deleted).toBe(true);
+    expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem('lista-session-v1') || '{}').token)).toBeUndefined();
+});
+
+test("private synchronization never opens a public Pusher socket", async ({page}) => {
+    const state = await fixture(page);
+    await page.goto('/');
+    await expect.poll(() => state.requests.some(r => r.path.endsWith('/sync-revision'))).toBeTruthy();
+    expect(state.sockets).toEqual([]);
 });

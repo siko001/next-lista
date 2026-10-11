@@ -21,6 +21,8 @@ import {getAllProducts, WP_API_BASE} from "../../app/lib/helpers";
 import {getCookie} from "./session.js";
 import {useLocation, useParams, router} from "./compat/navigation.js";
 import {reloadPage} from "./platform.js";
+import PublicInfo from "../../app/components/PublicInfo";
+import {isPublicInfoPath} from "../../app/lib/privacy.mjs";
 
 const EMPTY_METADATA = {};
 export function ErrorScreen({message, retry = reloadPage, login = false}) {
@@ -152,7 +154,11 @@ function MobileStatus() {
     </div>;
 }
 
-export default function App() {
+export default function App({sessionReady = true}) {
+    useLocation();
+    const path = window.location.pathname.replace(/\/$/, "");
+    if (isPublicInfoPath(path)) return <PublicInfo deletion={path === "/delete-account"} />;
+    if (!sessionReady) return <ErrorScreen message="Lista couldn’t open its secure session. Unlock your phone and try again." />;
     return <ErrorBoundary><LoadingProvider><NotificationProvider><ListProvider>
         <UserProvider initialRegistered={getCookie("registered") === "yes"} initialUserName={getCookie("username")}>
             <ProductProvider><ValidationProvider><OverlayProvider>

@@ -11,6 +11,7 @@ import "./css/list-pages.css";
 import "./css/page-skeleton.css";
 import "./css/auth.css";
 import "./css/settings.css";
+import "./css/public-info.css";
 import "./css/not-found.css";
 import {Quicksand, Saira} from "next/font/google";
 import {cookies} from "next/headers";

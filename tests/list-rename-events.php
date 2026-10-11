@@ -10,6 +10,8 @@ namespace Pusher {
 }
 
 namespace {
+    // Legacy callers use the compatibility factory; production returns a sink.
+    function setup_pusher() { return new \Pusher\Pusher(); }
     $rename_hook = null;
     function add_action($name, $callback, $priority, $argument_count) {
         global $rename_hook;

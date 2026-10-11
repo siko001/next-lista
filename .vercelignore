@@ -1,0 +1,7 @@
+WP/
+mobile/
+tests/
+.next*/
+.env*
+.git/
+*.log

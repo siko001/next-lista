@@ -6,10 +6,13 @@ const {claimGuestLists} = await import(`data:text/javascript;base64,${Buffer.fro
 const options = {apiBase:'https://example.test/wp-json',guestToken:'guest-test',guestUserId:7,accountToken:'account-test'};
 const json = (value, status=200) => ({ok:status===200,status,json:async()=>value});
 
-test('empty or shared-only guest lists need no transfer', async()=> {
-    let calls=0;
-    const count=await claimGuestLists({...options,fetcher:async()=>{calls++;return json([{id:1,acf:{owner_id:8}}]);}});
-    assert.equal(count,0); assert.equal(calls,1);
+test('empty or shared-only guest lists still transfer favourites and custom products', async()=> {
+    for (const lists of [[], [{id:1,acf:{owner_id:8}}]]) {
+        const calls=[];
+        const count=await claimGuestLists({...options,fetcher:async(url)=>{calls.push(url);return calls.length===1?json(lists):json({success:true,transferred_count:0});}});
+        assert.equal(count,0); assert.equal(calls.length,2);
+        assert.ok(calls[1].endsWith('/claim-guest-lists'));
+    }
 });
 test('owned lists use both session proofs, never a supplied destination ID',async()=>{
     const calls=[];

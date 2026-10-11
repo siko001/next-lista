@@ -25,7 +25,7 @@ const schema = yup.object().shape({
         .required("Email is required"),
     password: yup
         .string()
-        .min(6, "Password must be at least 6 characters")
+        .min(8, "Password must be at least 8 characters")
         .matches(/[0-9]/, "Password must contain at least one number")
         .matches(
             /[^a-zA-Z0-9]/,
@@ -177,7 +177,7 @@ export default function RegisterClient() {
                     <AuthField {...register("email")} id="email" label="Email address" icon={Mail} type="email" autoComplete="username" placeholder="you@example.com" error={(touchedFields.email || submitCount > 0) ? errors.email : undefined}
                         hint={emailStatus === "checking" ? "Checking availability…" : emailStatus === "available" ? "This email is available." : undefined} />
                     <AuthField {...register("password")} id="password" label="Password" icon={LockKeyhole} password autoComplete="new-password" placeholder="Make it a good one" error={(touchedFields.password || submitCount > 0) ? errors.password : undefined}
-                        hint="At least 6 characters, a number and a special character." />
+                        hint="At least 8 characters, a number and a special character." />
                     {password && <div className="auth-strength" aria-label={`Password strength: ${["Weak", "Weak", "Fair", "Strong", "Very strong"][strength]}`}>
                         <div aria-hidden="true">{[1,2,3,4].map(level => <span key={level} className={strength >= level ? `strength-${strength}` : ""} />)}</div>
                         <span>{["Weak", "Weak", "Fair", "Strong", "Very strong"][strength]}</span>

@@ -2,6 +2,7 @@
 /dist/
 /.vite/
 /.cache/
+/.signing/
 /artifacts/
 /playwright-report/
 /test-results/

@@ -20,11 +20,6 @@ function my_shopping_list_trash_handler($post_id) {
     error_log("Shopping list {$post_id} moved to trash");
 
     // Pusher trigger (make sure you've loaded Pusher via composer autoload earlier)
-    $pusher = new Pusher\Pusher(
-        'a9f747a06cd5ec1d8c62',
-        'c30a7a8803655f65cdaf',
-        '1990193',
-        ['cluster' => 'eu', 'useTLS' => true]
-    );
+    $pusher = setup_pusher();
     $pusher->trigger('shopping-list-' . $post_id, 'list-deleted', $data);
 }

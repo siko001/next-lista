@@ -757,7 +757,7 @@ const ChatWidget = forwardRef(function ChatWidget(
     try {
       const resp = await fetch(apiUrl("/api/ai/recipes"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${context === "list" ? decryptToken(token) : token}` },
         body: JSON.stringify({ query: finalQuery, history: messages.slice(-10) }),
       });
       const data = await resp.json();
@@ -813,7 +813,7 @@ const ChatWidget = forwardRef(function ChatWidget(
           setTyping(true);
           const resp = await fetch(apiUrl("/api/ai/recipes"), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${context === "list" ? decryptToken(token) : token}` },
             body: JSON.stringify({
               query: lastQueryRef.current || baseTitle,
               variationKey: opt,
@@ -926,7 +926,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       setPendingRecipe({ title: outTitle, ingredients: outIngredients });
       setPendingVariation(null);
     },
-    [pendingVariation],
+    [pendingVariation, context, token],
   );
 
   const ensureListForHome = useCallback(async () => {

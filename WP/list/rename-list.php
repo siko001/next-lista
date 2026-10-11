@@ -41,12 +41,7 @@ add_action('post_updated', function($post_id, $post_after, $post_before) {
     ];
 
     // Send to all users with access
-    $pusher = new Pusher\Pusher(
-        'a9f747a06cd5ec1d8c62',
-        'c30a7a8803655f65cdaf',
-        '1990193',
-        ['cluster' => 'eu', 'useTLS' => true]
-    );
+    $pusher = setup_pusher();
     foreach ($user_ids as $uid) {
         $pusher->trigger('user-lists-' . $uid, 'list-summary-updated', $summary);
     }

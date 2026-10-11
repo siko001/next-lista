@@ -31,10 +31,14 @@ export async function POST(request) {
 
     try {
         const authResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/custom/v1/user-data`,
-            {headers: {Authorization: authorization}, cache: "no-store"}
+            `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/custom/v1/assistant-quota`,
+            {method: "POST", headers: {Authorization: authorization}, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000)}
         );
-        if (!authResponse.ok) return json({error: "Your session has expired."}, 401);
+        if (authResponse.status === 429) return json({error: "You’ve reached the hourly assistant limit. Please try again later."}, 429);
+        if ([401, 403].includes(authResponse.status)) return json({error: "Your session has expired."}, 401);
+        if (!authResponse.ok) return json({error: "We couldn’t verify your session. Please try again."}, 503);
+        const user = await authResponse.json();
+        if (!Number.isSafeInteger(Number(user?.id)) || Number(user.id) <= 0) return json({error: "Could not verify your session."}, 503);
 
         const form = await request.formData();
         const audio = form.get("audio");
@@ -100,7 +104,7 @@ export async function POST(request) {
             }
         );
         if (!extractionResponse.ok) {
-            console.error("Voice item extraction failed:", extractionResponse.status, await extractionResponse.text());
+            console.error("Voice item extraction failed:", extractionResponse.status);
             return reviewFallback(transcript);
         }
         const extraction = await extractionResponse.json();

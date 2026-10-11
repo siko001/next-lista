@@ -1,5 +1,5 @@
 import {spawn, execFileSync} from "node:child_process";
-import {existsSync, mkdirSync, copyFileSync} from "node:fs";
+import {existsSync, mkdirSync, copyFileSync, readFileSync} from "node:fs";
 import {fileURLToPath} from "node:url";
 import {dirname, resolve} from "node:path";
 import {homedir} from "node:os";
@@ -7,7 +7,16 @@ import {homedir} from "node:os";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const task = process.argv[2] || "assembleDebug";
 if (!["assembleDebug", "bundleRelease", "assembleRelease"].includes(task)) throw new Error("Unsupported Android build task");
-if (task !== "assembleDebug" && !["LISTA_KEYSTORE_PATH", "LISTA_KEYSTORE_PASSWORD", "LISTA_KEY_ALIAS", "LISTA_KEY_PASSWORD"].every((key) => process.env[key])) {
+const signingKeys = ["LISTA_KEYSTORE_PATH", "LISTA_KEYSTORE_PASSWORD", "LISTA_KEY_ALIAS", "LISTA_KEY_PASSWORD"];
+let signing = {};
+const signingFile = resolve(root, ".signing/signing.json");
+if (task !== "assembleDebug" && !signingKeys.some(key => process.env[key]) && existsSync(signingFile)) {
+    const saved = JSON.parse(readFileSync(signingFile, "utf8"));
+    signing = Object.fromEntries(signingKeys.map(key => [key, saved[key]]));
+    if (typeof signing.LISTA_KEYSTORE_PATH === "string") signing.LISTA_KEYSTORE_PATH = resolve(root, signing.LISTA_KEYSTORE_PATH);
+}
+const buildEnv = {...process.env, ...signing};
+if (task !== "assembleDebug" && !signingKeys.every((key) => typeof buildEnv[key] === "string" && buildEnv[key])) {
     throw new Error("Release signing is not configured. Use the debug APK for device testing, or supply the four LISTA_KEYSTORE/KEY signing variables documented in README.md.");
 }
 const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT || resolve(homedir(), "Library/Android/sdk");
@@ -29,7 +38,7 @@ if (task === "assembleDebug" && !existsSync(debugKeystore)) {
 }
 const build = spawn(process.platform === "win32" ? "gradlew.bat" : "./gradlew", [task, "--no-daemon", "--console=plain"], {
     cwd: resolve(root, "android"),
-    env: {...process.env, ANDROID_HOME: sdk,
+    env: {...buildEnv, ANDROID_HOME: sdk,
         GRADLE_USER_HOME: process.env.GRADLE_USER_HOME || resolve(root, ".cache/gradle"),
         ...(javaHome ? {JAVA_HOME: javaHome} : {}),
     },
@@ -43,5 +52,11 @@ build.on("exit", (code) => {
         const destination = resolve(root, "artifacts/Lista-debug.apk");
         copyFileSync(resolve(root, "android/app/build/outputs/apk/debug/app-debug.apk"), destination);
         console.log(`\nInstallable test APK: ${destination}`);
+    }
+    if (task === "bundleRelease") {
+        mkdirSync(resolve(root, "artifacts"), {recursive: true});
+        const destination = resolve(root, "artifacts/Lista-release.aab");
+        copyFileSync(resolve(root, "android/app/build/outputs/bundle/release/app-release.aab"), destination);
+        console.log(`\nSigned Play bundle: ${destination}`);
     }
 });

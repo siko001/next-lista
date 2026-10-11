@@ -87,10 +87,6 @@ export const ListProvider = ({children}) => {
             title: listData.name,
             status: "publish",
             menu_order: newMenuOrder,
-            acf: {
-                owner_id: listData.userId,
-                owner_token: listData.token,
-            },
         };
 
         const res = await sendApiRequest(url, method, listData.token, body);

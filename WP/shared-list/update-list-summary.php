@@ -41,12 +41,7 @@ function trigger_user_list_summaries($shopping_list_id, $message =null) {
 		"message" => $message,
     ];
 
-    $pusher = new Pusher\Pusher(
-        'a9f747a06cd5ec1d8c62',
-        'c30a7a8803655f65cdaf',
-        '1990193',
-        ['cluster' => 'eu', 'useTLS' => true]
-    );
+    $pusher = setup_pusher();
 
     foreach ($user_ids as $uid) {
         if ($uid) {

@@ -47,6 +47,7 @@ export default function AuthShell({register = false, mode, loading = false, chil
                     </footer>
                 </section>
                 <p className="auth-footnote">Less remembering. More living.</p>
+                <p className="auth-policy-link"><Link href="/privacy">Privacy policy</Link></p>
                 <footer className="auth-credit"><SiteCredit /></footer>
             </div>
         </main>

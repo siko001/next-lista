@@ -56,6 +56,30 @@ function normalizeAssistantReply(value) {
 }
 
 export async function POST(req) {
+  // Guests also receive a WordPress JWT; validate it before any paid AI call.
+  const authorization = req.headers.get("authorization") || "";
+  if (!/^Bearer\s+\S+$/.test(authorization)) {
+    return Response.json({ error: "Please sign in to use the assistant." }, { status: 401 });
+  }
+  const wordpressUrl = process.env.NEXT_PUBLIC_WORDPRESS_URL?.replace(/\/$/, "");
+  if (!wordpressUrl) return Response.json({ error: "The assistant is temporarily unavailable." }, { status: 503 });
+  try {
+    const session = await fetch(`${wordpressUrl}/wp-json/custom/v1/assistant-quota`, {
+      method: "POST", headers: { Authorization: authorization }, cache: "no-store",
+      redirect: "error", signal: AbortSignal.timeout(10000),
+    });
+    if (session.status === 429) return Response.json({error: "You’ve reached the hourly assistant limit. Please try again later."}, {status: 429});
+    if (session.status === 401 || session.status === 403) {
+      return Response.json({ error: "Your session has expired. Please sign in again." }, { status: 401 });
+    }
+    if (!session.ok) throw new Error("Session validation unavailable");
+    const user = await session.json();
+    if (!Number.isSafeInteger(Number(user?.id)) || Number(user.id) <= 0) {
+      throw new Error("Invalid session response");
+    }
+  } catch {
+    return Response.json({ error: "We couldn’t verify your session. Please try again." }, { status: 503 });
+  }
   try {
     const body = await req.json();
     const query = typeof body?.query === "string" ? body.query.trim().slice(0, 2000) : "";

@@ -6,6 +6,7 @@ import {Mic, Square, Volume2, X} from "lucide-react";
 import {decryptToken, decodeHtmlEntities, WP_API_BASE} from "../lib/helpers";
 import {INGREDIENT_NAME_MAX_LENGTH} from "../lib/config";
 import {runAssistantAddJob} from "../lib/assistantAddJobs";
+import {microphoneErrorMessage} from "../lib/voiceRecording.mjs";
 
 const getListName = (list) => decodeHtmlEntities(
     typeof list.title === "string" ? list.title : list.title?.rendered || `List ${list.id}`
@@ -440,9 +441,10 @@ export default function VoiceListInput({
             beginVoiceActivityCheck(stream, recorder, mode);
             setRecordingMode(mode);
             setRecording(true);
-        } catch {
-            setError("Microphone access was denied or unavailable.");
+        } catch (cause) {
+            setError(microphoneErrorMessage(cause));
             streamRef.current?.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
         }
     };
 
@@ -529,6 +531,7 @@ export default function VoiceListInput({
 
     return (
         <div className="flex h-full min-h-0 flex-col gap-3 text-sm">
+            <p className="text-xs ai-chat-help-text">Voice recordings are sent to Groq to turn your speech into shopping items. Review the items before adding them.</p>
             {recording && <p role="status" className="text-xs">{recordingMode === "destination" ? "Listening for a list name…" : recordingMode === "choice" ? "Say add more or replace…" : "Listening… Speak clearly and pause between items."}</p>}
             {pausePrompt && <div role="status" className="rounded-xl border border-[var(--ai-chat-border)] p-3 text-sm"><p>Finished, or adding more?</p><div className="mt-2 flex gap-2"><button type="button" onClick={stopRecording} className="rounded-lg bg-blue-600 px-3 py-2 text-white">Stop and review</button><button type="button" onClick={continueRecording} className="rounded-lg border border-[var(--ai-chat-border)] px-3 py-2">Continue</button></div></div>}
             {busy && <p role="status" className="text-xs">Processing your items…</p>}

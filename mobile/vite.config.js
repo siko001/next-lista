@@ -28,9 +28,6 @@ export default defineConfig({
                 if (!importer || !source.startsWith(".")) return;
                 const target = resolve(dirname(importer.split("?")[0]), source);
                 if (target === resolve(repo, "app/lib/platform.mjs")) return resolve(root, "src/platform.js");
-                if (["app/lib/pusherClient", "app/lib/pusherClient.js"].some((path) => target === resolve(repo, path))) {
-                    return resolve(root, "src/realtime.js");
-                }
             },
             async transform(code, id) {
                 if (id.startsWith(resolve(repo, "app/")) && id.endsWith(".js")) {
