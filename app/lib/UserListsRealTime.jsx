@@ -1,7 +1,7 @@
 import {useEffect, useRef} from "react";
 import {useNotificationContext} from "../contexts/NotificationContext";
 import {useListContext} from "../contexts/ListContext";
-import {invalidateListData} from "./dataCache.mjs";
+import {invalidateListData, refreshListData} from "./dataCache.mjs";
 import {subscribePusherEvent} from "./pusherClient";
 
 export default function useUserListsRealtime(userId, setUserLists, isInInnerList) {
@@ -16,6 +16,10 @@ export default function useUserListsRealtime(userId, setUserLists, isInInnerList
         return subscribePusherEvent("user-lists-" + userId, "list-summary-updated", (data) => {
             invalidateListData(userId);
             const current = listsRef.current.find((list) => String(list.id) === String(data.list_id));
+            if (!current) {
+                refreshListData(userId);
+                return;
+            }
             const titleChanged = current && data.title && current.title !== data.title;
             setUserLists((prev) => prev.map((list) =>
                 String(list.id) === String(data.list_id)

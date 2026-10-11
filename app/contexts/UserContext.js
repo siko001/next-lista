@@ -1,4 +1,5 @@
 "use client";
+import useListChangeEvents from "../lib/useListChangeEvents";
 import {createContext, useContext, useEffect, useState} from "react";
 import {setCookie, getCookie, deleteCookie} from "cookies-next";
 import CryptoJS from "crypto-js";
@@ -192,6 +193,8 @@ export const UserProvider = ({children, initialRegistered = false, initialUserNa
         window.addEventListener("lista:logout", syncLogout);
         return () => window.removeEventListener("lista:logout", syncLogout);
     }, [userData?.id, clearUserLists]);
+
+    useListChangeEvents(userData?.id);
 
     return (
         <UserContext.Provider

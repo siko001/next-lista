@@ -41,7 +41,6 @@ export const ListProvider = ({children}) => {
     });
     const [startingInnerListName, setStartingInnerListName] = useState(null);
     const [userLists, setUserLists] = useState([]);
-    const [listName, setListName] = useState();
     const [listPreview, setListPreview] = useState(null);
     const [listsLoaded, setListsLoaded] = useState(false);
     const listsOwnerRef = useRef(null);
@@ -299,7 +298,7 @@ export const ListProvider = ({children}) => {
         setListSettings(false);
     };
 
-    const handleRenameList = async (value, token, view) => {
+    const handleRenameList = async (value, token, view, {title, setTitle} = {}) => {
         if (!value) return;
         const listId = listRename;
         const list = userLists.find((list) => list.id === listId);
@@ -321,13 +320,9 @@ export const ListProvider = ({children}) => {
             return;
         }
 
-        if (view === "in-list") {
-            // Optimistic UI update
-            setListName(value);
-        }
-
-        if (view === "in-list" && value) {
-        }
+        // The open list owns one title for local edits and incoming events.
+        // Keeping a second global name would permanently mask later renames.
+        if (view === "in-list") setTitle?.(value);
 
         // Optimistic UI update
         if (view !== "in-list") {
@@ -366,9 +361,7 @@ export const ListProvider = ({children}) => {
 
             const data = await response.json();
             if (!data) {
-                showNotification("Failed to update list", "error");
-                setUserLists(userLists);
-                return;
+                throw new Error("Failed to update list");
             }
 
             showNotification("List Renamed", "success", 1000);
@@ -377,7 +370,11 @@ export const ListProvider = ({children}) => {
         } catch (error) {
             console.error("Error updating list:", error);
             showNotification("Failed to update list", "error");
-            setUserLists(userLists);
+            if (view === "in-list") setTitle?.((current) => current === value ? title : current);
+            setUserLists((current) => current.map((item) =>
+                String(item.id) === String(listId) && item.title === value
+                    ? {...item, title: list?.title ?? title} : item
+            ));
         }
     };
 
@@ -407,8 +404,6 @@ export const ListProvider = ({children}) => {
                 handleRenameInput,
                 handleRenameClick,
                 handleRenameList,
-                listName,
-                setListName,
                 listPreview,
                 setListPreview,
                 listsLoaded,

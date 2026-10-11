@@ -1,4 +1,5 @@
 "use client";
+import {apiUrl} from "../lib/platform.mjs";
 
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from "react";
 import {Mic, Square, Volume2, X} from "lucide-react";
@@ -236,7 +237,7 @@ export default function VoiceListInput({
                             const form = new FormData();
                             form.append("audio", blob, "voice-answer");
                             form.append("mode", "command");
-                            const response = await fetch("/api/ai/voice-items", {
+                            const response = await fetch(apiUrl("/api/ai/voice-items"), {
                                 method: "POST",
                                 headers: {Authorization: `Bearer ${authToken}`},
                                 body: form,
@@ -373,7 +374,7 @@ export default function VoiceListInput({
                     form.append("mode", mode);
                     const controller = new AbortController();
                     requestRef.current = controller;
-                    const response = await fetch("/api/ai/voice-items", {
+                    const response = await fetch(apiUrl("/api/ai/voice-items"), {
                         method: "POST",
                         headers: {Authorization: `Bearer ${authToken}`},
                         body: form,

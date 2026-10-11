@@ -1,4 +1,5 @@
 "use client";
+import {reloadPage} from "../../lib/platform.mjs";
 import {useRouter, useSearchParams} from "next/navigation";
 import {useEffect, useMemo, useRef, useState} from "react";
 import {getSharedList} from "../../lib/api";
@@ -32,7 +33,7 @@ export default function SharedListPage({token, userId, listId}) {
         const t = setTimeout(() => {
             if (!sessionStorage.getItem("shared_list_auto_refresh")) {
                 sessionStorage.setItem("shared_list_auto_refresh", "1");
-                window.location.reload();
+                reloadPage();
             } else {
                 setError("Sign in, then open this share link again to join the list.");
                 setPhase("error");

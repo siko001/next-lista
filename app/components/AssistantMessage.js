@@ -1,4 +1,5 @@
 "use client";
+import {apiUrl} from "../lib/platform.mjs";
 
 import { useEffect, useMemo, useState } from "react";
 import { ExternalLink } from "lucide-react";
@@ -78,7 +79,7 @@ function LinkPreview({ url }) {
   useEffect(() => {
     if (!href) return;
     const controller = new AbortController();
-    fetch(`/api/ai/link-preview?url=${encodeURIComponent(href)}`, { signal: controller.signal })
+    fetch(apiUrl(`/api/ai/link-preview?url=${encodeURIComponent(href)}`), { signal: controller.signal })
       .then((response) => response.ok ? response.json() : null)
       .then((data) => setPreview(data))
       .catch(() => {});

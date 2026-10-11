@@ -1,8 +1,8 @@
 "use client";
+import {navigate} from "../../lib/platform.mjs";
 import gsap from "gsap";
 import {animateProductExit} from "../../lib/productMotion";
 import {useEffect, useState, useRef} from "react";
-import {useLoading} from "../../contexts/LoadingContext";
 import {calculateProgress, WP_API_BASE, decryptToken, getAllProducts, getAllCustomProducts, getFavourites, decodeHtmlEntities} from "../../lib/helpers";
 import {searchProductsInLanguage} from "../../lib/domTranslations.mjs";
 import useLocalListSync from "../../lib/useLocalListSync";
@@ -807,7 +807,9 @@ export default function ShoppingList({
 
     // Real time updating
     useListaRealtimeUpdates(listId, (data) => {
-        if (!data || !data.fields || userId == data.sender_id) return;
+        // The same account can edit on another device. Its server snapshots
+        // must update this screen too; sender identity only controls the toast.
+        if (!data || !data.fields) return;
         invalidateCurrentLists();
 
         // Normalize the linked products to ensure consistent ID field
@@ -855,7 +857,7 @@ export default function ShoppingList({
         }
 
         // Show notification unless suppressed by AI bulk add
-        if (data.message && !suppressAiToastsRef.current) {
+        if (data.message && String(userId) !== String(data.sender_id) && !suppressAiToastsRef.current) {
             showNotification(data.message);
         }
     });
@@ -920,7 +922,7 @@ export default function ShoppingList({
                     "removeListData",
                     JSON.stringify(removeData),
                 );
-                window.location.href = "/";
+                navigate("/");
             }
             // If someone else was removed from this list
             else if (
@@ -985,7 +987,7 @@ export default function ShoppingList({
             fetch(`${WP_API_BASE}/custom/v1/get-shopping-list-products?shoppingListId=${listId}`, {headers, signal, cache: "no-store"}),
             fetch(`${WP_API_BASE}/custom/v1/shopping-list/${listId}`, {headers, signal, cache: "no-store"}),
         ]);
-        if (listResponse.status === 404 && isCurrent()) { window.location.assign("/"); return; }
+        if ([403, 404].includes(listResponse.status) && isCurrent()) { navigate("/"); return; }
         if (!itemsResponse.ok || !listResponse.ok) return;
         const [items, details] = await Promise.all([itemsResponse.json(), listResponse.json()]);
         if (!isCurrent() || !items.success || !Array.isArray(items.linkedProducts)) return;
@@ -1058,6 +1060,7 @@ export default function ShoppingList({
                     userId={userId}
                     list={currentList}
                     title={listTitle}
+                    setTitle={setListTitle}
                     handleSearchProducts={handleSearchProducts}
                     checkedProducts={checkedProducts}
                     baggedProducts={baggedProducts}

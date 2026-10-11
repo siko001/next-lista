@@ -1,0 +1,38 @@
+/* Only the Capacitor build imports this stylesheet. */
+@source "../../app";
+@source "./";
+
+:root {
+    --font-saira: "Saira Variable", sans-serif;
+    --font-quicksand: "Quicksand Variable", sans-serif;
+    --font-geist-sans: "Geist Variable", sans-serif;
+    --font-geist-mono: "Geist Mono Variable", monospace;
+    --lista-safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+    --lista-safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+    --lista-safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    --lista-safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+}
+body { margin: 0; font-family: var(--font-saira); -webkit-tap-highlight-color: transparent; }
+.lista-mobile { min-height: 100%; overscroll-behavior-y: none; }
+.lista-mobile body { min-height: 100dvh; }
+.lista-mobile #root { padding: var(--lista-safe-top) var(--lista-safe-right) var(--lista-safe-bottom) var(--lista-safe-left); }
+.lista-mobile :is(.home-page, .list-detail-page, .auth-page, .mobile-message) { min-height: calc(100dvh - var(--lista-safe-top) - var(--lista-safe-bottom)); }
+.lista-mobile .shopping-list-header { top: var(--lista-safe-top); }
+/* Keep scrolling content behind a solid status-bar background. */
+.lista-mobile body::before { content: ""; position: fixed; inset: 0 0 auto; height: var(--lista-safe-top); background: var(--background); z-index: 10002; pointer-events: none; }
+.lista-mobile :is(.chat-widget, .open-product-overlay) { bottom: calc(var(--lista-safe-bottom) + 1.5rem); }
+.lista-mobile .ai-chat { bottom: calc(var(--lista-safe-bottom) + .75rem); max-height: calc(100dvh - var(--lista-safe-top) - var(--lista-safe-bottom) - 1.5rem); }
+.lista-mobile input, .lista-mobile textarea, .lista-mobile select { font-size: max(16px, 1em); }
+.lista-mobile .app-dialog-layer { padding-top: max(12px, var(--lista-safe-top)); padding-bottom: max(12px, var(--lista-safe-bottom)); }
+@media (max-width: 680px) {
+    .lista-mobile .picker-header { padding-top: max(10px, var(--lista-safe-top)); }
+    .lista-mobile .picker-footer { padding-bottom: max(10px, var(--lista-safe-bottom)); }
+}
+.mobile-message { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
+.mobile-message-card { max-width: 390px; display: grid; gap: 18px; text-align: center; color: var(--foreground); }
+.mobile-message-card h1 { font-size: 25px; font-weight: 650; }
+.mobile-message-card p { line-height: 1.6; opacity: .8; }
+.mobile-message-card button { justify-content: center; }
+.mobile-wordmark { font-weight: 800; letter-spacing: .12em; color: #21ba9c; font-size: 24px; }
+.mobile-status { position: fixed; left: 12px; right: 12px; bottom: calc(var(--lista-safe-bottom) + 12px); z-index: 10001; display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 14px; background: #243047; color: #fff; font-size: 13px; box-shadow: 0 6px 24px #0002; }
+.mobile-status button { margin-left: auto; font-size: 24px; min-width: 32px; }

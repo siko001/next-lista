@@ -1,4 +1,5 @@
 "use client";
+import {navigate} from "../lib/platform.mjs";
 import {useEffect, useState} from "react";
 import {useForm} from "react-hook-form";
 import * as yup from "yup";
@@ -157,7 +158,7 @@ export default function RegisterClient() {
                 });
 
                 setTimeout(() => {
-                    window.location.href = "/";
+                    navigate("/");
                 }, 3000);
             } else {
                 showNotification(`Error: ${result.message || "Could not create account"}`, "error");

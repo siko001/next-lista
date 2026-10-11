@@ -1,4 +1,5 @@
 "use client";
+import {navigate} from "../../lib/platform.mjs";
 import {useState, useEffect, useRef} from "react";
 import {gsap} from "gsap";
 import {animateProductExit} from "../../lib/productMotion";
@@ -32,6 +33,7 @@ import {UserRound, UsersRound} from "lucide-react";
 export default function ShoppingListHeader({
     ownerName,
     title,
+    setTitle,
     totalProductCount,
     baggedProductCount,
     handleSearchProducts,
@@ -60,7 +62,6 @@ export default function ShoppingListHeader({
         listRename,
         setListRename,
         innerListRef,
-        listName,
         startingValue,
     } = useListContext();
     const [openSettings, setOpenSettings] = useState(false);
@@ -70,6 +71,14 @@ export default function ShoppingListHeader({
     const [isPinned, setIsPinned] = useState(false);
     const stickySentinelRef = useRef(null);
     const headerRef = useRef(null);
+    const renameSubmitted = useRef(false);
+    useEffect(() => { if (listRename) renameSubmitted.current = false; }, [listRename]);
+    const submitRename = (value) => {
+        if (renameSubmitted.current) return;
+        renameSubmitted.current = true;
+        void handleRenameList(value, token, "in-list", {title, setTitle});
+        setListRename(false);
+    };
     const {overlay, showVerbConfirmation} = useOverlayContext();
     const {showNotification} = useNotificationContext();
     const [originalCheckedLength, setOriginalCheckedLength] = useState(
@@ -306,7 +315,7 @@ export default function ShoppingListHeader({
         );
 
         // Redirect to clean URL
-        window.location.href = "/";
+        navigate("/");
     };
 
     return (
@@ -327,21 +336,11 @@ export default function ShoppingListHeader({
                                 onChange={handleRenameInput}
                                 defaultValue={innerListRef.current?.innerText}
                                 onBlur={() => {
-                                    handleRenameList(
-                                        listRenameRef.current.value,
-                                        token,
-                                        "in-list"
-                                    );
-                                    setListRename(false);
+                                    submitRename(listRenameRef.current.value);
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter") {
-                                        handleRenameList(
-                                            listRenameRef.current.value,
-                                            token,
-                                            "in-list"
-                                        );
-                                        setListRename(false);
+                                        submitRename(listRenameRef.current.value);
                                     }
                                 }}
                                 className="w-full dark:bg-gray-900 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 bg-gray-100 transition-colors duration-100 max-w-[400px] rounded-sm pl-2 outline-none text-lg font-bold"
@@ -363,7 +362,7 @@ export default function ShoppingListHeader({
                                 className="text-xl  max-w-[80ch]  whitespace-normal overflow-scroll md:text-2xl font-bold "
                             >
                                 {decodeHtmlEntities(
-                                    listName || title || list?.title
+                                    title ?? list?.title
                                 )}
                             </h2>
 
@@ -378,7 +377,7 @@ export default function ShoppingListHeader({
                                     type="button"
                                     className="list-card-shared list-header-meta-pill"
                                     onClick={onManageAccess}
-                                    aria-label={`Manage access to ${decodeHtmlEntities(listName || title || list?.title)}, shared with ${sharedCount} ${sharedCount === 1 ? "person" : "people"}`}
+                                    aria-label={`Manage access to ${decodeHtmlEntities(title ?? list?.title)}, shared with ${sharedCount} ${sharedCount === 1 ? "person" : "people"}`}
                                 >
                                     <UsersRound size={14} aria-hidden="true" />
                                     Shared with {sharedCount}
@@ -455,7 +454,7 @@ export default function ShoppingListHeader({
                                                 onClick={() =>
                                                     totalProductCount > 0 &&
                                                     showVerbConfirmation(
-                                                        {...list, title: listName || title || list.title},
+                                                        {...list, title: title ?? list.title},
                                                         token,
                                                         "Empty"
                                                     )
@@ -472,7 +471,7 @@ export default function ShoppingListHeader({
                                             <button
                                                 onClick={() =>
                                                     showVerbConfirmation(
-                                                        {...list, title: listName || title || list.title},
+                                                        {...list, title: title ?? list.title},
                                                         token,
                                                         "Delete"
                                                     )
@@ -489,7 +488,7 @@ export default function ShoppingListHeader({
                                             <button
                                                 onClick={() =>
                                                     showVerbConfirmation(
-                                                        {...list, title: listName || title || list.title},
+                                                        {...list, title: title ?? list.title},
                                                         token,
                                                         "Remove",
                                                         userId

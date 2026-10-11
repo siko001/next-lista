@@ -2,7 +2,7 @@
 import {useEffect, useState, useRef} from "react";
 import {DragDropContext, Droppable, Draggable} from "@hello-pangea/dnd";
 import {WP_API_BASE, isListOwner, removeListRelationship} from "./lib/helpers";
-import {invalidateCurrentLists} from "./lib/dataCache.mjs";
+import {invalidateCurrentLists, refreshListData} from "./lib/dataCache.mjs";
 import gsap from "gsap";
 import {subscribePusherEvent} from "./lib/pusherClient";
 
@@ -365,6 +365,8 @@ const HomeClient = ({
         return subscribePusherEvent("user-lists-" + userData.id, "share-update", (data) => {
             invalidateCurrentLists();
             if (data.action === "add") {
+                // This device may not know the newly shared list yet.
+                refreshListData(userData.id);
                 const newUser = {
                     ID: parseInt(data.userId),
                     display_name: data.userName,
@@ -374,10 +376,9 @@ const HomeClient = ({
                 setUserLists((prevLists) =>
                     prevLists.map((list) => {
                         if (parseInt(list.id) === parseInt(data.listId)) {
-                            const updatedUsers = [
-                                ...(list.acf.shared_with_users || []),
-                                newUser,
-                            ];
+                            const members = list.acf.shared_with_users || [];
+                            const updatedUsers = members.some((user) => String(user.ID) === String(newUser.ID))
+                                ? members : [...members, newUser];
                             if (shareDialogOpenRef.current === parseInt(data.listId)) {
                                 nextSharedUsers = updatedUsers;
                             }
@@ -454,6 +455,7 @@ const HomeClient = ({
                                                 key={list.id}
                                                 draggableId={String(list.id)}
                                                 index={index}
+                                                disableInteractiveElementBlocking
                                             >
                                                 {(provided, snapshot) => (
                                                     <div

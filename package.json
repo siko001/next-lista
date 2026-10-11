@@ -6,7 +6,14 @@
     "dev": "next dev -H 0.0.0.0 -p 3233",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "mobile:dev": "npm --prefix mobile run dev",
+    "mobile:build": "npm --prefix mobile run build",
+    "mobile:sync": "npm --prefix mobile run sync",
+    "mobile:apk": "npm --prefix mobile run apk",
+    "mobile:android": "npm --prefix mobile run android",
+    "mobile:ios": "npm --prefix mobile run ios",
+    "mobile:test": "npm --prefix mobile test"
   },
   "dependencies": {
     "@auth/core": "^0.34.3",

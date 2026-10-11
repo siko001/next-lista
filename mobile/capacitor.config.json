@@ -1,0 +1,14 @@
+{
+  "appId": "app.lista.shopping",
+  "appName": "Lista",
+  "webDir": "dist",
+  "server": {"androidScheme": "https"},
+  "android": {"backgroundColor": "#f8f8ff"},
+  "ios": {"backgroundColor": "#f8f8ff", "contentInset": "never", "scrollEnabled": true},
+  "plugins": {
+    "CapacitorHttp": {"enabled": true},
+    "SystemBars": {"insetsHandling": "css", "initialViewportFitValueHint": "cover"},
+    "SplashScreen": {"launchAutoHide": false, "launchFadeOutDuration": 200, "backgroundColor": "#f8f8ff", "showSpinner": false},
+    "Keyboard": {"resize": "native", "autoBackdropColor": "dom"}
+  }
+}

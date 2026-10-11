@@ -1,4 +1,5 @@
 "use client";
+import {publicOrigin, openExternal, shareLink, copyText} from "../../lib/platform.mjs";
 import {useState, useEffect, useRef} from "react";
 import WhatsAppIcon from "../svgs/WhatsappIcon";
 import MessengerIcon from "../svgs/MessengerIcon";
@@ -36,9 +37,7 @@ const ShareListDialog = ({
     const [shareCode, setShareCode] = useState(null);
     const [generatingTarget, setGeneratingTarget] = useState(null); // 'whatsapp' | 'messenger' | 'copy' | null
 
-    const listUrlBase = `${
-        typeof window !== "undefined" ? window.location.origin : ""
-    }/shared-list/${listId}`;
+    const listUrlBase = `${publicOrigin()}/shared-list/${listId}`;
     const listUrlWithCode = shareCode
         ? `${listUrlBase}?k=${shareCode}`
         : listUrlBase;
@@ -118,7 +117,7 @@ const ShareListDialog = ({
         const code = await ensureShareCode("copy");
         if (!code) return;
         try {
-            await navigator.clipboard.writeText(`${listUrlBase}?k=${code}`);
+            await copyText(`${listUrlBase}?k=${code}`);
             showNotification("Link copied to clipboard!", "success", 3000);
             onClose();
         } catch {
@@ -298,11 +297,7 @@ const ShareListDialog = ({
                                     const url = `https://wa.me/?text=${encodeURIComponent(
                                         `Sharing this list with you: ${listUrlBase}?k=${code}`
                                     )}`;
-                                    window.open(
-                                        url,
-                                        "_blank",
-                                        "noopener,noreferrer"
-                                    );
+                                    if (!await shareLink(`${listUrlBase}?k=${code}`)) openExternal(url);
                                 }}
                             >
                                 <span className="share-option-icon"><WhatsAppIcon /></span>
@@ -316,7 +311,8 @@ const ShareListDialog = ({
                                         "messenger"
                                     );
                                     if (!code) return;
-                                    shareOnMessenger(`${listUrlBase}?k=${code}`);
+                                    const link = `${listUrlBase}?k=${code}`;
+                                    if (!await shareLink(link)) shareOnMessenger(link);
                                 }}
                                 className="share-option share-option-messenger"
                                 disabled={!!generatingTarget}

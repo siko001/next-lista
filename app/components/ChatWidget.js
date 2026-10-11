@@ -1,4 +1,5 @@
 "use client";
+import {apiUrl} from "../lib/platform.mjs";
 import {
   useCallback,
   useRef,
@@ -754,7 +755,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       finalQuery = `${text} (Earlier ingredients: ${ingredientContextRef.current.join(", ")})`;
     }
     try {
-      const resp = await fetch("/api/ai/recipes", {
+      const resp = await fetch(apiUrl("/api/ai/recipes"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: finalQuery, history: messages.slice(-10) }),
@@ -810,7 +811,7 @@ const ChatWidget = forwardRef(function ChatWidget(
       if (pendingVariation?.source === "api") {
         try {
           setTyping(true);
-          const resp = await fetch("/api/ai/recipes", {
+          const resp = await fetch(apiUrl("/api/ai/recipes"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

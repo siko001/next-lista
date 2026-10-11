@@ -1,4 +1,5 @@
 "use client";
+import {navigate} from "../lib/platform.mjs";
 import {useEffect, useRef, useState} from "react";
 import {useUserContext} from "../contexts/UserContext";
 import LogoutScreen from "../components/auth/LogoutScreen";
@@ -12,7 +13,7 @@ export default function LogoutClient() {
         const fade = setTimeout(() => setLeaving(true), 1200);
         const redirect = setTimeout(() => {
             logoutRef.current();
-            window.location.replace("/");
+            navigate("/", {replace: true});
         }, 1500);
         return () => { clearTimeout(fade); clearTimeout(redirect); };
     }, []);

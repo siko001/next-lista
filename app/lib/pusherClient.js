@@ -1,5 +1,6 @@
 import Pusher from "pusher-js";
 import {createSharedRealtime} from "./sharedRealtime.mjs";
+import {currentCacheUserId, refreshListData} from "./dataCache.mjs";
 
 let pusher;
 const channelReferences = new Map();
@@ -13,6 +14,8 @@ export function getPusher() {
       forceTLS: true,
       enableStats: false,
     });
+    // Recover events missed while this browser's socket was disconnected.
+    pusher.connection.bind("connected", () => refreshListData(currentCacheUserId()));
   }
   return pusher;
 }

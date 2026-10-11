@@ -1,0 +1,14 @@
+/node_modules/
+/dist/
+/.vite/
+/.cache/
+/artifacts/
+/playwright-report/
+/test-results/
+/association-files/
+*.jks
+*.keystore
+*.apk
+*.aab
+*.ipa
+*.xcarchive

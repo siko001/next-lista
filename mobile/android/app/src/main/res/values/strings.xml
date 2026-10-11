@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Lista</string>
+    <string name="title_activity_main">Lista</string>
+    <string name="package_name">app.lista.shopping</string>
+    <string name="custom_url_scheme">app.lista.shopping</string>
+</resources>

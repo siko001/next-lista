@@ -1,4 +1,5 @@
 "use client";
+import {navigate} from "../lib/platform.mjs";
 import Link from "next/link";
 import {useState} from "react";
 import {useForm} from "react-hook-form";
@@ -116,7 +117,7 @@ export default function LoginClient() {
                     "success"
                 );
                 setTimeout(() => {
-                    window.location.href = "/";
+                    navigate("/");
                 }, 2000);
             } else {
                 showNotification(`Please check your email and password.`, "error");

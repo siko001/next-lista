@@ -1,3 +1,4 @@
+import {sessionUserId} from "./platform.mjs";
 // Small, session-scoped cache for browser reads. Keys contain resource IDs, never tokens.
 // WordPress remains the source of truth; expired and invalidated entries are not served.
 export const CACHE_TTL = Object.freeze({
@@ -150,10 +151,17 @@ export function invalidateListData(userId) {
     if (userId) invalidateCache(cacheKeys.lists(userId));
 }
 
+// Remote events can introduce lists absent from this screen. Notify the local
+// document as well as sibling tabs so mounted views reload authoritative data.
+export function refreshListData(userId) {
+    if (!userId) return;
+    invalidateListData(userId);
+    if (browser()) window.dispatchEvent(new CustomEvent("lista:cache-invalidated", {detail: [cacheKeys.lists(userId)]}));
+}
+
 export function currentCacheUserId() {
     if (!browser()) return null;
-    const match = document.cookie.match(/(?:^|;\s*)id=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : null;
+    return sessionUserId();
 }
 
 export function invalidateCurrentLists() {

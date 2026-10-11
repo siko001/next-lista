@@ -1,4 +1,5 @@
 "use client";
+import {navigate} from "../lib/platform.mjs";
 import {removeListRelationship} from "../lib/helpers";
 import {useOverlayContext} from "../contexts/OverlayContext";
 import {useNotificationContext} from "../contexts/NotificationContext";
@@ -124,7 +125,7 @@ export default function Button(props) {
                     sessionStorage.setItem("suppressSelfRemovalToast", "1");
                 } catch {}
                 showNotification("List removed successfully", "success");
-                window.location.href = "/";
+                navigate("/");
                 return;
             }
 
