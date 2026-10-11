@@ -37,16 +37,20 @@
     "android_aab_build": "passed",
     "configured_server_secrets_in_public_bundles": 0,
     "apk_signature": "verified",
-    "aab_signature": "jar verified; self-signed upload certificate, no timestamp; JDK also reports ZIP stream ordering warnings. Play validation remains pending."
+    "aab_signature": "jar verified; self-signed upload certificate, no timestamp; JDK also reports ZIP stream ordering warnings. Play validation remains pending.",
+    "production_policy_pages": "privacy and deletion pages HTTP 200; privacy names Neil Mallia; both publish the support email",
+    "production_ai_auth": "recipes and voice-items each reject absent/invalid sessions with HTTP 401 (4 checks); no paid AI call requested"
   },
   "deployment": {
     "wordpress": "live",
-    "vercel": "CLI authenticated and project linked; merge and deployment pending",
+    "vercel": "live; production build Ready from main, public privacy/deletion pages return 200",
     "phone_0_1_2": "installed in place on 2026-10-11 13:51:27 Europe/Malta; version 0.1.2/code 3 verified, data preserved",
-    "google_play": "not uploaded; identity verification pending"
+    "google_play": "not uploaded; identity verification pending",
+    "vercel_deployment_id": "dpl_xLX4Z7aEaGxdDNW7W3rw1xoH6wzM",
+    "vercel_source_commit": "5275d9fbbda55b276b097c0e52ac67081ca08e6f",
+    "production_url": "https://next-lista.vercel.app"
   },
   "remaining": [
-    "Publish website/AI routes and verify public policy URLs",
     "Revoke retired Pusher credential at provider",
     "Confirm provider/log/backup retention and final Data safety answers",
     "Secure off-device backup of signing folder",
@@ -66,5 +70,17 @@
       "sha256": "086dc781cb91d21ea31a8105cdf55ce4ce7a2714cb4b40ea753598f9268d5ff7",
       "native_so_files": 0
     }
-  ]
+  ],
+  "vercel_agent_setup": {
+    "cli": "63.1.2",
+    "username": "siko001",
+    "guidance": "vercel@openai-curated installed and enabled globally; command files present",
+    "mcp_url": "https://mcp.vercel.com",
+    "mcp_config": "~/.codex/config.toml",
+    "oauth": "Codex login succeeded; CLI inventory reports o_auth",
+    "mutation_approval": "writes",
+    "duplicate_plugin_mcp": "disabled; user-wide authenticated connection retained",
+    "tool_checks": "Pending session reload: search_vercel_documentation and list_teams are not in the running chat tool catalog",
+    "reload": "required for new plugin/MCP tools; current client cannot be reloaded through available controls"
+  }
 }

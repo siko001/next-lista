@@ -34,7 +34,7 @@ Remove only the opening `<?php` when pasting into the PHP editor. Select **PHP S
 - Guest registration/login/transfer, custom products and favourites; fresh favourites persist using normalized user-meta IDs.
 - Authenticated revision markers without list payloads; client requests then pass the same membership checks as ordinary reads. Removed members lose access on the next check. Already downloaded content cannot be recalled from their devices.
 - Authenticated self-service deletion with explicit confirmation, protected administrator accounts, removal of owned data and surviving-list references. A per-account lock prevents duplicate erasers; a deletion marker blocks new requests while cleanup runs. Failures report an error for retry rather than a false success.
-- Assistant account quota and request limits; corresponding paid-provider enforcement still requires the prepared Vercel deployment.
+- Assistant account quota and request limits; corresponding paid-provider enforcement is now deployed to Vercel.
 
 Validation completed:
 
@@ -58,4 +58,4 @@ The old route runner (`check-live-wordpress-guards.mjs --create-test-data`) reta
 
 Correct a regression in the affected snippet while retaining the authorization boundary. Disabling 1769 also removes routes required by the new clients and does not reverse migrated roles/passwords. Disabling 1764 reopens known access-control gaps. Do not describe either as a harmless rollback. Use the private backups for an identified, reviewed recovery; avoid restoring old guest passwords, editor roles or public publishing.
 
-See `mobile/release/backend-release-blockers.md` for pending Vercel deployment, Pusher credential revocation, retention confirmation, physical-device checks and Google verification. No Google Play submission has occurred.
+See `mobile/release/backend-release-blockers.md` for Vercel deployment evidence and remaining Pusher credential revocation, retention confirmation, physical-device checks and Google verification. No Google Play submission has occurred.

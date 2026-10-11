@@ -34,8 +34,8 @@ Support: neil.mallia1@gmail.com
 - Suggested category: Shopping.
 - Support email: `neil.mallia1@gmail.com`.
 - Website: `https://next-lista.vercel.app`.
-- Privacy URL after deployment: `https://next-lista.vercel.app/privacy`.
-- Account deletion URL after deployment: `https://next-lista.vercel.app/delete-account`.
+- Verified public privacy URL: `https://next-lista.vercel.app/privacy`.
+- Verified public account deletion URL: `https://next-lista.vercel.app/delete-account`.
 - Developer display name: **Neil Mallia** (confirmed by the developer on 11 October 2026).
 - Price, countries, target audience and content-rating responses: owner decisions; do not infer an age rating from this draft.
 - Ads: no ad SDK or advertising UI found in the app code reviewed. Confirm against the shipped dependencies/configuration before declaring.

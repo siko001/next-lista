@@ -21,7 +21,7 @@ Likely form categories to evaluate: Personal info (name, email, user IDs); Audio
 
 Transport uses HTTPS/TLS in the reviewed mobile configuration. Verify every deployed endpoint and SDK before declaring that all user data is encrypted in transit. A missing authorization check is a separate security defect that must be fixed even if transport is encrypted.
 
-Deletion: authenticated self-service removal is available in the new app for guests and registered accounts, with an explicit confirmation. The matching public page also provides an email fallback without requiring sign-in or reinstalling; verified email requests are targeted within 30 days. Public web deployment is still pending. Backups, request audit records, provider logs and AI retention must be documented against actual settings. Never claim "zero retention" or "not used for training" without verifying the specific provider account configuration.
+Deletion: authenticated self-service removal is available in the new app for guests and registered accounts, with an explicit confirmation. The matching public page also provides an email fallback without requiring sign-in or reinstalling; verified email requests are targeted within 30 days. Both public policy pages are deployed and verified accessible. Backups, request audit records, provider logs and AI retention must be documented against actual settings. Never claim "zero retention" or "not used for training" without verifying the specific provider account configuration.
 
 Source: [Google Play Data safety guidance](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en).
 
@@ -30,7 +30,7 @@ Source: [Google Play Data safety guidance](https://support.google.com/googleplay
 
 - **Data collected:** Yes. Email/name/user IDs, shopping content, optional AI messages and optional voice are transmitted off-device.
 - **Account creation:** Email and password; anonymous guest identifiers are also created. Do not declare OAuth/social sign-in for this release.
-- **Deletion:** Yes, with the published `/delete-account` URL once deployment is verified. It covers the account and associated data; optional requests for particular data can also be emailed.
+- **Deletion:** Yes, with the verified public `https://next-lista.vercel.app/delete-account` URL. It covers the account and associated data; optional requests for particular data can also be emailed.
 - **Encryption in transit:** Reviewed configured endpoints use HTTPS. Recheck after deployment and after any SDK/provider change.
 - **Purposes:** App functionality and account management; operational metadata also supports security and abuse prevention. No advertising purpose found.
 - **Required/optional:** Guest ID and stored lists are intrinsic to the used features. Registered email/name, voice, AI conversation and translation are optional because guests can use typed lists.

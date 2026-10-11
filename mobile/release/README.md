@@ -2,7 +2,7 @@
 
 Prepared on **11 October 2026** for **Neil Mallia**. Package `app.lista.shopping`; Android **0.1.2**, version code **3**, target SDK **36**. Contact: `neil.mallia1@gmail.com`.
 
-**Status:** The backend privacy fixes are live and the signed testing bundle is built. Version 0.1.2 is installed on the owner’s phone with data preserved. The public website update and Google Play submission remain pending. Google is verifying the developer's identity; phone verification and app creation are locked behind that step. No app has been uploaded or published.
+**Status:** The backend and website privacy fixes are live, the signed testing bundle is built, and version 0.1.2 is installed on the owner’s phone with data preserved. Google Play submission remains pending. Google is verifying the developer's identity; phone verification and app creation are locked behind that step. No app has been uploaded or published.
 
 ## Files to use
 
@@ -26,7 +26,7 @@ Upload only the `.aab` to Play. The ignored `mobile/.signing/` directory contain
 - Authenticated revision checks replace public Pusher list broadcasts. Both web and Android need the updated client for live synchronization.
 - Guests and registered users can review and explicitly confirm account deletion in the new app. The web deletion page also accepts email requests without login/reinstallation, with the owner-approved 30-day target after ownership verification.
 - Favourites persist for fresh guest accounts, and guest lists/products/favourites transfer to an existing registered account.
-- AI chat and voice use authenticated account quotas before paid provider calls. Those hosted route changes need Vercel deployment.
+- AI chat and voice use authenticated account quotas before paid provider calls. Those hosted route changes are deployed on Vercel.
 - Privacy information names Neil Mallia and the configured processors. Translation loads only after a non-English choice, including a saved choice. Microphone permission remains optional.
 - Next.js/authentication and affected runtime dependencies are patched. Unused Pusher/Auth.js adapter packages were removed.
 
@@ -44,15 +44,19 @@ Upload only the `.aab` to Play. The ignored `mobile/.signing/` directory contain
 
 See `verification.json` for artifact hashes and the final UI result. These checks are evidence for release preparation, not proof of policy approval or a complete security audit.
 
-## Next actions, in order
+## Website deployment and Vercel setup
 
-1. **Deploy the prepared website to the existing `next-lista` project.** Verify `https://next-lista.vercel.app/privacy` and `https://next-lista.vercel.app/delete-account` signed out. Verify missing/expired AI sessions and exhausted quotas never reach a paid provider. Do not create a different production project or upload private caches, exports, environment files or signing keys. `.vercelignore` excludes these directories.
-2. **Revoke the old Pusher credential** in its provider account. Its live plugin is inactive and current source/archive no longer contains it, but old history and backups can retain the credential.
-3. **Confirm provider/log/backup retention** and finish the Data safety worksheet against the deployed configuration. Do not declare zero retention or ephemeral processing without evidence. Decide price, countries and intended audience before answering those Console fields; the content rating comes from Google's questionnaire.
-4. **Check the updated APK already installed on the phone.** Check microphone, list persistence after restarting, sharing with a second account, remote changes, privacy/deletion access and offline/reconnect behavior.
-5. **Finish Google's identity/phone/device verification.** Create Lista in Play Console, select the app name/language/category, add support information and the prepared listing/assets, complete app access, content rating, audience, ads and Data safety. Use a dedicated ordinary reviewer account; never administrator credentials.
-6. **Upload `Lista-release.aab` to internal testing**, inspect Play's compatibility/pre-launch results and install from Play. The Play signature differs from the debug signature: do not silently uninstall the debug app or erase guest data to switch builds. First confirm data is saved in a registered account.
-7. **Run closed testing with real participants.** New personal accounts require at least 12 opted-in testers continuously for 14 days before requesting production access. Internal testing and multiple accounts operated by one person do not establish that participation. Record real feedback and fixes for the production-access application.
+The `feature/mobile-app` branch was fast-forwarded into `main` and pushed. Vercel built commit `5275d9f` successfully in the existing `next-lista` project. Both [privacy](https://next-lista.vercel.app/privacy) and [account deletion](https://next-lista.vercel.app/delete-account) return HTTP 200. Both AI routes return HTTP 401 for absent and invalid sessions; these four checks did not request a paid AI call. Quota exhaustion was verified against the live WordPress endpoint and the hosted guard logic in unit tests.
+
+Following [Vercel’s agent setup guide](https://vercel.com/get-started.md), global CLI 63.1.2 is authenticated as `siko001`. The official Codex marketplace plugin is installed and enabled, including its status command source. A single user-wide MCP entry in `~/.codex/config.toml` points to `https://mcp.vercel.com`; OAuth succeeded and write tools require confirmation. Its duplicate plugin server is disabled. A new Codex session/reload is still needed to load the new commands/tools: `search_vercel_documentation` and authenticated `list_teams` were not available in the running chat, so those final MCP checks are not yet verified. This does not affect the completed website deployment.
+
+## Next actions, in order
+1. **Revoke the old Pusher credential** in its provider account. Its live plugin is inactive and current source/archive no longer contains it, but old history and backups can retain the credential.
+2. **Confirm provider/log/backup retention** and finish the Data safety worksheet against the deployed configuration. Do not declare zero retention or ephemeral processing without evidence. Decide price, countries and intended audience before answering those Console fields; the content rating comes from Google's questionnaire.
+3. **Check the updated APK already installed on the phone.** Check microphone, list persistence after restarting, sharing with a second account, remote changes, privacy/deletion access and offline/reconnect behavior.
+4. **Finish Google's identity/phone/device verification.** Create Lista in Play Console, select the app name/language/category, add support information and the prepared listing/assets, complete app access, content rating, audience, ads and Data safety. Use a dedicated ordinary reviewer account; never administrator credentials.
+5. **Upload `Lista-release.aab` to internal testing**, inspect Play's compatibility/pre-launch results and install from Play. The Play signature differs from the debug signature: do not silently uninstall the debug app or erase guest data to switch builds. First confirm data is saved in a registered account.
+6. **Run closed testing with real participants.** New personal accounts require at least 12 opted-in testers continuously for 14 days before requesting production access. Internal testing and multiple accounts operated by one person do not establish that participation. Record real feedback and fixes for the production-access application.
 
 ## Email deletion requests
 
